@@ -1,0 +1,7 @@
+# debug captures and Mixamo sources made while developing
+assets/_debug/
+assets/_src/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

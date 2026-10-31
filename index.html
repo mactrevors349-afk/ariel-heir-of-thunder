@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ariel — Heir of Thunder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- three.js r160 ships with the game (lib/three): no internet connection needed -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./lib/three/build/three.module.js",
+      "three/addons/": "./lib/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="game"></div>
+
+  <!-- ============ LOADING ============ -->
+  <div id="loading" class="screen">
+    <div class="load-inner">
+      <div class="load-small">A TALE OF FALLEN OLYMPUS</div>
+      <div class="load-title">ARIEL</div>
+      <div class="load-sub">HEIR OF THUNDER</div>
+      <div class="load-bar"><div id="load-fill"></div></div>
+      <div id="load-text">Summoning the Fates…</div>
+    </div>
+    <div id="load-tip" class="tip"></div>
+  </div>
+
+  <!-- ============ TITLE ============ -->
+  <div id="title" class="screen hidden">
+    <div class="title-shade"></div>
+    <div class="title-wrap">
+      <div class="title-small">A TALE OF FALLEN OLYMPUS</div>
+      <h1 class="title-main">ARIEL</h1>
+      <div class="title-rule"><span></span><i>ϟ</i><span></span></div>
+      <div class="title-sub">HEIR OF THUNDER</div>
+      <div class="menu" id="title-menu">
+        <button data-act="continue" id="btn-continue">Continue</button>
+        <button data-act="new">New Journey</button>
+        <button data-act="settings">Settings</button>
+        <button data-act="controls">Controls</button>
+        <button data-act="credits">Credits</button>
+      </div>
+    </div>
+    <div class="title-foot">Chapter I — The Spark of War</div>
+  </div>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div id="bars">
+      <div class="bar" id="bar-hp"><div class="bar-chip"></div><div class="bar-fill"></div></div>
+      <div class="bar" id="bar-fp"><div class="bar-chip"></div><div class="bar-fill"></div></div>
+      <div class="bar" id="bar-st"><div class="bar-chip"></div><div class="bar-fill"></div></div>
+    </div>
+    <div id="quick">
+      <div class="slot" id="slot-spell">
+        <svg viewBox="0 0 64 64"><path d="M36 4 L14 36 h14 l-6 24 L50 24 H35 L42 4 Z" fill="url(#gBolt)" stroke="#e8f2ff" stroke-width="1.2"/><defs><linearGradient id="gBolt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#6fa8ff"/></linearGradient></defs></svg>
+        <span class="slot-name">Zeus's Bolt</span><span class="key">Q</span>
+      </div>
+      <div class="slot" id="slot-flask">
+        <svg viewBox="0 0 64 64"><path d="M14 10 h36 c0 16 -6 24 -14 26 v12 h8 v6 H20 v-6 h8 V36 C20 34 14 26 14 10 Z" fill="url(#gCup)" stroke="#ffe7a8" stroke-width="1.2"/><ellipse cx="32" cy="14" rx="16" ry="3" fill="#ffd36b" opacity=".9"/><defs><linearGradient id="gCup" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd970"/><stop offset="1" stop-color="#a8761f"/></linearGradient></defs></svg>
+        <span class="count" id="flask-count">4</span><span class="key">R</span>
+      </div>
+    </div>
+    <div id="ichor">
+      <svg viewBox="0 0 64 64"><path d="M32 6 C24 20 16 28 16 40 a16 16 0 0 0 32 0 C48 28 40 20 32 6 Z" fill="url(#gIchor)"/><defs><radialGradient id="gIchor" cx=".4" cy=".6" r=".7"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#f0b93a"/><stop offset="1" stop-color="#8a5a10"/></radialGradient></defs></svg>
+      <span id="ichor-val">0</span>
+    </div>
+    <div id="boss" class="hidden">
+      <div class="boss-name" id="boss-name"></div>
+      <div class="boss-bar"><div class="bar-chip"></div><div class="bar-fill"></div></div>
+      <div class="boss-dmg" id="boss-dmg"></div>
+    </div>
+    <div id="prompt" class="hidden"></div>
+    <div id="lock" class="hidden"></div>
+    <div id="hint" class="hidden"></div>
+    <div id="toasts"></div>
+    <div id="enemy-bars"></div>
+    <div id="labels"></div>
+  </div>
+
+  <!-- ============ CINEMATIC / OVERLAYS ============ -->
+  <div id="letterbox"><div class="lb lb-top"></div><div class="lb lb-bottom"></div></div>
+  <div id="area" class="hidden"><div class="area-line"></div><div class="area-name" id="area-name"></div><div class="area-line"></div></div>
+  <div id="banner" class="hidden"><div class="banner-band"><div class="banner-text" id="banner-text"></div></div></div>
+  <div id="subtitle" class="hidden"><div class="sub-speaker" id="sub-speaker"></div><div class="sub-line" id="sub-line"></div></div>
+  <div id="card" class="hidden"><div id="card-text"></div></div>
+  <div id="chapter" class="hidden"><div class="chapter-small" id="chapter-small"></div><div class="chapter-big" id="chapter-big"></div></div>
+  <div id="skip" class="hidden"><span>Hold <b>Enter</b> to skip</span><div class="skip-ring"><div id="skip-fill"></div></div></div>
+  <div id="credits" class="hidden"><div class="credits-roll" id="credits-roll"></div></div>
+
+  <div id="dialog" class="hidden">
+    <div class="dlg-name" id="dlg-name"></div>
+    <div class="dlg-text" id="dlg-text"></div>
+    <div class="dlg-choices" id="dlg-choices"></div>
+  </div>
+
+  <div id="altar" class="panel hidden">
+    <h2 id="altar-name">Altar of Hestia</h2>
+    <div class="menu" id="altar-menu">
+      <button data-act="level">Level Up</button>
+      <button data-act="leave">Leave</button>
+    </div>
+  </div>
+
+  <div id="levelup" class="panel hidden">
+    <h2>Offer Ichor</h2>
+    <div class="lv-head"><div>Level <b id="lv-level">1</b></div><div>Ichor held <b id="lv-held">0</b></div><div>Cost <b id="lv-cost">0</b></div></div>
+    <div id="lv-stats"></div>
+    <div class="lv-derived" id="lv-derived"></div>
+    <div class="menu row"><button data-act="confirm">Confirm</button><button data-act="back">Back</button></div>
+  </div>
+
+  <div id="pause" class="panel hidden">
+    <h2>Paused</h2>
+    <div class="menu" id="pause-menu">
+      <button data-act="resume">Resume</button>
+      <button data-act="settings">Settings</button>
+      <button data-act="controls">Controls</button>
+      <button data-act="title">Return to Title</button>
+    </div>
+  </div>
+
+  <div id="settings" class="panel hidden">
+    <h2>Settings</h2>
+    <div class="set-grid" id="set-grid"></div>
+    <div class="menu row"><button data-act="back">Back</button></div>
+  </div>
+
+  <div id="controls" class="panel hidden">
+    <h2>Controls</h2>
+    <div class="ctl-grid">
+      <div><kbd>W A S D</kbd></div><div>Move</div>
+      <div><kbd>Mouse</kbd></div><div>Look (click the game to capture the mouse)</div>
+      <div><kbd>Shift</kbd> hold</div><div>Sprint</div>
+      <div><kbd>Space</kbd></div><div>Dodge roll (no direction = backstep)</div>
+      <div><kbd>Left Click</kbd></div><div>Light attack (chain up to 3)</div>
+      <div><kbd>Right Click</kbd></div><div>Heavy attack — thunder slam</div>
+      <div><kbd>Q</kbd></div><div>Cast Zeus's Bolt (uses FP)</div>
+      <div><kbd>R</kbd></div><div>Drink Ambrosia (heal)</div>
+      <div><kbd>Tab</kbd> / <kbd>Middle Click</kbd></div><div>Lock on to enemy</div>
+      <div><kbd>E</kbd></div><div>Interact / talk / rest</div>
+      <div><kbd>Arrow Keys</kbd></div><div>Turn camera (alternative to mouse)</div>
+      <div><kbd>Esc</kbd></div><div>Pause menu</div>
+      <div><kbd>Enter</kbd> hold</div><div>Skip cutscene · <kbd>Space</kbd> advance line</div>
+    </div>
+    <div class="menu row"><button data-act="back">Back</button></div>
+  </div>
+
+  <div id="credits-panel" class="panel hidden">
+    <h2>Credits</h2>
+    <div class="credits-static">
+      <p><b>ARIEL — HEIR OF THUNDER</b><br>Chapter I: The Spark of War</p>
+      <p>The world, its sounds and its music are generated by code at load time.</p>
+      <p>Ground, rock, marble, paving and bark textures: Poly Haven (polyhaven.com), CC0.</p>
+      <p>Rendering: three.js (MIT License)<br>Fonts: Cinzel &amp; Cormorant Garamond (Google Fonts, OFL)</p>
+    </div>
+    <div class="menu row"><button data-act="back">Back</button></div>
+  </div>
+
+  <div id="death" class="hidden"><div class="death-band"><div class="death-text">YOU HAVE FALLEN</div></div></div>
+  <div id="click-resume" class="hidden"><div>Click to continue</div></div>
+  <div id="fade"></div>
+  <div id="flash"></div>
+  <div id="fps" class="hidden"></div>
+  <div id="error" class="hidden"></div>
+
+  <script>
+    // If three.js cannot be loaded (opened as a file instead of through a local server), explain instead of showing a black screen.
+    window.__bootTimer = setTimeout(function () {
+      if (!window.THREE) {
+        var e = document.getElementById('error');
+        e.innerHTML = '<h3>Could not load the 3D engine</h3><p>Open the game through a local web server (VS Code: right-click index.html → Open with Live Server) rather than as a file, then reload.</p>';
+        e.classList.remove('hidden');
+      }
+    }, 20000);
+    window.addEventListener('error', function (ev) {
+      var e = document.getElementById('error');
+      if (!e) return;
+      e.innerHTML = '<h3>Something broke</h3><p>' + (ev.message || 'Unknown error') + '</p><p class="small">' + (ev.filename || '') + ':' + (ev.lineno || '') + '</p>';
+      e.classList.remove('hidden');
+    });
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+    import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+    import { Sky } from 'three/addons/objects/Sky.js';
+    import { Water } from 'three/addons/objects/Water.js';
+    import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+    import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+    import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+
+    window.THREE = THREE;
+    window.Addons = { EffectComposer, RenderPass, UnrealBloomPass, OutputPass, ShaderPass, Sky, Water, mergeGeometries, FBXLoader, GLTFLoader, SkeletonUtils, FXAAShader };
+
+    // Game code is plain scripts loaded in order, so the game also runs when index.html is opened directly.
+    const files = ['core', 'textures', 'humanoid', 'models', 'effects', 'world', 'player', 'enemies', 'ui', 'cutscenes', 'life', 'game'];
+    const load = (i) => {
+      if (i >= files.length) return;
+      const s = document.createElement('script');
+      s.src = 'js/' + files[i] + '.js';
+      s.onload = () => load(i + 1);
+      s.onerror = () => { throw new Error('Could not load js/' + files[i] + '.js'); };
+      document.body.appendChild(s);
+    };
+    load(0);
+  </script>
+</body>
+</html>
