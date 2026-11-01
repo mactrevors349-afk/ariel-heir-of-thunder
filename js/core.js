@@ -578,8 +578,9 @@ const Voice = {
     Narrator: { rev: 0.14, low: 4.5, presence: 2, rate: 0.965 },
     Ariel: { rev: 0.08 },
     Hermes: { rev: 0.12 },
-    Ares: { rev: 0.32, low: 5 },
-    Zeus: { rev: 0.8, low: 6, delay: 0.17 },
+    // the gods: big, but still a voice in the room, not a cathedral (a long tail and a slap-back muddied every word)
+    Ares: { rev: 0.24, low: 4, presence: 1.5 },
+    Zeus: { rev: 0.42, low: 5, presence: 1.5 },
     Echo: { rev: 0.75, lp: 3800, gain: 0.85 },
   },
   async init() {

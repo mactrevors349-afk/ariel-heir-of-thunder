@@ -17,7 +17,11 @@ const Cutscene = {
     this.active = { name, cancelled: false, hold: 0, advance: false };
     this.timers = [];
     Game.setState('cutscene');
-    Input.unlock();
+    // (a cutscene in the middle of a fight keeps the mouse captured, so play goes straight on after)
+    if (!script.keepLock) Input.unlock();
+    // the story is staged on the ground: a cutscene that finds him flying sets him down first
+    const P = G.player;
+    if (!script.keepLock && P.flying) { P.flying = false; P.vy = 0; P.pos.y = World.getHeight(P.pos.x, P.pos.z, P.pos.y); P.visY = null; }
     UI.hide('hud'); UI.prompt(null); UI.hide('hint');
     UI.letterbox(true);
     G.player.state = 'locked';
@@ -1799,6 +1803,211 @@ const SCRIPTS = {
       Music.play('explore');
       UI.toast('Obtained <b>Spark of War</b> · Divinity +1');
       setTimeout(() => UI.hint('Chapter I complete! Elysia is yours to explore — find the <b>golden apples</b>, level up, and speak with <b>Hermes</b>.', 10), 2000);
+    },
+  },
+
+  /**
+   * Berserker God Mode. Ariel's Rage is full and he calls on both halves of what he is: his father's thunder
+   * and the shard of Ares' war. The fight holds its breath (G.freezeFoes) while the two gods tower out of the
+   * sky behind him, Zeus in his storm and Ares in his fire, and pour themselves into him. He rises, and the
+   * shockwave throws everything near him back. The first time in full; after that in a few beats.
+   */
+  godMode: {
+    keepLock: true,
+    /** Ares as an apparition: his own crimson armour, translucent, burning at the edges */
+    makeAres() {
+      const A = buildShell({ stance: 'ares', armSwing: [0, 0], mat: Mat.zeus });
+      A.model = Models.attach(A.rig, 'ares', { ownMaterials: true });
+      if (A.model) {
+        A.mats = A.model.materials();
+        A.mats.forEach((m) => {
+          m.transparent = true;
+          m.emissive = new THREE.Color(0.3, 0.04, 0.01);
+          m.onBeforeCompile = (sh) => {
+            sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+              float arL = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+              diffuseColor.rgb = mix(diffuseColor.rgb, vec3(arL) * vec3(1.15, 0.2, 0.14), 0.85) * 0.5;`).replace('#include <opaque_fragment>', `
+              float arR = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+              outgoingLight += vec3(1.8, 0.42, 0.08) * pow(arR, 2.2) * 2.4;
+              #include <opaque_fragment>`);
+          };
+          m.customProgramCacheKey = () => 'aresSpectre';
+          m.needsUpdate = true;
+        });
+        A.setOpacity = (v) => A.mats.forEach((m) => { m.opacity = v; m.depthWrite = v > 0.95; });
+      } else A.setOpacity = (v) => { A.root.visible = v > 0.05; };
+      return A;
+    },
+    /** the gods' power arriving: thunder and fire out from where he hangs, everything near thrown back */
+    shockwave(P) {
+      const c = P.pos.clone(), gy = World.getHeight(c.x, c.z, c.y + 1);
+      FX.lightningStrike(c.clone(), { radius: 5, scale: 1.4, shake: 1.2, flash: 0.4, light: 1300, puff: false });
+      FX.fireBurst(c, 3.5, 70);
+      FX.ring(c.clone().setY(gy), 16, { color: [1.8, 0.8, 0.25], life: 1.0, opacity: 0.7 });
+      FX.ring(c.clone().setY(gy), 10, { color: [0.6, 0.8, 1.6], life: 0.8, opacity: 0.7 });
+      Sound.roar(1.15, 0.9); Sound.boom(1);
+      for (const e of G.enemies) {
+        if (!e.alive || !e.root.visible) continue;
+        const dx = e.pos.x - c.x, dz = e.pos.z - c.z, d = Math.hypot(dx, dz) - e.radius;
+        if (d > 10 || Math.abs(e.pos.y - gy) > 5) continue;
+        P.strike(e, P.dmg * 1.5, 120, 'lightning', e.pos.clone().add(V(0, e.height * 0.5, 0)), c);
+        P.shove(e, dx, dz, 14);
+      }
+    },
+    async run(c) {
+      const P = G.player, S = SCRIPTS.godMode;
+      const first = !G.flags.godModeSeen;
+      G.flags.godModeSeen = true;
+      G.freezeFoes = true;
+      const h = P.heading, f = V(Math.sin(h), 0, Math.cos(h)), r = V(Math.cos(h), 0, -Math.sin(h));
+      const at = (fw, rt, up) => P.pos.clone().addScaledVector(f, fw).addScaledVector(r, rt).add(V(0, up, 0));
+      const chest = () => P.pos.clone().add(V(0, 1.3, 0));
+      const head = () => P.pos.clone().add(V(0, 1.62, 0));
+      // the gods, giant and translucent high behind him: Zeus over his left shoulder, Ares over his right
+      const Z = S.zeus || (S.zeus = SCRIPTS.bossDefeat.makeZeus());
+      const A = S.ares || (S.ares = S.makeAres());
+      const scale = 8, base = P.pos.y + 6.5;
+      const place = (g, rt) => {
+        const p = at(-25, rt, 0); p.y = base;
+        g.root.scale.setScalar(scale);
+        g.root.position.copy(p);
+        g.root.rotation.y = Math.atan2(P.pos.x - p.x, P.pos.z - p.z);
+        g.root.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+        G.scene.add(g.root);
+        g.setOpacity(0);
+        g.root.visible = false;
+      };
+      place(Z, 12); place(A, -12);
+      const godAt = (g, up) => g.root.position.clone().add(V(0, up * scale, 0));
+      // their presence, every frame of the scene: fading in, reaching out to him, the storm and the fire round them
+      const st = S.st = { z: 0, a: 0, zT: 0, aT: 0, reach: 0, reachT: 0, stream: false, n: 0, riseTo: null };
+      const hz = new THREE.Vector3(), ha = new THREE.Vector3(), jp = new THREE.Vector3();
+      const aJoints = [];
+      A.root.traverse((o) => { if (o.userData.joint) aJoints.push(o); });
+      clearInterval(S.iv);
+      S.iv = setInterval(() => {
+        const dt = 0.033;
+        st.n++;
+        st.z = damp(st.z, st.zT, 2.4, dt); st.a = damp(st.a, st.aT, 2.4, dt); st.reach = damp(st.reach, st.reachT, 2.5, dt);
+        // he rises about three metres and hangs there, however long the line runs
+        if (st.riseTo !== null) P.vy = clamp((st.riseTo - P.pos.y) * 1.6, 0, 2.6);
+        Z.setOpacity(st.z * 0.9); A.setOpacity(st.a * 0.9);
+        Z.root.visible = st.z > 0.01; A.root.visible = st.a > 0.01;
+        const k = st.reach;
+        Z.rig.poseFrom({ armR: [lerp(-40, -112, k), 0, lerp(-30, -12, k)], elbowR: [lerp(-60, -10, k), 0, 0], armL: [-30, 0, 30], elbowL: [-50, 0, 0], neck: [lerp(10, 24, k), 0, 0] });
+        A.rig.poseFrom({ armL: [lerp(-20, -108, k), 0, lerp(20, 10, k)], elbowL: [lerp(-30, -8, k), 0, 0], armR: [-20, 0, -18], elbowR: [-30, 0, 0], neck: [lerp(4, 22, k), 0, 0] });
+        if (Z.model) Z.model.update();
+        if (A.model) A.model.update();
+        Z.rig.j.handR.getWorldPosition(hz);
+        A.rig.j.handL.getWorldPosition(ha);
+        // Zeus in his storm: lightning crawls off him into the clouds
+        if (st.z > 0.3 && Math.random() < 0.12) FX.bolt(hz.clone().add(V(rand(-3, 3), rand(-4, 2), rand(-3, 3))), hz.clone().add(V(rand(-10, 10), rand(18, 30), rand(-10, 10))), { radius: 0.18, life: 0.2, branches: 3 });
+        // Ares in his fire
+        if (st.a > 0.3 && aJoints.length) for (let i = 0; i < 3; i++) { aJoints[Math.floor(Math.random() * aJoints.length)].getWorldPosition(jp); FX.flame(jp, 3.2); }
+        // the gift itself: the bolt and the fire into his chest
+        if (st.stream) {
+          if (st.n % 2 === 0) FX.bolt(hz, chest(), { radius: 0.12, life: 0.09, branches: 2 });
+          FX.fireStream(ha, chest(), 12);
+          if (st.n % 6 === 0) FX.flashLight(chest(), st.n % 12 ? 0xff7a30 : 0xb8d4ff, 140, 0.25, 16);
+        }
+      }, 33);
+
+      // ---- the fight holds its breath: the colour drains out of the world, his heart pounds
+      Sound.heartbeat(1);
+      // (only half grey: the gods keep their colour against it)
+      G.post.desat = 0.55;
+      P.rig.play('clutch', { fade: 0.25 });
+      G.cam.shake(0.3);
+      c.shot(at(2.4, 0.8, 1.2), head(), 40);
+      c.move(at(1.8, 0.6, 1.35), head(), first ? 4 : 2);
+      await c.wait(first ? 1.1 : 0.6);
+      if (first) await c.say('Ariel', 'Dad. Ares. If you can hear me — I need everything you have.');
+      Sound.heartbeat(1);
+
+      // ---- Zeus comes out of the storm
+      FX.lightningStrike(godAt(Z, 0).setY(World.getHeight(Z.root.position.x, Z.root.position.z, base)), { radius: 4, scale: 1.4, shake: 0.6, flash: 0.18, light: 1400 });
+      Sound.thunder(0);
+      st.zT = 1;
+      const upAt = (g) => godAt(g, 1.45);
+      if (first) {
+        c.shot(at(3.6, -2.8, 0.55), upAt(Z), 50);
+        c.move(at(3.0, -2.3, 0.6), upAt(Z), 6, { ease: (t) => t });
+        await c.wait(1.2);
+        await c.say('Zeus', 'You never needed to ask, my son. The sky has always been yours.');
+      }
+
+      // ---- Ares comes out of the fire
+      FX.fireBurst(godAt(A, 0.2), 6, 120);
+      Sound.fire(true, 1); Sound.roar(0.55, 0.7);
+      st.aT = 1;
+      if (first) {
+        c.shot(at(3.6, 2.8, 0.55), upAt(A), 50);
+        c.move(at(3.0, 2.3, 0.6), upAt(A), 6, { ease: (t) => t });
+        await c.wait(1.2);
+        if (G.flags.bossDefeated) await c.say('Ares', 'And the war answers with it, brother. Let them see what the two of us made.');
+        else await c.say('Ares', 'You want my war, little thief? Then take it. Every drop. And see if you can hold it.');
+      } else {
+        // the short version: both of them at once, behind him, and one of them speaks
+        const mid = () => godAt(Z, 1.0).lerp(godAt(A, 1.0), 0.5);
+        c.shot(at(5.5, 0, 0.7), P.pos.clone().lerp(mid(), 0.6), 56);
+        c.move(at(4.8, 0, 0.9), P.pos.clone().lerp(mid(), 0.62), 3, { ease: (t) => t });
+        await c.wait(0.8);
+        const lines = G.flags.bossDefeated
+          ? [() => c.say('Zeus', 'Rise, my son.'), () => c.say('Ares', 'Blood and thunder, brother!'), () => c.say('Ariel', 'Thunder and war. Let\'s go.')]
+          : [() => c.say('Zeus', 'Rise, my son.'), () => c.say('Ares', 'Burn for me, little thief.'), () => c.say('Ariel', 'Thunder and war. Let\'s go.')];
+        await pick(lines)();
+      }
+
+      // ---- the gift: they reach for him, and the thunder and the fire pour in; he rises with his arms spread
+      st.reachT = 1;
+      await c.wait(0.4);
+      st.stream = true;
+      P.cineGlow = 1;
+      P.rig.play('ascend', { fade: 0.35 });
+      P.flying = true; P.vx = P.vz = 0;
+      st.riseTo = P.pos.y + 3;
+      Sound.zap(); Sound.fire(true, 0.8);
+      G.cam.shake(0.6);
+      c.shot(at(7.5, 1.2, 0.9), chest().add(V(0, 1.6, 0)), 54);
+      c.move(at(6.2, 1.0, 1.6), chest().add(V(0, 2.6, 0)), 2.6, { ease: (t) => t });
+      if (first) {
+        await c.wait(1.0);
+        await c.say('Ariel', 'Then let\'s finish this.');
+      } else await c.wait(1.6);
+      st.riseTo = null; P.vy = 0;
+
+      // ---- the roar, the shockwave, and the colour comes back burning
+      st.stream = false;
+      st.zT = st.aT = 0;
+      G.post.desat = 0;
+      P.beginGod();
+      S.shockwave(P);
+      c.shot(at(4.2, -1.6, 1.4), chest(), 46);
+      c.move(at(5.6, -2.0, 2.0), chest(), 1.4);
+      await c.wait(1.2);
+    },
+    async finish() {
+      const P = G.player, S = SCRIPTS.godMode;
+      clearInterval(S.iv);
+      if (S.st) S.st.riseTo = null;
+      for (const g of [S.zeus, S.ares]) if (g) { g.setOpacity(0); g.root.visible = false; if (g.root.parent) g.root.parent.remove(g.root); }
+      G.freezeFoes = false;
+      G.post.desat = 0;
+      P.vy = 0;
+      // (skipped before the gift: it is given all the same)
+      if (!P.god && P.alive) { P.beginGod(); S.shockwave(P); }
+      P.cineGlow = 0;
+      if (!P.alive) return;
+      // back into the fight where it stood: no reset, and the music plays on
+      Game.setState('playing');
+      P.state = 'free';
+      P.rig.stop(0.3);
+      UI.letterbox(false);
+      UI.show('hud');
+      G.cam.yaw = P.heading + Math.PI; G.cam.pitch = 0.22;
+      G.cam.snap(P);
+      G.camera.fov = 58; G.camera.updateProjectionMatrix();
+      if (!Input.locked && !Input.lockFailed) UI.show('click-resume');
     },
   },
 };

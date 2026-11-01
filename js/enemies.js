@@ -209,6 +209,11 @@ class Enemy {
     }
     if (moveSpeed > 0 && !this.speedOverride) this.steer(this.heading, moveSpeed * dt, dt);
     this.speedOverride = false;
+    // shoved by Ariel (Spartan Charge, War Cry, the God Mode shockwave): slides out over a few frames
+    if (this.kb && this.kb.lengthSq() > 1e-3) {
+      World.move(this.pos, this.kb.x * dt, this.kb.y * dt, this.radius);
+      this.kb.multiplyScalar(Math.exp(-7 * dt));
+    }
     this.separate();
     this.ground(dt);
     this.place(dt);

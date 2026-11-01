@@ -57,7 +57,15 @@
       <div class="bar" id="bar-hp"><div class="bar-chip"></div><div class="bar-fill"></div></div>
       <div class="bar" id="bar-fp"><div class="bar-chip"></div><div class="bar-fill"></div></div>
       <div class="bar" id="bar-st"><div class="bar-chip"></div><div class="bar-fill"></div></div>
+      <div class="bar" id="bar-rage"><div class="bar-chip"></div><div class="bar-fill"></div><span class="bar-label" id="rage-label">RAGE</span></div>
     </div>
+    <!-- the gifts of Zeus and Ares, flight and God Mode (the slots are made by UI.buildAbilities) -->
+    <div id="abilities"></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <linearGradient id="gZeus" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#6fa8ff"/></linearGradient>
+      <linearGradient id="gAres" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd27a"/><stop offset=".5" stop-color="#ff6a1f"/><stop offset="1" stop-color="#9c1a08"/></linearGradient>
+      <linearGradient id="gGod" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfe4ff"/><stop offset=".45" stop-color="#fff0b8"/><stop offset="1" stop-color="#ff5a14"/></linearGradient>
+    </defs></svg>
     <div id="quick">
       <div class="slot" id="slot-spell">
         <svg viewBox="0 0 64 64"><path d="M36 4 L14 36 h14 l-6 24 L50 24 H35 L42 4 Z" fill="url(#gBolt)" stroke="#e8f2ff" stroke-width="1.2"/><defs><linearGradient id="gBolt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#6fa8ff"/></linearGradient></defs></svg>
@@ -143,6 +151,10 @@
       <div><kbd>Left Click</kbd></div><div>Light attack (chain up to 3)</div>
       <div><kbd>Right Click</kbd></div><div>Heavy attack — thunder slam</div>
       <div><kbd>Q</kbd></div><div>Cast Zeus's Bolt (uses FP)</div>
+      <div><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></div><div>Gifts of Zeus: Chain Lightning · Thunder Step (lightning dash) · Wrath of Olympus (storm)</div>
+      <div><kbd>4</kbd> <kbd>5</kbd> <kbd>6</kbd></div><div>Gifts of Ares: War Cry (fury, lifesteal) · Spartan Charge · Spear of Ares</div>
+      <div><kbd>F</kbd></div><div>Fly / land · in the air: <kbd>Space</kbd> climb, <kbd>C</kbd> sink, <kbd>Shift</kbd> speed, <kbd>Left Click</kbd> sky bolt, <kbd>Right Click</kbd> dive strike (uses FP)</div>
+      <div><kbd>G</kbd></div><div>Berserker God Mode when your Rage is full (Rage fills as you fight)</div>
       <div><kbd>R</kbd></div><div>Drink Ambrosia (heal)</div>
       <div><kbd>Tab</kbd> / <kbd>Middle Click</kbd></div><div>Lock on to enemy</div>
       <div><kbd>E</kbd></div><div>Interact / talk / rest</div>

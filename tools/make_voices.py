@@ -14,6 +14,8 @@ It reads every spoken line straight from the game code:
   - echoes:     text: '...'                     in js/world.js
   - mid-fight:  UI.subtitle('Speaker', '...')   in js/enemies.js
   - Ares' hold: const GRIP_LINES = { Speaker: ['...'] }  in js/player.js
+  (God Mode's cutscene, SCRIPTS.godMode, is in cutscenes.js with the rest)
+Each line is delivered with its own rate, pitch and volume on top of the speaker's (see delivery).
 and writes assets/voice/<id>.mp3 plus assets/voice/manifest.json.
 The id is an FNV-1a hash of "Speaker|text", the same hash js/core.js uses,
 so editing a line in the code simply needs this script run again.
@@ -36,13 +38,14 @@ CAST = {
     'Narrator': ('en-US-AndrewMultilingualNeural', '-14%', '-11Hz'),
     'Ariel': ('en-US-BrianMultilingualNeural', '+4%', '+0Hz'),
     'Hermes': ('en-GB-RyanNeural', '+7%', '+0Hz'),
-    'Ares': ('en-US-ChristopherNeural', '-9%', '-12Hz'),
+    # Guy carries anger best of the deep voices: the God of War raging, not reading a statement
+    'Ares': ('en-US-GuyNeural', '-7%', '-11Hz'),
     'Zeus': ('en-GB-ThomasNeural', '-12%', '-7Hz'),
     # Ariel's ordinary life: the most human-sounding voices, each kept to one person
     'Anna': ('en-US-EmmaMultilingualNeural', '-5%', '-2Hz'),      # his mother: warm, tired, wry
     'Jesse': ('en-US-AvaMultilingualNeural', '+3%', '+1Hz'),      # seventeen, quick, teasing
-    'Marcus': ('en-US-SteffanNeural', '+6%', '+4Hz'),             # a classmate
-    'Principal': ('en-US-GuyNeural', '-4%', '-5Hz'),
+    'Marcus': ('en-US-RogerNeural', '+4%', '+2Hz'),               # a classmate: lively
+    'Principal': ('en-US-EricNeural', '-4%', '-3Hz'),
 }
 # each echo message is a different fallen demigod (none shares a voice with the cast above)
 ECHO_VOICES = [
@@ -92,6 +95,23 @@ def collect():
     return out
 
 
+def delivery(text, rate, pitch):
+    """Each line's own delivery on top of its speaker's: a shout comes quicker, higher and louder, a line
+    that trails off (…) slower, a question lifts, and a very short line is slowed so it isn't clipped."""
+    r, p, v = int(rate.rstrip('%')), int(pitch.rstrip('Hz')), 0
+    t = text.strip()
+    shout = t.endswith('!') or sum(1 for w in t.split() if len(w) > 2 and w.isupper()) >= 1
+    if shout:
+        r += 5; p += 3; v += 10
+    if '…' in t or '...' in t:
+        r -= 5
+    if t.endswith('?'):
+        p += 2
+    if len(t) < 20:
+        r -= 4
+    return f'{r:+d}%', f'{p:+d}Hz', f'{v:+d}%'
+
+
 def fnv1a(s):
     h = 0x811C9DC5
     for b in s.encode('utf-8'):
@@ -104,6 +124,7 @@ async def record(who, text, voice, force, sem, manifest):
     key = fnv1a(f'{who}|{text}')
     path = OUT / f'{key}.mp3'
     name, rate, pitch = voice or CAST[who]
+    rate, pitch, volume = delivery(text, rate, pitch)
     spoken = text
     for a, b in SPOKEN:
         spoken = spoken.replace(a, b)
@@ -111,7 +132,7 @@ async def record(who, text, voice, force, sem, manifest):
         if force or not path.exists() or path.stat().st_size < 2000:
             for attempt in range(6):
                 try:
-                    await edge_tts.Communicate(spoken, name, rate=rate, pitch=pitch).save(str(path))
+                    await edge_tts.Communicate(spoken, name, rate=rate, pitch=pitch, volume=volume).save(str(path))
                     break
                 except Exception as e:  # the free service throttles bursts: back off and retry
                     path.unlink(missing_ok=True)
@@ -148,5 +169,7 @@ async def main():
 
 
 if __name__ == '__main__':
+    # (a Windows console can't print every character in the lines, ▸ among them: never let that stop a recording)
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     # the selector loop avoids noisy connection-reset warnings on Windows
     asyncio.run(main(), loop_factory=asyncio.SelectorEventLoop if sys.platform == 'win32' else None)

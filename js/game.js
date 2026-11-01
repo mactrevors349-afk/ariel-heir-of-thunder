@@ -742,9 +742,17 @@ const Game = {
     // while Ares has hold of Ariel, the edges of the world throb red with his heartbeat
     const possess = G.post.possess ? G.post.possess * (0.75 + 0.25 * Math.sin(G.time * 6.6)) : 0;
     this.final.uniforms.uDamage.value = Math.max(G.post.damage * 0.8, lowHp + Math.sin(G.time * 5) * lowHp * 0.3, possess);
-    this.final.uniforms.uDesat.value = damp(this.final.uniforms.uDesat.value, G.post.desat ? 0.85 : 0, 2, raw);
+    // (desat: true or 1 for the full grey of a vision, a fraction for less)
+    this.final.uniforms.uDesat.value = damp(this.final.uniforms.uDesat.value, G.post.desat ? 0.85 * Math.min(1, +G.post.desat) : 0, 2, raw);
     this.final.uniforms.uTime.value = G.time;
     this.gradeFor(G.activeScene);
+    // Berserker God Mode: the world runs warm and a little more vivid around him
+    const gk = P && G.activeScene === G.scene ? P.glowK || 0 : 0;
+    if (gk > 0.01) {
+      const U = this.final.uniforms;
+      U.uTint.value.lerp(this._godTint || (this._godTint = new THREE.Vector3(1.1, 0.97, 0.86)), gk * 0.55);
+      U.uSat.value += gk * 0.12;
+    }
   },
 
   /**
@@ -766,7 +774,8 @@ const Game = {
   updateWorld(dt, cameraFollow) {
     const P = G.player;
     P.update(dt);
-    for (const e of G.enemies) e.update(dt);
+    // (while the gods speak to Ariel in God Mode's cutscene, the fight holds its breath)
+    if (!G.freezeFoes) for (const e of G.enemies) e.update(dt);
     G.hermes.update(dt);
     if (G.state === 'playing') G.echo.update(dt);
     if (cameraFollow) G.cam.update(Math.min(0.05, dt / Math.max(0.05, G.slowMo)), P);

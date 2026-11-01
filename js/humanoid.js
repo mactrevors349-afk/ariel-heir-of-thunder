@@ -142,6 +142,13 @@ const CLUTCH = {
   thighL: [-16, 0, 6], kneeL: [24, 0, 0], thighR: [-4, 0, -6], kneeR: [18, 0, 0],
 };
 
+// in flight: tipped a little into the air, legs trailing loose with the toes down, arms held clear
+const FLY = {
+  hp: [0, 0, 0], spine: [8, 0, 0], chest: [4, 0, 0], neck: [-10, 0, 0],
+  armL: [-14, 0, 24], elbowL: [-30, 0, 0], armR: [-20, 0, -22], elbowR: [-40, 0, 0], handR: [-30, 0, 0],
+  thighL: [-14, 0, 4], kneeL: [26, 0, 0], footL: [30, 0, 0], thighR: [4, 0, -4], kneeR: [40, 0, 0], footR: [34, 0, 0],
+};
+
 // on his knees, arms dragged out to the sides by the chains of Tartarus
 const CHAINED = {
   ...KNEEL, armL: [-12, 0, 62], elbowL: [-15, 0, 0], armR: [-12, 0, -62], elbowR: [-15, 0, 0], handR: [0, 0, 0],
@@ -305,6 +312,72 @@ const CLIPS = {
       [0.74, { ...CROUCH_HAND, hp: [0, -0.52, -0.25] }],
       [0.88, { ...PUSH_UP, hp: [0, -0.2, -0.08] }],
       [1, {}]],
+  },
+  /* ---------------------------------------------------------- Ariel's powers (gifts of Zeus and of Ares) */
+  // Chain Lightning: Keraunos raised to drink the storm, then levelled at the foe
+  chainCast: {
+    dur: 0.9, keys: [[0, {}],
+      [0.3, { chest: [-10, -8, 0], spine: [-4, -4, 0], neck: [-16, 6, 0], armR: [-168, 0, -14], elbowR: [-18, 0, 0], handR: [-10, 0, 0], armL: [-24, 0, 36], elbowL: [-30, 0, 0] }],
+      [0.48, { hp: [0, -0.08, 0.08], chest: [10, -16, 0], spine: [10, -8, 0], neck: [-6, 14, 0], armR: [-86, 0, -6], elbowR: [-4, 0, 0], handR: [-12, 0, 0], armL: [-12, 0, 30], elbowL: [-30, 0, 0], thighL: [-32, 0, 4], kneeL: [34, 0, 0], thighR: [16, 0, -4], kneeR: [14, 0, 0] }, 'in'],
+      [0.75, { hp: [0, -0.07, 0.07], chest: [8, -14, 0], spine: [8, -6, 0], neck: [-6, 12, 0], armR: [-82, 0, -8], elbowR: [-8, 0, 0], handR: [-14, 0, 0], armL: [-12, 0, 30], elbowL: [-32, 0, 0], thighL: [-30, 0, 4], kneeL: [32, 0, 0], thighR: [15, 0, -4], kneeR: [13, 0, 0] }],
+      [1, {}]],
+  },
+  // Thunder Step: a crouch, the body becomes the bolt, and he lands low out the far side, blade swept through
+  dashStrike: {
+    dur: 0.62, keys: [[0, {}],
+      [0.14, { hp: [0, -0.22, 0.06], spine: [30, 0, 0], chest: [12, 10, 0], neck: [-24, -6, 0], armR: [20, 0, -30], elbowR: [-40, 0, 0], handR: [-30, 0, 0], armL: [-40, 0, 20], elbowL: [-50, 0, 0], thighL: [-60, 0, 6], kneeL: [80, 0, 0], footL: [-16, 0, 0], thighR: [10, 0, -6], kneeR: [60, 0, 0], footR: [20, 0, 0] }, 'in'],
+      [0.4, { hp: [0, -0.3, 0.04], spine: [26, -20, 0], chest: [10, -30, 0], neck: [-20, 30, 0], armR: [-30, 60, -88], elbowR: [-8, 0, 0], handR: [-20, 0, 0], armL: [-20, 0, 40], elbowL: [-40, 0, 0], thighL: [-70, 0, 10], kneeL: [95, 0, 0], footL: [-20, 0, 0], thighR: [20, 0, -12], kneeR: [70, 0, 0], footR: [24, 0, 0] }],
+      [0.7, { hp: [0, -0.24, 0.03], spine: [22, -16, 0], chest: [8, -24, 0], neck: [-16, 24, 0], armR: [-28, 55, -84], elbowR: [-12, 0, 0], handR: [-22, 0, 0], armL: [-20, 0, 36], elbowL: [-40, 0, 0], thighL: [-62, 0, 10], kneeL: [86, 0, 0], footL: [-18, 0, 0], thighR: [16, 0, -10], kneeR: [62, 0, 0], footR: [20, 0, 0] }],
+      [1, {}]],
+  },
+  // War Cry: chest thrown open, arms flung wide, head back: Ares' roar out of Ariel's mouth
+  warcry: {
+    dur: 1.25, keys: [[0, {}],
+      [0.2, { hp: [0, -0.12, -0.02], spine: [22, 0, 0], chest: [14, 0, 0], neck: [18, 0, 0], armL: [-50, 0, -10], elbowL: [-100, 0, 0], armR: [-50, 0, 10], elbowR: [-100, 0, 0], thighL: [-20, 0, 8], kneeL: [30, 0, 0], thighR: [8, 0, -8], kneeR: [24, 0, 0] }],
+      [0.36, { hp: [0, -0.14, 0], spine: [-10, 0, 0], chest: [-20, 0, 0], neck: [-34, 0, 0], head: [-14, 0, 0], armL: [-20, 0, 62], elbowL: [-40, 0, 0], armR: [-20, 0, -62], elbowR: [-40, 0, 0], handR: [-20, 0, 0], thighL: [-24, 0, 12], kneeL: [28, 0, 0], thighR: [14, 0, -12], kneeR: [22, 0, 0] }, 'in'],
+      [0.78, { hp: [0, -0.14, 0], spine: [-10, 0, 0], chest: [-22, 0, 0], neck: [-36, 0, 0], head: [-14, 0, 0], armL: [-22, 0, 64], elbowL: [-42, 0, 0], armR: [-22, 0, -64], elbowR: [-42, 0, 0], handR: [-20, 0, 0], thighL: [-24, 0, 12], kneeL: [28, 0, 0], thighR: [14, 0, -12], kneeR: [22, 0, 0] }],
+      [1, {}]],
+  },
+  // Spartan Charge: head down behind the left shoulder, sword arm cocked back, driving off the legs
+  charge: {
+    dur: 0.95, keys: [[0, {}],
+      [0.12, { hp: [0, -0.16, 0.05], spine: [30, -30, 0], chest: [14, -24, 0], neck: [-26, 40, 0], armL: [-50, -20, 10], elbowL: [-110, 0, 0], armR: [24, 0, -20], elbowR: [-70, 0, 0], handR: [-30, 0, 0], thighL: [-50, 0, 6], kneeL: [50, 0, 0], thighR: [20, 0, -6], kneeR: [40, 0, 0] }, 'in'],
+      [0.3, { hp: [0, -0.18, 0.08], spine: [32, -30, 0], chest: [14, -24, 0], neck: [-28, 40, 0], armL: [-50, -20, 10], elbowL: [-110, 0, 0], armR: [24, 0, -20], elbowR: [-70, 0, 0], handR: [-30, 0, 0], thighL: [20, 0, 6], kneeL: [70, 0, 0], thighR: [-55, 0, -6], kneeR: [45, 0, 0] }, 'lin'],
+      [0.48, { hp: [0, -0.16, 0.08], spine: [32, -30, 0], chest: [14, -24, 0], neck: [-28, 40, 0], armL: [-50, -20, 10], elbowL: [-110, 0, 0], armR: [24, 0, -20], elbowR: [-70, 0, 0], handR: [-30, 0, 0], thighL: [-55, 0, 6], kneeL: [45, 0, 0], thighR: [20, 0, -6], kneeR: [70, 0, 0] }, 'lin'],
+      [0.66, { hp: [0, -0.18, 0.08], spine: [32, -30, 0], chest: [14, -24, 0], neck: [-28, 40, 0], armL: [-50, -20, 10], elbowL: [-110, 0, 0], armR: [24, 0, -20], elbowR: [-70, 0, 0], handR: [-30, 0, 0], thighL: [20, 0, 6], kneeL: [70, 0, 0], thighR: [-55, 0, -6], kneeR: [45, 0, 0] }, 'lin'],
+      [0.82, { hp: [0, -0.2, 0.06], spine: [24, -10, 0], chest: [10, -8, 0], neck: [-20, 10, 0], armL: [-30, 0, 20], elbowL: [-60, 0, 0], armR: [-20, 0, -20], elbowR: [-40, 0, 0], handR: [-30, 0, 0], thighL: [-40, 0, 8], kneeL: [50, 0, 0], thighR: [16, 0, -8], kneeR: [40, 0, 0] }],
+      [1, {}]],
+  },
+  // Spear of Ares: a javelin of fire in the free hand, drawn back past the ear and hurled
+  spearThrow: {
+    dur: 1.0, keys: [[0, {}],
+      [0.34, { hp: [0, -0.06, -0.06], spine: [-4, 24, 0], chest: [-8, 28, 0], neck: [-6, -40, 0], armL: [-196, 0, 26], elbowL: [-80, 0, 0], handL: [-10, 0, 0], armR: [-30, 0, -30], elbowR: [-40, 0, 0], thighL: [8, 0, 6], kneeL: [12, 0, 0], thighR: [-30, 0, -6], kneeR: [30, 0, 0] }],
+      [0.5, { hp: [0, -0.1, 0.1], spine: [16, -16, 0], chest: [10, -26, 0], neck: [-10, 30, 0], armL: [-84, 0, 12], elbowL: [-6, 0, 0], handL: [-10, 0, 0], armR: [-6, 0, -26], elbowR: [-30, 0, 0], thighL: [-34, 0, 6], kneeL: [36, 0, 0], thighR: [18, 0, -6], kneeR: [16, 0, 0] }, 'in'],
+      [0.75, { hp: [0, -0.09, 0.09], spine: [14, -14, 0], chest: [8, -22, 0], neck: [-8, 26, 0], armL: [-60, 0, 14], elbowL: [-14, 0, 0], handL: [-10, 0, 0], armR: [-8, 0, -24], elbowR: [-32, 0, 0], thighL: [-32, 0, 6], kneeL: [34, 0, 0], thighR: [16, 0, -6], kneeR: [15, 0, 0] }],
+      [1, {}]],
+  },
+  // dive strike: from the air, Keraunos turned point-down over the head, held while he falls, then driven into the ground
+  dive: {
+    dur: 1.0, keys: [[0, {}],
+      [0.25, { spine: [-8, 0, 0], chest: [-10, 0, 0], neck: [14, 0, 0], armR: [-170, 0, -10], elbowR: [-60, 0, 0], handR: [-60, 0, 0], armL: [-160, 0, 14], elbowL: [-60, 0, 0], thighL: [-40, 0, 6], kneeL: [70, 0, 0], thighR: [-10, 0, -6], kneeR: [60, 0, 0] }],
+      [0.3, { spine: [-8, 0, 0], chest: [-10, 0, 0], neck: [14, 0, 0], armR: [-172, 0, -10], elbowR: [-58, 0, 0], handR: [-60, 0, 0], armL: [-162, 0, 14], elbowL: [-58, 0, 0], thighL: [-42, 0, 6], kneeL: [72, 0, 0], thighR: [-12, 0, -6], kneeR: [62, 0, 0] }],
+      [0.5, { hp: [0, -0.34, 0.16], spine: [34, 0, 0], chest: [22, 0, 0], neck: [-28, 0, 0], armR: [-55, 0, -6], elbowR: [-5, 0, 0], handR: [-30, 0, 0], armL: [-45, 0, 12], elbowL: [-15, 0, 0], thighL: [-64, 0, 5], kneeL: [96, 0, 0], footL: [-25, 0, 0], thighR: [28, 0, -5], kneeR: [80, 0, 0], footR: [20, 0, 0] }, 'in'],
+      [0.8, { hp: [0, -0.3, 0.14], spine: [30, 0, 0], chest: [20, 0, 0], neck: [-26, 0, 0], armR: [-55, 0, -6], elbowR: [-8, 0, 0], handR: [-30, 0, 0], armL: [-45, 0, 12], elbowL: [-18, 0, 0], thighL: [-60, 0, 5], kneeL: [88, 0, 0], footL: [-22, 0, 0], thighR: [26, 0, -5], kneeR: [72, 0, 0], footR: [18, 0, 0] }],
+      [1, {}]],
+  },
+  // flight: carried on the storm, legs trailing loose, toes down, arms clear of the body (held under the actions)
+  fly: {
+    dur: 2.6, loop: true, keys: [
+      [0, FLY],
+      [0.5, { ...FLY, hp: [0, 0.03, 0], thighL: [-20, 0, 5], kneeL: [32, 0, 0], thighR: [0, 0, -5], kneeR: [46, 0, 0], armL: [-12, 0, 28], armR: [-16, 0, -26] }],
+      [1, FLY]],
+  },
+  // God Mode: the thunder and the war pour in; he rises with his arms spread and roars at the sky
+  ascend: {
+    dur: 2.4, hold: true, keys: [[0, {}],
+      [0.3, { ...CLUTCH, hp: [0, -0.18, 0.02] }],
+      [0.62, { hp: [0, 0.02, 0], spine: [-10, 0, 0], chest: [-22, 0, 0], neck: [-38, 0, 0], head: [-14, 0, 0], armL: [-40, 0, 70], elbowL: [-30, 0, 0], armR: [-40, 0, -70], elbowR: [-30, 0, 0], handR: [-20, 0, 0], thighL: [-12, 0, 6], kneeL: [26, 0, 0], footL: [30, 0, 0], thighR: [4, 0, -6], kneeR: [36, 0, 0], footR: [32, 0, 0] }, 'in'],
+      [1, { hp: [0, 0.03, 0], spine: [-10, 0, 0], chest: [-24, 0, 0], neck: [-40, 0, 0], head: [-14, 0, 0], armL: [-42, 0, 74], elbowL: [-28, 0, 0], armR: [-42, 0, -74], elbowR: [-28, 0, 0], handR: [-20, 0, 0], thighL: [-14, 0, 6], kneeL: [28, 0, 0], footL: [30, 0, 0], thighR: [4, 0, -6], kneeR: [38, 0, 0], footR: [32, 0, 0] }]],
   },
 
   /* ---------------------------------------------------------- hoplite */
@@ -555,7 +628,9 @@ class Rig {
     if (g > 0.01) {
       const ns = speed / this.size;
       const run = smooth(2.4, 5.6, ns);
-      const stride = lerp(0.62, 1.18, run) * this.stepLen;
+      // a motion-captured run (see mocapRun below) sets the stride of its own cycle
+      const mo = this.mocapRun && dir > 0 ? CLIPS[this.mocapRun] : null;
+      const stride = lerp(0.62, mo && mo.stride ? mo.stride : 1.18, run) * this.stepLen;
       this.phase += dt * Math.max(ns, 0.8) / (2 * stride) * TAU * (dir < 0 ? -1 : 1);
       const s = Math.sin(this.phase), c = Math.cos(this.phase);
       const amp = lerp(22, 40, run) * g * DEG;
@@ -581,6 +656,15 @@ class Rig {
       P[HP + 1] += (-Math.abs(s) * lerp(0.02, 0.06, run) - 0.025 * run) * g;
       if (s * this._lastS < 0 && this.onStep) this.onStep(run);
       this._lastS = s;
+      // the running gait itself from motion capture (Ariel's Mixamo "Running"), kept in step with the
+      // procedural phase: the capture's left-thigh-forward frame lands where the procedural cycle has it
+      // (phase pi/2), so footfalls, step sounds and the walk underneath all agree
+      const mc = mo && this.clip(this.mocapRun);
+      if (mc && run > 0.02) {
+        const u = this.phase / TAU - 0.25 + (mo.lfwd || 0);
+        this.sample(mc, u - Math.floor(u), this.tmp);
+        this.blend(this.tmp, run * g * (this.mocapW ?? 1), null);
+      }
     }
     // ---- breathing, and a slow shift of weight from foot to foot when standing
     this.breath += dt;
@@ -588,6 +672,16 @@ class Rig {
     P[JI.chest] += br * 1.4 * DEG * (1 - g * 0.7);
     P[JI.armL + 2] += br * 1.0 * DEG; P[JI.armR + 2] -= br * 1.0 * DEG;
     P[HP] += sway * 0.012; P[JI.hips + 2] += sway * 1.6 * DEG; P[JI.chest + 2] -= sway * 1.2 * DEG; P[JI.neck + 2] -= sway * 0.6 * DEG;
+    // ---- overlay: a whole-body pose held under the actions (flight), faded in and out by its weight
+    const ov = this.overlay;
+    if (ov && ov.w > 0.001) {
+      const oc = this.clip(ov.name);
+      if (oc) {
+        ov.t = (ov.t + dt / oc.dur) % 1;
+        this.sample(oc, ov.t, this.tmp);
+        this.blend(this.tmp, ov.w, null);
+      }
+    }
 
     // ---- action layer
     const a = this.act;

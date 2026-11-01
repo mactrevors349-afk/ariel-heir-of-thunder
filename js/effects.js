@@ -237,14 +237,14 @@ const FX = {
   },
 
   /* ---- particle presets */
-  sparks(pos, dir, n = 18, col = [1.6, 1.2, 0.6, 1], speed = 7) {
+  sparks(pos, dir, n = 18, col = [1.6, 1.2, 0.6, 1], speed = 7, puff = true) {
     for (let i = 0; i < n; i++) {
       const v = new THREE.Vector3(rand(-1, 1), rand(-0.2, 1), rand(-1, 1)).normalize();
       if (dir) v.addScaledVector(dir, 1.2).normalize();
       const sp = speed * rand(0.4, 1.2);
       this.glow.spawn({ x: pos.x, y: pos.y, z: pos.z, vx: v.x * sp, vy: v.y * sp, vz: v.z * sp, life: rand(0.25, 0.6), s: rand(0.05, 0.11), s2: 0.01, c: col, c2: [col[0], col[1] * 0.4, col[2] * 0.2, 0], g: -14, drag: 2 });
     }
-    this.glow.spawn({ x: pos.x, y: pos.y, z: pos.z, life: 0.12, s: 1.4, s2: 2.2, c: [col[0], col[1], col[2], 0.7], c2: [col[0], col[1], col[2], 0] });
+    if (puff) this.glow.spawn({ x: pos.x, y: pos.y, z: pos.z, life: 0.12, s: 1.4, s2: 2.2, c: [col[0], col[1], col[2], 0.7], c2: [col[0], col[1], col[2], 0] });
   },
   ash(pos, n = 14, col = [0.12, 0.1, 0.09, 0.6]) {
     for (let i = 0; i < n; i++) {
@@ -361,17 +361,39 @@ const FX = {
     });
     return g;
   },
-  lightningStrike(pos, { radius = 3, scale = 1, sound = true, shake = 0.6 } = {}) {
+  /** a gout of fire from one point to another (Ares' gift in the God Mode cutscene, the burning spear) */
+  fireStream(from, to, n = 30, col = [3.2, 0.9, 0.2, 0.9]) {
+    const d = to.clone().sub(from), len = d.length();
+    d.divideScalar(len || 1);
+    for (let i = 0; i < n; i++) {
+      const u = Math.random(), sp = rand(0.6, 1.4) * len * 1.6;
+      this.glow.spawn({ x: from.x + d.x * u * 0.3 + rand(-0.1, 0.1), y: from.y + d.y * u * 0.3 + rand(-0.1, 0.1), z: from.z + d.z * u * 0.3 + rand(-0.1, 0.1),
+        vx: d.x * sp + rand(-0.6, 0.6), vy: d.y * sp + rand(-0.6, 0.6), vz: d.z * sp + rand(-0.6, 0.6),
+        life: rand(0.45, 0.7), s: rand(0.3, 0.7), s2: 0.1, c: col, c2: [col[0] * 0.4, col[1] * 0.2, col[2] * 0.1, 0], drag: 0.6 });
+    }
+  },
+  /** embers and crawling sparks clinging to a body (War Cry, God Mode) */
+  aura(root, n = 3, ember = true, spark = true) {
+    const v = this._av || (this._av = new THREE.Vector3());
+    const pts = this._ap && this._apRoot === root ? this._ap : (this._ap = [], this._apRoot = root, root.traverse((o) => { if (o.userData.joint) this._ap.push(o); }), this._ap);
+    if (!pts.length) return;
+    for (let i = 0; i < n; i++) {
+      pick(pts).getWorldPosition(v);
+      if (ember) this.glow.spawn({ x: v.x + rand(-0.12, 0.12), y: v.y + rand(-0.1, 0.1), z: v.z + rand(-0.12, 0.12), vx: rand(-0.3, 0.3), vy: rand(0.8, 2.2), vz: rand(-0.3, 0.3), life: rand(0.4, 0.8), s: rand(0.03, 0.08), s2: 0.01, c: [2.4, 0.7, 0.15, 1], c2: [1.2, 0.2, 0.04, 0], drag: 0.8 });
+      if (spark && Math.random() < 0.6) this.glow.spawn({ x: v.x + rand(-0.15, 0.15), y: v.y + rand(-0.15, 0.15), z: v.z + rand(-0.15, 0.15), vx: rand(-2, 2), vy: rand(-1, 2), vz: rand(-2, 2), life: rand(0.08, 0.2), s: rand(0.04, 0.09), s2: 0.01, c: [1.6, 2.1, 3.6, 1], c2: [0.8, 1.2, 3, 0], drag: 4 });
+    }
+  },
+  lightningStrike(pos, { radius = 3, scale = 1, sound = true, shake = 0.6, flash = 0.28 * scale, decal = true, light = 4000 * scale, puff = true } = {}) {
     const from = pos.clone().add(new THREE.Vector3(rand(-10, 10), 70 + rand(0, 20), rand(-10, 10)));
     this.bolt(from, pos, { radius: 0.12 * scale, branches: 5 });
     this.bolt(from.clone().add(new THREE.Vector3(rand(-3, 3), 0, rand(-3, 3))), pos, { radius: 0.05 * scale, branches: 2, life: 0.2 });
-    this.flashLight(pos.clone().add(new THREE.Vector3(0, 3, 0)), 0xb8d4ff, 4000 * scale, 0.45, 90);
-    this.sparks(pos.clone().add(new THREE.Vector3(0, 0.3, 0)), new THREE.Vector3(0, 1, 0), 50, [1.6, 2.0, 3.4, 1], 11);
+    this.flashLight(pos.clone().add(new THREE.Vector3(0, 3, 0)), 0xb8d4ff, light, 0.45, 90);
+    this.sparks(pos.clone().add(new THREE.Vector3(0, 0.3, 0)), new THREE.Vector3(0, 1, 0), 50, [1.6, 2.0, 3.4, 1], 11, puff);
     this.ring(pos, radius * 1.4, { color: [0.6, 0.85, 1.6], life: 0.45 });
     this.ring(pos, radius * 0.8, { color: [1.2, 1.4, 2.0], life: 0.3 });
     this.dust(pos, radius * 0.6, 14, [0.4, 0.42, 0.48, 0.4]);
-    this.decal(pos, radius * 1.3);
-    UI.flash(0.28 * scale);
+    if (decal) this.decal(pos, radius * 1.3);
+    if (flash > 0) UI.flash(flash);
     if (sound) Sound.thunder(G.camera ? G.camera.position.distanceTo(pos) * 0.4 : 0);
     if (G.cam) G.cam.shake(shake);
   },

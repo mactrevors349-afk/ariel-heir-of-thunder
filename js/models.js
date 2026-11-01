@@ -49,8 +49,13 @@ const WOMAN_SHEET = {
   // weights diffused over the skin a little: round shoulders, but still a defined elbow (more reads as rubber)
   relaxSkin: 8,
   // arms: the sculpt's own arm mesh (body_2: thin, flat-fingered, joined at the shoulders under the top's
-  // armholes) is replaced by the arms of a full-body model, measured and fitted when it loads (see graftArms)
-  arms: { url: 'assets/arms/body.glb', hide: /^body_2$/ },
+  // armholes) is replaced by the arms of a full-body model, measured and fitted when it loads (see graftArms).
+  // The donor is an athletic man: his arms are slimmed to a woman's (upper arm, forearm), and their roots
+  // reach in under the top's armholes (depth, metres past the cut) instead of a collar of the old mesh,
+  // which showed on top of the shoulders in a different tone
+  arms: { url: 'assets/arms/body.glb', hide: /^body_2$/, collar: 0, slim: [0.76, 0.88], root: 1, depth: 0.06 },
+  // the top, seen from both sides: where its armhole stands off the body you see the inside of the fabric, not a dark slit
+  twoSided: /^dress2_1$|Cotton_Oxford/,
 };
 
 // the armoured sculpt ("ARIEL GOD MODE 33" — the same file as the Ares download)
@@ -212,7 +217,24 @@ const MODEL_DEFS = {
   },
   // ---- Ariel's ordinary life
   // Anna Stormborn, his mother (an A-posed figure, auto-skinned; her flared skirt swings with her hips)
-  anna: { url: 'assets/anna/anna.glb', type: 'glb', height: 1.74, label: 'Anna', ...WOMAN_SHEET },
+  anna: {
+    url: 'assets/anna/anna.glb', type: 'glb', height: 1.74, label: 'Anna', ...WOMAN_SHEET,
+    // her face is evenly lit in its texture, so it reads flat: the shadow a face holds is painted into the skin
+    // (as Athena's is, the same map moved up to her eyes at 1.721 m), and her eyes are shaded toward the lids
+    relief: {
+      mesh: /^Material13454$/, box: { x: 0.08, y0: 1.615, y1: 1.765, z: 0.03 },
+      shape: [],
+      shade: [
+        [0.030, 1.722, 0.016, 0.011, 0.3], [0.014, 1.718, 0.006, 0.008, 0.26],          // eye sockets, inner corners
+        [0.030, 1.731, 0.013, 0.0025, 0.2],                                               // the crease of the upper lid
+        [0.012, 1.686, 0.005, 0.005, 0.28], [0, 1.680, 0.011, 0.004, 0.22],               // beside the nostrils, under the nose
+        [0.017, 1.660, 0.004, 0.004, 0.28], [0, 1.661, 0.015, 0.0016, 0.26],              // mouth corners, the line of the lips
+        [0, 1.647, 0.012, 0.003, 0.18], [0.021, 1.672, 0.004, 0.010, 0.12],               // under the lower lip, smile lines
+        [0, 1.624, 0.03, 0.008, 0.22], [0.045, 1.667, 0.013, 0.010, 0.1],                 // under the chin, cheek hollows
+      ],
+    },
+    eyes: /^eye_[LR]$/,
+  },
   // Jesse: the same figure in her own clothes, wearing her own (sculpted) head
   jesse: { url: 'assets/jesse/jesse.glb', type: 'glb', height: 1.64, label: 'Jesse', ...WOMAN_SHEET },
   // a classmate with his own skeleton (Ready Player Me naming is Mixamo's)
@@ -256,6 +278,7 @@ const Models = {
     progress('Summoning the gods…', 0.88);
     // motion-captured clips, retargeted onto the rig (see loadMotion)
     this.loadMotion('texting', 'assets/anim/texting.json');
+    this.loadMotion('run', 'assets/anim/run.json');
     // the full-body model whose arms some sculpts wear (see graftArms): measured before any model is prepared
     const donorUrl = keys.map((k) => MODEL_DEFS[k].arms && MODEL_DEFS[k].arms.url).find(Boolean);
     if (donorUrl) try { await this.loadDonor(glb, donorUrl); } catch (e) { console.warn('arm donor failed', e); this.donor = null; }
@@ -288,7 +311,8 @@ const Models = {
         return [i / n, o, 'lin'];
       });
       keys.push([1, keys[0][1], 'lin']);
-      CLIPS[name] = { dur: n * dt, loop: true, keys };
+      // (a run also says where in its cycle the left thigh is furthest forward, and its stride: see Rig.update)
+      CLIPS[name] = { dur: n * dt, loop: true, keys, lfwd: m.lfwd, stride: m.stride };
       // the same arms, held still: the hands together in front of the body (a mug, a phone)
       CLIPS[name + 'Hold'] = { dur: 0.6, hold: true, mask: 'arms', keys: [[0, {}], [1, keys[Math.floor(n * 0.3)][1]]] };
     } catch (e) { /* opened from disk: the hand-made poses stand in */ }
@@ -312,6 +336,7 @@ const Models = {
         const ms = Array.isArray(o.material) ? o.material : [o.material];
         ms.forEach((m) => {
           m.envMapIntensity = 0.75; m.roughness = Math.max(m.roughness, 0.3);
+          if (d.twoSided && (d.twoSided.test(o.name) || d.twoSided.test(m.name))) m.side = THREE.DoubleSide;
           if (d.enhance && m.map && !cache.has(m.map)) cache.set(m.map, this.enhance(m.map, d.enhance));
           if (d.enhance && m.map) m.map = cache.get(m.map);
         });
@@ -322,6 +347,7 @@ const Models = {
       }
     });
     if (d.relief) this.relief(obj, d);
+    if (d.eyes) this.shadeEyes(obj, d);
     if (d.grip) this.curlGrip(obj, d);
     if (d.arms && this.donor && !d._graft) this.graftArms(obj, d);
     if (d.arms && d._graft) this.trimArms(obj, d);
@@ -448,6 +474,32 @@ const Models = {
       }
       this.smoothNormals(g);
       if (col) { g.setAttribute('color', new THREE.BufferAttribute(col, 3)); [].concat(o.material).forEach((m) => { m.vertexColors = true; }); }
+    });
+  },
+  /**
+   * A sculpt's eyeballs, shaded as a real eye is: the white dims toward the corners and under the upper
+   * lid, which shadows it, and only the iris and the white beside it stay bright. Without it a game model's
+   * fully lit, pure white eyeballs stare.
+   */
+  shadeEyes(obj, d) {
+    obj.traverse((o) => {
+      if (!o.isMesh || !d.eyes.test(o.name)) return;
+      const g = o.geometry, P = g.attributes.position;
+      g.computeBoundingSphere();
+      const c = g.boundingSphere.center, R = g.boundingSphere.radius || 1, v = new THREE.Vector3();
+      // the eye looks the way its furthest-forward point lies from its centre (the cornea bulges)
+      const fwd = new THREE.Vector3();
+      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).sub(c); if (v.z > fwd.z) fwd.copy(v); }
+      fwd.normalize();
+      const col = new Float32Array(P.count * 3);
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i).sub(c).divideScalar(R);
+        const front = v.dot(fwd), up = v.y;
+        const k = lerp(0.55, 1, smooth(0.45, 0.93, front)) * (1 - 0.22 * smooth(-0.05, 0.55, up));
+        col[i * 3] = k; col[i * 3 + 1] = k * 0.98; col[i * 3 + 2] = k * 0.97;
+      }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      [].concat(o.material).forEach((m) => { m.vertexColors = true; m.needsUpdate = true; });
     });
   },
   /**
@@ -1042,15 +1094,17 @@ const Models = {
         // so none of the donor's chest comes along with it
         r.copy(p).sub(A.sh);
         const along = r.dot(dU), off = r.addScaledVector(dU, -along).length();
-        if (r.copy(p).sub(A.sh).dot(nCut) < -0.03 || ax < 0.12 || p.y > A.sh.y + 0.07 || off > 0.062) continue;
+        if (r.copy(p).sub(A.sh).dot(nCut) < -(d.arms.depth ?? 0.03) || ax < 0.12 || p.y > A.sh.y + 0.07 || off > 0.062) continue;
       }
       // upper-arm placement, forearm placement, blended across the elbow; near the root the arm is drawn in
       // a little toward its axis, so it fills the armhole under the top without pushing out through it
+      // (slimmed along the arm: the root as wide as the armhole, the upper arm and the forearm narrower)
+      const [slimU, slimF] = d.arms.slim || [1, 1], root = d.arms.root ?? 0.92;
       r.copy(p).sub(A.sh); const aU = r.dot(dU); r.addScaledVector(dU, -aU);
-      r.multiplyScalar(0.92 + 0.08 * sm(0.0, 0.1, aU));
+      r.multiplyScalar(lerp(root, slimU, sm(-0.02, 0.1, aU)));
       u.copy(dU).multiplyScalar(aU < 0 ? aU : aU * kU).add(r).applyQuaternion(RU).add(Jsh);
       r.copy(p).sub(A.el); const aF = r.dot(dF); r.addScaledVector(dF, -aF);
-      const hs = 1 - 0.06 * sm(LF - 0.01, LF + 0.03, aF);   // a slightly smaller hand
+      const hs = (1 - 0.06 * sm(LF - 0.01, LF + 0.03, aF)) * lerp(slimF, 1, sm(LF - 0.03, LF + 0.02, aF));   // a slimmer forearm, a slightly smaller hand
       if (aF <= LF) f.copy(dF).multiplyScalar(aF * kF).add(r.multiplyScalar(hs)).applyQuaternion(RF).add(Jel);
       else f.copy(dF).multiplyScalar(aF - LF).add(r).multiplyScalar(hs).applyQuaternion(RF).add(Jwr);
       const w = sm(-0.03, 0.03, aF);
@@ -1379,15 +1433,22 @@ function keraunosMaterial(m) {
 }
 // god-mode Ariel: the gold worn and tarnished toward old bronze, the way war-gods' armour looks in the old games.
 // Only the metal changes (the sculpt's skin and cloth share the texture, and stay as they are)
+// Berserker God Mode: how strongly the gods' fire burns along the armour's edges (Player.updateGlow sets it)
+const GOD_GLOW = { value: 0 };
 function agedGold(m) {
   const c = m.clone();
   c.onBeforeCompile = (sh) => {
-    sh.fragmentShader = sh.fragmentShader.replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
+    sh.uniforms.uGodGlow = GOD_GLOW;
+    sh.fragmentShader = 'uniform float uGodGlow;\n' + sh.fragmentShader.replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
       float agL = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
       vec3 aged = mix(vec3(agL), diffuseColor.rgb, 0.72) * vec3(1.0, 0.91, 0.76) * 0.84;
       float agM = smoothstep(0.3, 0.7, metalnessFactor);
       diffuseColor.rgb = mix(diffuseColor.rgb, aged, agM);
-      roughnessFactor = mix(roughnessFactor, max(roughnessFactor, 0.36), agM);`);
+      roughnessFactor = mix(roughnessFactor, max(roughnessFactor, 0.36), agM);`).replace('#include <opaque_fragment>', `
+      // God Mode: Ares' fire at the grazing edges, a molten warmth in the metal itself
+      float gdF = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+      outgoingLight += (vec3(1.0, 0.36, 0.06) * pow(gdF, 3.2) * 1.5 + vec3(1.0, 0.5, 0.16) * agM * 0.07) * uGodGlow;
+      #include <opaque_fragment>`);
   };
   c.envMapIntensity = 0.85;
   c.customProgramCacheKey = () => 'agedGold';

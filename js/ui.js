@@ -12,7 +12,8 @@ const UI = {
   replay(id) { const e = this.el(id); e.classList.add('hidden'); void e.offsetWidth; e.classList.remove('hidden'); },
 
   init() {
-    this.bars = { hp: { v: 1, chip: 1, hold: 0 }, fp: { v: 1, chip: 1, hold: 0 }, st: { v: 1, chip: 1, hold: 0 } };
+    this.bars = { hp: { v: 1, chip: 1, hold: 0 }, fp: { v: 1, chip: 1, hold: 0 }, st: { v: 1, chip: 1, hold: 0 }, rage: { v: 0, chip: 0, hold: 0 } };
+    this.buildAbilities();
     this.bossState = { v: 1, chip: 1, hold: 0, dmg: 0, dmgT: 0, enemy: null };
     this.ebars = new Map();
     this.labels = new Map();
@@ -25,11 +26,41 @@ const UI = {
       'Right-click calls the thunder down with your blade. It hits everything around you.',
       'Zeus\'s Bolt (Q) strikes whatever you are locked on to.',
       'Golden apples of the Hesperides grant another draught of Ambrosia.',
+      'Every blow you trade fills your Rage. When it is full, press G: Zeus and Ares lend you everything.',
+      'Press F to ride the storm into the air. Right-click from above to dive like a thunderbolt.',
+      'Keys 1 to 6 call the gifts of Zeus and Ares. Thunder Step (2) goes straight through a foe.',
       'If you fall, your Ichor stays where you died. Return to reclaim it.',
       'Watch for the moment a foe\'s weapon stops rising. That is when to roll.',
     ];
     this.el('load-tip').textContent = pick(tips);
     this.tips = tips;
+  },
+
+  /** a slot for each gift of Zeus and Ares (keys 1-6), then flight (F) and God Mode (G) */
+  buildAbilities() {
+    const Z = 'fill="url(#gZeus)" stroke="#e8f2ff" stroke-width="1.2"', A = 'fill="url(#gAres)" stroke="#ffd9a8" stroke-width="1.2"';
+    const ICON = {
+      chain: `<path d="M6 44 L20 24 L28 36 L40 14 L48 28 L58 20" fill="none" stroke="url(#gZeus)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="20" cy="24" r="4" fill="#fff"/><circle cx="40" cy="14" r="4" fill="#fff"/><circle cx="58" cy="20" r="3.5" fill="#fff"/>`,
+      dash: `<path d="M4 38 L30 30 L25 19 L60 32 L34 39 L39 50 Z" ${Z}/>`,
+      storm: `<path d="M14 32 a10 10 0 0 1 10-12 a13 13 0 0 1 24 3 a9 9 0 0 1 3 17 H17 a8 8 0 0 1 -3-8 Z" fill="#9fb3cf" stroke="#e8f2ff" stroke-width="1.2"/><path d="M26 42 l-5 10 h6 l-3 10 l10-14 h-6 l3-6 Z M42 42 l-4 8 h5 l-2 8 l8-11 h-5 l2-5 Z" ${Z}/>`,
+      warcry: `<path d="M32 4 C37 16 48 22 46 38 a14 14 0 0 1 -28 0 c0-8 5-12 6-19 c4 4 6 8 6 13 c3-7 0-16 2-28 Z" ${A}/>`,
+      charge: `<path d="M32 6 L54 14 V30 C54 44 44 54 32 58 C20 54 10 44 10 30 V14 Z" ${A}/><path d="M24 22 L32 40 L40 22" fill="none" stroke="#3a0c04" stroke-width="3"/>`,
+      spear: `<path d="M8 56 L46 18" stroke="url(#gAres)" stroke-width="4" stroke-linecap="round"/><path d="M42 10 L58 6 L54 22 L46 22 L42 18 Z" ${A}/><path d="M14 46 c-4 2 -6 6 -5 10 c4 0 8-2 10-6" fill="#ff8a2a" opacity=".85"/>`,
+      fly: `<path d="M4 42 C16 22 34 14 60 12 C48 20 42 26 38 32 C46 30 52 30 58 33 C46 39 30 46 4 42 Z" ${Z}/>`,
+      god: `<path d="M32 4 C38 16 50 22 48 40 a16 16 0 0 1 -32 0 c0-9 6-14 7-22 c4 5 6 9 6 14 c3-8 0-18 5-28 Z" fill="url(#gGod)" stroke="#fff1c8" stroke-width="1.2"/><path d="M34 22 L24 40 h7 l-3 14 L42 34 h-7 l4-12 Z" fill="#ffffff" opacity=".95"/>`,
+    };
+    const box = this.el('abilities');
+    this.slots = {};
+    const add = (id, key, name, cls) => {
+      const el = document.createElement('div');
+      el.className = 'slot mini ' + cls; el.id = 'slot-' + id;
+      el.innerHTML = `<svg viewBox="0 0 64 64">${ICON[id]}</svg><span class="key">${key}</span><span class="slot-name">${name}</span><div class="cd"></div><span class="cd-num"></span>`;
+      box.appendChild(el);
+      this.slots[id] = { el, cd: el.querySelector('.cd'), num: el.querySelector('.cd-num'), f: -1 };
+    };
+    for (const ab of ABILITIES) add(ab.id, ab.key.slice(-1), ab.short, ab.god);
+    add('fly', 'F', 'Fly', 'zeus');
+    add('god', 'G', 'God Mode', 'god');
   },
 
   loading(label, pct) {
@@ -46,7 +77,26 @@ const UI = {
       this.bar('st', Math.max(0, P.st), P.maxSt, 110 + P.maxSt * 1.6, dt);
       this.el('flask-count').textContent = P.flasks;
       this.el('slot-flask').classList.toggle('empty', P.flasks <= 0);
-      this.el('slot-spell').classList.toggle('empty', P.fp < PLAYER_ACTIONS.cast.fp);
+      this.el('slot-spell').classList.toggle('empty', P.fp < PLAYER_ACTIONS.cast.fp && !P.god);
+      // the gifts: the cooldown's shade drains off each slot; Rage, flight and God Mode light up
+      for (const ab of ABILITIES) {
+        const s = this.slots[ab.id], left = P.cd[ab.id] || 0, f = left / ab.cd;
+        if (Math.abs(s.f - f) > 0.002) { s.f = f; s.cd.style.height = (f * 100).toFixed(1) + '%'; s.num.textContent = left > 0.05 ? Math.ceil(left) : ''; }
+        const a = PLAYER_ACTIONS[ab.id];
+        s.el.classList.toggle('empty', !P.god && ((a.fp && P.fp < a.fp) || (a.st && P.st <= 0)));
+      }
+      this.slots.fly.el.classList.toggle('active', P.flying);
+      this.slots.fly.el.classList.toggle('empty', !P.flying && !P.god && P.fp < 12);
+      const full = P.rage >= 100 && !P.god;
+      this.slots.god.el.classList.toggle('ready', full);
+      this.slots.god.el.classList.toggle('active', !!P.god);
+      this.slots.god.el.classList.toggle('empty', !full && !P.god);
+      this.bar('rage', P.rage, 100, 220, dt);
+      const rb = this.el('bar-rage');
+      rb.classList.toggle('full', full);
+      rb.classList.toggle('god', !!P.god);
+      const rl = P.god ? 'GOD MODE' : full ? 'RAGE · PRESS G' : 'RAGE';
+      if (this._rl !== rl) { this._rl = rl; this.el('rage-label').textContent = rl; }
       if (this._ichor !== P.ichor) { this._ichor = P.ichor; this.el('ichor-val').textContent = P.ichor.toLocaleString(); }
       // lock reticle
       if (P.lock && P.lock.alive) {
