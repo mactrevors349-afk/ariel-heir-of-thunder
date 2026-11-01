@@ -89,7 +89,8 @@ class Enemy {
     this.patrol = opts.patrol || null;
     this.pos = new THREE.Vector3();
     G.scene.add(this.root);
-    if (opts.cloak) {
+    // (a model brings its own cloth: the Spartan wears his red drape, and a cape simulated over it floated off his back)
+    if (opts.cloak && !this.model) {
       this.cape = new Cape(this.rig, { width: 0.52, topWidth: 0.36, length: 0.9, cols: 9, rows: 10, material: Mat.capeRag, top: 0.25, back: -0.15 });
       this.cape.attach(G.scene);
     }
@@ -225,6 +226,12 @@ class Enemy {
     this.rig.legYaw = damp(this.rig.legYaw || 0, this.state === 'attack' || this.state === 'stagger' ? 0 : legWant, 8, dt);
     this.rig.update(dt, this.state === 'attack' || this.state === 'stagger' ? 0 : this.loco, moveDir);
     if (this.model) this.model.update();
+    // a Hollow hoplite is shade inside its bronze: it smokes faintly as it moves
+    if (this.type === 'hoplite' && camD < 35 && Math.random() < 0.3) {
+      const j = this.rig.j[pick(['chest', 'spine', 'armL', 'armR', 'elbowL', 'elbowR', 'thighL', 'thighR', 'neck'])];
+      const p = j.getWorldPosition(this._b);
+      FX.smoke.spawn({ x: p.x + rand(-0.06, 0.06), y: p.y, z: p.z + rand(-0.06, 0.06), vx: rand(-0.15, 0.15), vy: rand(0.3, 0.8), vz: rand(-0.15, 0.15), life: rand(0.8, 1.5), s: rand(0.08, 0.14), s2: rand(0.35, 0.6), c: [0.06, 0.05, 0.05, 0.32], c2: [0.08, 0.07, 0.07, 0], drag: 1.2 });
+    }
     if (this.cape && this.cape.mesh.visible) this.cape.update(dt);
     if (this.trail) {
       if (this.state === 'attack' && this.act.trail && this.parts.weapon) {

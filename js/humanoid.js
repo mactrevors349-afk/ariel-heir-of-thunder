@@ -15,6 +15,8 @@ const JI = {};
 JOINTS.forEach((n, i) => { JI[n] = i * 3; });
 const UPPER_IDX = ['spine', 'chest', 'neck', 'head', 'armL', 'elbowL', 'handL', 'armR', 'elbowR', 'handR'].map((n) => JI[n]);
 const ARM_IDX = ['armL', 'elbowL', 'handL', 'armR', 'elbowR', 'handR'].map((n) => JI[n]);
+// the legs and the hips' turn (with the hips' offset): a run laid under arms that are busy holding something
+const LOWER_IDX = ['hips', 'thighL', 'kneeL', 'footL', 'thighR', 'kneeR', 'footR'].map((n) => JI[n]);
 
 function compilePose(obj) {
   const p = new Float32Array(POSE_LEN);
@@ -42,7 +44,15 @@ const STANCES = {
     spine: [2, 0, 0], head: [3, 0, 0], armL: [3, 0, 7], elbowL: [-12, 0, 0], armR: [3, 0, -7], elbowR: [-12, 0, 0],
     thighL: [-2, 0, 2], kneeL: [3, 0, 0], thighR: [1, 0, -2], kneeR: [3, 0, 0],
   },
+  // the spear held overhand, as the hoplites did: the fist above the shoulder, the shaft over it and levelled at the
+  // foe across the top of the shield (solved on the Spartan model for the fist's place and the point's aim)
   hoplite: {
+    hp: [0, -0.06, 0], spine: [10, 0, 0], chest: [4, 18, 0], neck: [-8, -14, 0], head: [-4, -4, 0],
+    armL: [-5, -70, 40], elbowL: [-95, 0, 0], armR: [-88, -72, -59], elbowR: [-142, 0, 0], handR: [-2, -68, 3],
+    thighL: [-22, 0, 6], kneeL: [22, 0, 0], footL: [-2, 0, 0], thighR: [14, 0, -8], kneeR: [18, 0, 0], footR: [-6, 0, 0],
+  },
+  // the sword-armed: the blade held up beside the face, behind the shield
+  hopliteSword: {
     hp: [0, -0.06, 0], spine: [10, 0, 0], chest: [4, 18, 0], neck: [-8, -14, 0], head: [-4, -4, 0],
     armL: [-5, -70, 40], elbowL: [-95, 0, 0], armR: [12, 0, -22], elbowR: [-95, 0, 0], handR: [0, 0, 0],
     thighL: [-22, 0, 6], kneeL: [22, 0, 0], footL: [-2, 0, 0], thighR: [14, 0, -8], kneeR: [18, 0, 0], footR: [-6, 0, 0],
@@ -383,9 +393,10 @@ const CLIPS = {
   /* ---------------------------------------------------------- hoplite */
   thrust: {
     dur: 1.2, keys: [[0, {}],
-      [0.36, { hp: [0, -0.08, -0.05], chest: [0, 32, 0], spine: [6, 10, 0], armR: [25, 0, -28], elbowR: [-110, 0, 0], handR: [0, 0, 0] }],
-      [0.5, { hp: [0, -0.1, 0.15], chest: [10, -12, 0], spine: [16, -6, 0], armR: [-78, 0, -6], elbowR: [-6, 0, 0], handR: [0, 0, 0], thighL: [-40, 0, 6], kneeL: [40, 0, 0], thighR: [22, 0, -8], kneeR: [16, 0, 0] }, 'in'],
-      [0.7, { hp: [0, -0.1, 0.14], chest: [8, -10, 0], spine: [14, -5, 0], armR: [-72, 0, -8], elbowR: [-15, 0, 0], thighL: [-38, 0, 6], kneeL: [38, 0, 0], thighR: [20, 0, -8], kneeR: [16, 0, 0] }],
+      // overhand: the fist drawn up and back, then the spear driven forward and down over the shield
+      [0.36, { hp: [0, -0.08, -0.05], chest: [0, 32, 0], spine: [6, 10, 0], armR: [-111, -39, -100], elbowR: [-133, 0, 0], handR: [1, -65, -2] }],
+      [0.5, { hp: [0, -0.1, 0.15], chest: [10, -12, 0], spine: [16, -6, 0], armR: [-65, -7, 10], elbowR: [-88, 0, 0], handR: [-50, -23, 0], thighL: [-40, 0, 6], kneeL: [40, 0, 0], thighR: [22, 0, -8], kneeR: [16, 0, 0] }, 'in'],
+      [0.7, { hp: [0, -0.1, 0.14], chest: [8, -10, 0], spine: [14, -5, 0], armR: [-52, -10, 10], elbowR: [-98, 0, 0], handR: [-50, -24, -2], thighL: [-38, 0, 6], kneeL: [38, 0, 0], thighR: [20, 0, -8], kneeR: [16, 0, 0] }],
       [1, {}]],
   },
   bash: {
@@ -610,8 +621,9 @@ class Rig {
     if (w <= 0) return;
     // ease the cross-fade itself, so actions settle in and out instead of snapping at the ends
     w = w >= 1 ? 1 : w * w * (3 - 2 * w);
-    if (mask === 'upper' || mask === 'arms') {
-      for (const i of mask === 'arms' ? ARM_IDX : UPPER_IDX) { P[i] = lerpAngle(P[i], src[i], w); P[i + 1] = lerpAngle(P[i + 1], src[i + 1], w); P[i + 2] = lerpAngle(P[i + 2], src[i + 2], w); }
+    if (mask === 'upper' || mask === 'arms' || mask === 'lower') {
+      for (const i of mask === 'arms' ? ARM_IDX : mask === 'lower' ? LOWER_IDX : UPPER_IDX) { P[i] = lerpAngle(P[i], src[i], w); P[i + 1] = lerpAngle(P[i + 1], src[i + 1], w); P[i + 2] = lerpAngle(P[i + 2], src[i + 2], w); }
+      if (mask === 'lower') for (let i = HP; i < POSE_LEN; i++) P[i] = lerp(P[i], src[i], w);
       return;
     }
     for (let i = 0; i < HP; i++) P[i] = lerpAngle(P[i], src[i], w);
@@ -663,7 +675,7 @@ class Rig {
       if (mc && run > 0.02) {
         const u = this.phase / TAU - 0.25 + (mo.lfwd || 0);
         this.sample(mc, u - Math.floor(u), this.tmp);
-        this.blend(this.tmp, run * g * (this.mocapW ?? 1), null);
+        this.blend(this.tmp, run * g * (this.mocapW ?? 1), this.mocapMask || null);
       }
     }
     // ---- breathing, and a slow shift of weight from foot to foot when standing
@@ -998,7 +1010,62 @@ function initCharacterMaterials() {
     capeRag: new THREE.MeshStandardMaterial({ map: Tex.capeRag, roughness: 0.9, side: THREE.DoubleSide, alphaTest: 0.5, normalMap: Tex.cloth.normal }),
   });
   Mat.ghost = makeGhostMaterial(new THREE.Color(0.55, 0.8, 1.6), 0.9);
+  // the Hollow: what is left inside a hoplite's armour is shade, dark as wet ash, the rot glowing in its cracks
+  Mat.shadeFlesh = makeShadeMaterial();
+  // and their bronze: centuries in the open, dulled, darkened, gone green where the rain sat
+  Mat.bronzeOld = makeOldBronze();
   Mat.zeus = makeGhostMaterial(new THREE.Color(0.8, 0.95, 1.8), 0.85);
+}
+
+function makeShadeMaterial() {
+  const m = new THREE.MeshStandardMaterial({ color: 0x0f0c0b, roughness: 0.95, metalness: 0 });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = G.uniforms.time;
+    sh.vertexShader = 'varying vec3 vShade;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vShade = position * 9.0;');
+    sh.fragmentShader = `uniform float uTime; varying vec3 vShade;
+      float shH(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+      float shN(vec3 p) {
+        vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(mix(shH(i), shH(i + vec3(1, 0, 0)), f.x), mix(shH(i + vec3(0, 1, 0)), shH(i + vec3(1, 1, 0)), f.x), f.y),
+                   mix(mix(shH(i + vec3(0, 0, 1)), shH(i + vec3(1, 0, 1)), f.x), mix(shH(i + vec3(0, 1, 1)), shH(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+      }
+      ` + sh.fragmentShader.replace('#include <opaque_fragment>', `
+      // cracks where the noise crosses its middle, glowing like coals, breathing slowly; only here and there
+      // (a broad noise gates them), so they read as burns in ash, not lines drawn round the limbs
+      float shn = shN(vShade) * 0.65 + shN(vShade * 2.3 + 7.0) * 0.35;
+      float vein = 1.0 - smoothstep(0.0, 0.022, abs(shn - 0.5));
+      vein *= smoothstep(0.5, 0.75, shN(vShade * 0.37 + 3.1));
+      float pulse = 0.5 + 0.5 * sin(uTime * 1.7 + shn * 14.0);
+      outgoingLight *= 0.75 + 0.5 * shN(vShade * 3.7);
+      outgoingLight += vec3(1.5, 0.36, 0.07) * vein * pulse;
+      // smoke at the edges: a soft, ashen rim instead of a hard mannequin silhouette
+      float shR = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+      outgoingLight += vec3(0.16, 0.09, 0.07) * pow(shR, 2.5);
+      #include <opaque_fragment>`);
+  };
+  m.customProgramCacheKey = () => 'shadeFlesh2';
+  return m;
+}
+function makeOldBronze() {
+  const m = new THREE.MeshStandardMaterial({ color: 0xa08a68, map: Tex.bronze.map, roughnessMap: Tex.bronze.orm, metalnessMap: Tex.bronze.orm, metalness: 1, roughness: 1, envMapIntensity: 1.0 });
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = 'varying vec3 vOld;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vOld = position * 14.0;');
+    sh.fragmentShader = `varying vec3 vOld;
+      float obH(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+      float obN(vec3 p) {
+        vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(mix(obH(i), obH(i + vec3(1, 0, 0)), f.x), mix(obH(i + vec3(0, 1, 0)), obH(i + vec3(1, 1, 0)), f.x), f.y),
+                   mix(mix(obH(i + vec3(0, 0, 1)), obH(i + vec3(1, 0, 1)), f.x), mix(obH(i + vec3(0, 1, 1)), obH(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+      }
+      ` + sh.fragmentShader.replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
+      // verdigris: patches of pale green-blue patina, matte and no longer metal
+      float pat = smoothstep(0.6, 0.78, obN(vOld * 2.0) * 0.55 + obN(vOld * 6.3) * 0.45);
+      diffuseColor.rgb = mix(diffuseColor.rgb * 0.78, vec3(0.13, 0.22, 0.18), pat * 0.7);
+      metalnessFactor *= 1.0 - pat * 0.75;
+      roughnessFactor = mix(roughnessFactor, 0.85, pat * 0.8);`);
+  };
+  m.customProgramCacheKey = () => 'bronzeOld2';
+  return m;
 }
 
 function makeGhostMaterial(color, opacity) {
@@ -1254,7 +1321,7 @@ function makeSpear() {
 function makeHoplon(emblem = true) {
   const g = new THREE.Group();
   const prof = [[0, 0.075], [0.18, 0.068], [0.33, 0.045], [0.41, 0.015], [0.445, 0.0], [0.47, 0.012], [0.475, 0.03], [0.46, 0.035], [0.44, 0.02], [0.0, 0.02]].map(([x, y]) => new THREE.Vector2(x, y));
-  part(g, new THREE.LatheGeometry(prof, 32), Mat.bronze, [0, 0, 0]);
+  part(g, new THREE.LatheGeometry(prof, 32), Mat.bronzeOld, [0, 0, 0]);
   if (emblem) {
     part(g, new THREE.TorusGeometry(0.2, 0.012, 6, 28), Mat.crest, [0, 0.066, 0], [90, 0, 0]);
     part(g, gbox(0.03, 0.006, 0.26), Mat.crest, [0.05, 0.074, 0], [0, 25, 0]);
@@ -1388,15 +1455,16 @@ function corinthian(J, mat, crestMat, eyeMat, scale = 1) {
 }
 
 function buildHoplite({ weapon = 'spear', cloak = true } = {}) {
-  const { root, J } = buildBody({ bulk: 0.92, mats: { skin: Mat.skinDead, torso: Mat.bronze, pelvis: Mat.leather, upper: Mat.skinDead, fore: Mat.skinDead, hand: Mat.skinDead, thigh: Mat.skinDead, shin: Mat.bronze, foot: Mat.leather, eye: null } });
-  corinthian(J, Mat.bronze, Mat.crest, Mat.glowEmber);
+  // the Hollow: old bronze over a body of shade, eyes burning in the helmet's slits
+  const { root, J } = buildBody({ bulk: 0.92, mats: { skin: Mat.shadeFlesh, torso: Mat.bronzeOld, pelvis: Mat.leather, upper: Mat.shadeFlesh, fore: Mat.shadeFlesh, hand: Mat.shadeFlesh, thigh: Mat.shadeFlesh, shin: Mat.bronzeOld, foot: Mat.leather, eye: null } });
+  corinthian(J, Mat.bronzeOld, Mat.crest, Mat.glowEmber);
   // pteruges skirt
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * TAU;
     part(J.hips, gbox(0.065, 0.22, 0.012), Mat.leather, [Math.sin(a) * 0.13, -0.12, Math.cos(a) * 0.1], [Math.cos(a) * 8, a / DEG, -Math.sin(a) * 8]);
   }
-  part(J.armR, new THREE.SphereGeometry(0.075, 14, 8, 0, TAU, 0, Math.PI / 2), Mat.bronze, [-0.01, 0.0, 0], [0, 0, 12], [1.1, 0.8, 1.1]);
-  part(J.armL, new THREE.SphereGeometry(0.075, 14, 8, 0, TAU, 0, Math.PI / 2), Mat.bronze, [0.01, 0.0, 0], [0, 0, -12], [1.1, 0.8, 1.1]);
+  part(J.armR, new THREE.SphereGeometry(0.075, 14, 8, 0, TAU, 0, Math.PI / 2), Mat.bronzeOld, [-0.01, 0.0, 0], [0, 0, 12], [1.1, 0.8, 1.1]);
+  part(J.armL, new THREE.SphereGeometry(0.075, 14, 8, 0, TAU, 0, Math.PI / 2), Mat.bronzeOld, [0.01, 0.0, 0], [0, 0, -12], [1.1, 0.8, 1.1]);
   const parts = {};
   const shield = makeHoplon();
   shield.position.set(0.043, -0.131, -0.04);
@@ -1407,8 +1475,101 @@ function buildHoplite({ weapon = 'spear', cloak = true } = {}) {
   else { parts.weapon = makeXiphos(); parts.weapon.children.forEach((c) => { if (c.material === Mat.glowBlue) c.visible = false; }); J.handR.add(parts.weapon); }
   finalize(root);
   skinBody(root);
-  const rig = new Rig(root, J, { stance: 'hoplite', armSwing: [0.2, 0.25] });
-  return { root, J, rig, parts, cloak };
+  const rig = new Rig(root, J, { stance: weapon === 'spear' ? 'hoplite' : 'hopliteSword', armSwing: [0.2, 0.25] });
+  // they run with the same motion-captured run as Ariel, legs and hips only: the arms keep the spear and shield up
+  rig.mocapRun = 'run';
+  rig.mocapMask = 'lower';
+  // the Spartan wears the rig, with his own shield on his arm; the sword-armed keep his sword, the rest a spear
+  // (the code-built body above is only the stand-in if the model can't load)
+  const model = Models.attach(rig, 'spartan', { keep: weapon === 'spear' ? [parts.weapon] : [] });
+  if (model) {
+    // (the file's bounds are in its own centimetre frame, so culling would drop the helmet at some angles;
+    // a far hoplite is hidden whole anyway)
+    model.holder.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+    let sword = null;
+    model.holder.traverse((o) => { if (o.isMesh && /Sword/.test([].concat(o.material)[0].name)) sword = o; });
+    if (weapon === 'spear') {
+      // the model's hand is relaxed and open: closed into a fist, the spear through the middle of it
+      if (sword) sword.visible = false;
+      curlFist(model, 'r', [55, 70, 50], [8, 25, 25]);
+      seatInFist(model, 'r', parts.weapon);
+    } else if (sword) {
+      const grip = fistGrip(model, sword, 'hand_r_022');
+      if (grip) parts.weapon = grip;
+    }
+  }
+  return { root, J, rig, parts, cloak, model };
+}
+
+/**
+ * Trail markers for a rigged model's own sword (base of the blade, tip), fixed to the bone that holds it: the
+ * sword's two ends along its length, measured in the bind pose (the grip end is the one nearer the hand).
+ */
+function fistGrip(binding, sword, boneName) {
+  const sk = binding.model.userData.skeleton;
+  const hand = sk && sk.bones.find((b) => b.name === boneName);
+  if (!hand) return null;
+  const saved = sk.bones.map((bn) => [bn.position.clone(), bn.quaternion.clone(), bn.scale.clone()]);
+  sk.pose();
+  binding.holder.updateMatrixWorld(true);
+  const P = sword.geometry.attributes.position, v = new THREE.Vector3(), pts = [];
+  for (let i = 0; i < P.count; i += 3) pts.push(v.fromBufferAttribute(P, i).applyMatrix4(sword.matrixWorld).clone());
+  const box = new THREE.Box3().setFromPoints(pts), size = box.getSize(new THREE.Vector3());
+  const ax = size.x >= size.y && size.x >= size.z ? 'x' : size.y >= size.z ? 'y' : 'z';
+  let a = pts[0], b = pts[0];
+  for (const p of pts) { if (p[ax] < a[ax]) a = p; if (p[ax] > b[ax]) b = p; }
+  const hp = hand.getWorldPosition(new THREE.Vector3());
+  if (a.distanceTo(hp) > b.distanceTo(hp)) [a, b] = [b, a];
+  const mk = (p) => { const o = new THREE.Object3D(); hand.add(o); o.position.copy(hand.worldToLocal(p.clone())); return o; };
+  const out = { userData: { base: mk(a.clone().lerp(b, 0.22)), tip: mk(b) } };
+  sk.bones.forEach((bn, i) => { bn.position.copy(saved[i][0]); bn.quaternion.copy(saved[i][1]); bn.scale.copy(saved[i][2]); });
+  binding.update();
+  return out;
+}
+
+/**
+ * Close a rigged hand (Unreal finger names: index_01_r ...) into a fist: every finger joint turned toward the palm
+ * by the given degrees (base, middle, tip), and the thumb wrapped over. The palm side is read from the way the
+ * middle finger already bends. The binding never drives the fingers, so the fist stays closed.
+ */
+function curlFist(binding, side, deg, thumbDeg) {
+  const sk = binding.model.userData.skeleton;
+  const B = (n) => sk.bones.find((b) => b.name.startsWith(n + '_' + side + '_'));
+  const W = (b) => b.getWorldPosition(new THREE.Vector3());
+  binding.holder.updateMatrixWorld(true);
+  const m1 = W(B('middle_01')), m2 = W(B('middle_02')), m3 = W(B('middle_03'));
+  const a1 = m2.clone().sub(m1).normalize(), a2 = m3.clone().sub(m2).normalize();
+  const palm = a2.clone().sub(a1.clone().multiplyScalar(a2.dot(a1))).normalize();
+  const q = new THREE.Quaternion(), wq = new THREE.Quaternion(), pq = new THREE.Quaternion();
+  const turn = (b, d) => {
+    const c = b && b.children.find((x) => x.isBone);
+    if (!c) return;
+    b.updateMatrixWorld(true);
+    const p = W(b), dir = W(c).sub(p).normalize();
+    q.setFromAxisAngle(new THREE.Vector3().crossVectors(dir, palm).normalize(), d * DEG);
+    b.getWorldQuaternion(wq); b.parent.getWorldQuaternion(pq);
+    b.quaternion.copy(pq.invert().multiply(q.multiply(wq)));
+    b.updateMatrixWorld(true);
+  };
+  for (const f of ['index', 'middle', 'ring', 'pinky']) ['_01', '_02', '_03'].forEach((k, i) => turn(B(f + k), deg[i]));
+  ['_01', '_02', '_03'].forEach((k, i) => turn(B('thumb' + k), thumbDeg[i]));
+}
+
+/**
+ * Seat a pole (a spear: its local -Y is the point) in a closed fist: through the middle of the curled fingers,
+ * along the line of the knuckles, the point out of the little-finger side, as a spear is held overhand.
+ */
+function seatInFist(binding, side, pole) {
+  const sk = binding.model.userData.skeleton;
+  const B = (n) => sk.bones.find((b) => b.name.startsWith(n + '_' + side + '_'));
+  const W = (b) => b.getWorldPosition(new THREE.Vector3());
+  binding.holder.updateMatrixWorld(true);
+  const hand = B('hand'), centre = W(B('middle_01')).lerp(W(B('middle_03')), 0.5);
+  const along = W(B('index_01')).sub(W(B('pinky_01'))).normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), along.negate());
+  const m = new THREE.Matrix4().compose(centre, q, new THREE.Vector3(1, 1, 1));
+  hand.add(pole);
+  new THREE.Matrix4().copy(hand.matrixWorld).invert().multiply(m).decompose(pole.position, pole.quaternion, pole.scale);
 }
 
 function buildCyclops() {

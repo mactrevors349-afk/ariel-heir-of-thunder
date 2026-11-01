@@ -113,7 +113,10 @@ const Game = {
     this.output = new Addons.OutputPass();
     this.fxaa = new Addons.ShaderPass(Addons.FXAAShader);
     this.final = new Addons.ShaderPass(FinalShader);
-    comp.addPass(this.renderPass); comp.addPass(this.bloom); comp.addPass(this.output); comp.addPass(this.fxaa); comp.addPass(this.final);
+    // the scene pass keeps its depth, for the ambient occlusion straight after it (see ao.js)
+    for (const t of [comp.renderTarget1, comp.renderTarget2]) { t.depthTexture = new THREE.DepthTexture(1, 1); t.depthTexture.type = THREE.UnsignedIntType; }
+    this.ao = new AOPass(camera);
+    comp.addPass(this.renderPass); comp.addPass(this.ao); comp.addPass(this.bloom); comp.addPass(this.output); comp.addPass(this.fxaa); comp.addPass(this.final);
     addEventListener('resize', () => this.resize());
     this.renderScale = 1;
     this.applyQuality(true);
@@ -579,6 +582,7 @@ const Game = {
     }
     this.fxaa.enabled = !msaa;
     this.bloom.enabled = q !== 'low';
+    this.ao.enabled = q !== 'low';
     // soft shadow filtering samples the shadow map many times per pixel: plain PCF below High
     const st = msaa ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     if (R.shadowMap.type !== st) {

@@ -243,6 +243,19 @@ const MODEL_DEFS = {
     bones: { hips: 'Hips', spine: 'Spine', chest: 'Spine2', neck: 'Neck', head: 'Head', ...MIXAMO_LIMBS },
     tips: { handL: 'LeftHandMiddle1', handR: 'RightHandMiddle1', footL: 'LeftToeBase', footR: 'RightToeBase' },
   },
+  // the Hollow hoplites: a Spartan in a crested bronze helmet, greaves and straps, his own shield on his arm and sword in
+  // his fist (Andy Woodhead, CC-BY 4.0). Rigged for Unreal, so his bones carry Unreal's names (and Sketchfab's numbers)
+  spartan: {
+    url: 'assets/hoplite/spartan.glb', type: 'glb', height: 2.05, label: 'the Hollow Hoplites', keepBind: true,
+    // the Hollow: dead men still under arms, so the skin is drained, ashen and cold (the bronze stays as it is)
+    material: (m) => (m.name === 'Body' ? hollowSkin(m) : m),
+    bones: {
+      hips: 'pelvis_01', spine: 'spine_01_014', chest: 'spine_03_016', neck: 'neck_01_017', head: 'head_018',
+      armL: 'upperarm_l_041', elbowL: 'lowerarm_l_042', handL: 'hand_l_043', armR: 'upperarm_r_020', elbowR: 'lowerarm_r_021', handR: 'hand_r_022',
+      thighL: 'thigh_l_02', kneeL: 'calf_l_03', footL: 'foot_l_04', thighR: 'thigh_r_08', kneeR: 'calf_r_09', footR: 'foot_r_010',
+    },
+    tips: { handL: 'middle_01_l_052', handR: 'middle_01_r_032', footL: 'ball_l_05', footR: 'ball_r_011' },
+  },
   // Principal Steinback (an Avaturn avatar: Mixamo naming too)
   principal: {
     url: 'assets/npc/principal.glb', type: 'glb', height: 1.82, label: 'Westbrook High',
@@ -357,8 +370,8 @@ const Models = {
     obj.updateMatrixWorld(true);
     obj.traverse((o) => { if (o.isSkinnedMesh && o.visible) meshes.push(o); });
     // some exporters write a bind matrix that disagrees with the skeleton's frame:
-    // bind every piece in the frame its bones actually live in
-    meshes.forEach((m) => m.bind(m.skeleton, m.matrixWorld.clone()));
+    // bind every piece in the frame its bones actually live in (unless the file's own bind is right: keepBind)
+    if (!d.keepBind) meshes.forEach((m) => m.bind(m.skeleton, m.matrixWorld.clone()));
     if (meshes.length) {
       meshes.sort((a, b) => b.geometry.attributes.position.count - a.geometry.attributes.position.count);
       const main = meshes[0].skeleton;
@@ -1452,6 +1465,18 @@ function agedGold(m) {
   };
   c.envMapIntensity = 0.85;
   c.customProgramCacheKey = () => 'agedGold';
+  return c;
+}
+// the Hollow hoplites' skin: the colour drained out of it, grey and cold, a little darker
+function hollowSkin(m) {
+  const c = m.clone();
+  c.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      float hsL = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+      diffuseColor.rgb = mix(vec3(hsL), diffuseColor.rgb, 0.4) * vec3(0.9, 0.92, 0.95) * 0.96;`);
+  };
+  c.roughness = Math.max(c.roughness, 0.7);
+  c.customProgramCacheKey = () => 'hollowSkin';
   return c;
 }
 // Ares: the same armour gone dark, blood-red and smouldering
