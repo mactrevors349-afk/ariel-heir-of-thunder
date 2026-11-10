@@ -127,7 +127,7 @@ Double-click `index.html` to open it in **Chrome** or **Edge**. The game runs, b
     - **Olympus restored (3D):** the rot drains out of the hall, each god's spark comes home, and Ariel stands at Zeus's right hand.
     - **Epilogue, *The Two Lives of Ariel Stormborn*:**
       - Ariel comes home to Anna and chooses to stay her son.
-      - Jesse works out the truth on the school steps.
+      - Jesse works out the truth on the school steps. As she lists what gave him away, the game cuts to flashbacks of those moments in a cold, faded memory grade: her phone dying in her hands, the vending machine frying, and the lightning on the school roof.
       - Painted scenes of his mortal life (school by day, god by night, graduation, the wedding with Zeus and Ares as guests).
       - The **wedding photograph** on the pier where Anna met Zeus: Ariel in a tailcoat, Jesse in an ivory gown with veil and bouquet.
       - Years later, on **Olympus**, their son **Kratos** is born. Jesse wears a goddess gown, Anna is in white and gold, Ariel is in his god form, and Zeus looks on from his throne.

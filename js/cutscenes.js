@@ -1154,17 +1154,25 @@ const Garments = {
       ['uv1', 'uv2', 'uv3', 'tangent'].forEach((a) => g.deleteAttribute(a));
       const P = g.attributes.position, N = g.attributes.normal;
       if (k === 'tailcoat') {
-        // sleeves leave the shoulder about 39 degrees below level: swing them down another 41 to hang at his sides
+        // the sleeves leave the shoulder about 39 degrees below level, along an axis from a pivot at (±0.24, 0.8):
+        // every sleeve vertex is measured along that axis (t) and around it (r), to be laid onto the wearer's
+        // real arm when it is worn (wrapSleeves), shoulder to elbow to wrist
+        const SL = { side: new Int8Array(P.count), w: new Float32Array(P.count), t: new Float32Array(P.count), r: new Float32Array(P.count * 3) };
+        const d = new THREE.Vector3(), rel = new THREE.Vector3();
         for (let i = 0; i < P.count; i++) {
           v.fromBufferAttribute(P, i);
-          const ax = Math.abs(v.x), cy = 0.8 - 0.8 * (ax - 0.24);
-          if (ax < 0.2 || Math.abs(v.y - cy) > 0.17 || v.y < 0.28) continue;
-          const w = sm(0.2, 0.33, ax), a = -Math.sign(v.x) * 41 * DEG * w, c = Math.cos(a), s2 = Math.sin(a);
-          const px = Math.sign(v.x) * 0.24, py = 0.8, dx = v.x - px, dy = v.y - py;
-          P.setXY(i, px + dx * c - dy * s2, py + dx * s2 + dy * c);
-          n.fromBufferAttribute(N, i);
-          N.setXY(i, n.x * c - n.y * s2, n.x * s2 + n.y * c);
+          // (the armhole is deep: near the shoulder the sleeve reaches well below its axis, down to the armpit)
+          const ax = Math.abs(v.x), cy = 0.8 - 0.8 * (ax - 0.24), band = 0.17;
+          if (ax < 0.2 || Math.abs(v.y - cy) > band || v.y < 0.28) continue;
+          const sg = Math.sign(v.x);
+          d.set(sg, -0.8, 0).normalize();
+          rel.set(v.x - sg * 0.24, v.y - 0.8, v.z - 0.0);
+          const t = rel.dot(d);
+          rel.addScaledVector(d, -t);
+          SL.side[i] = sg; SL.w[i] = sm(-0.02, 0.06, t); SL.t[i] = t;
+          SL.r[i * 3] = rel.x; SL.r[i * 3 + 1] = rel.y; SL.r[i * 3 + 2] = rel.z;
         }
+        g.userData.sleeve = SL;
       }
       if (k === 'dress' && o.material.map && o.material.map.image && g.attributes.uv) {
         // the gown came on a dressmaker's dummy: every triangle painted in the dummy's tan goes, the white stays
@@ -1229,12 +1237,69 @@ const Garments = {
     const cx = top.isEmpty() ? (bb.min.x + bb.max.x) / 2 : (top.min.x + top.max.x) / 2, cz = top.isEmpty() ? (bb.min.z + bb.max.z) / 2 : (top.min.z + top.max.z) / 2;
     out.children.forEach((c) => c.geometry.translate(-cx, -bb.min.y, -cz));
     out.userData.h = bb.max.y - bb.min.y;
+    out.userData.pivot = { x: -cx, y: -bb.min.y, z: -cz };   // where the garment's own origin went
     return out;
   },
   /**
    * Put a garment on an actor standing still: its own clothes hidden, the garment scaled from the actor's own
    * measurements (fit: which of the garment's heights meets which joint), and hung from the actor's root
    */
+  /**
+   * Lay each sleeve onto the wearer's real arm as it is posed now: the upper sleeve along shoulder to elbow,
+   * the cuff end along elbow to wrist, each ring of cloth turned with its segment (so no bare arm shows through)
+   */
+  wrapSleeves(a, g, off) {
+    a.root.updateMatrixWorld(true);
+    g.updateMatrixWorld(true);
+    const inv = g.matrixWorld.clone().invert(), J = a.rig.j, V3 = THREE.Vector3;
+    const at = (n2) => J[n2].getWorldPosition(new V3()).applyMatrix4(inv);
+    const sm = (lo, hi, x) => { const t = Math.min(1, Math.max(0, (x - lo) / (hi - lo))); return t * t * (3 - 2 * t); };
+    const L0 = 0.77, arms = {};
+    for (const sg of [1, -1]) {
+      // (the garment faces +Z as the character does: its +x side is the character's left)
+      const S = at(sg > 0 ? 'armL' : 'armR'), E = at(sg > 0 ? 'elbowL' : 'elbowR'), W = at(sg > 0 ? 'handL' : 'handR');
+      const lu = S.distanceTo(E), lf = E.distanceTo(W), te = L0 * lu / (lu + lf);
+      const d0 = new V3(sg, -0.8, 0).normalize();
+      const dU = E.clone().sub(S).normalize(), dF = W.clone().sub(E).normalize();
+      arms[sg] = { S, E, W, te, ku: lu / te, kf: lf / (L0 - te), dU, dF, qU: new THREE.Quaternion().setFromUnitVectors(d0, dU), qF: new THREE.Quaternion().setFromUnitVectors(d0, dF) };
+    }
+    const pivot = (sg) => new V3(sg * 0.24 + off.x, 0.8 + off.y, off.z);
+    const v = new V3(), r = new V3(), pu = new V3(), pf = new V3(), n = new V3(), nu = new V3();
+    // each sleeve's tube centred on its axis (the coat's sleeves need not sit exactly on the line it was measured on)
+    const mid = { 1: new V3(), '-1': new V3() }, cnt = { 1: 0, '-1': 0 };
+    g.children.forEach((c) => { const SL = c.geometry.userData.sleeve; if (!SL) return; for (let i = 0; i < SL.side.length; i++) { const sg = SL.side[i]; if (sg && SL.t[i] > 0.15 && SL.t[i] < 0.65) { mid[sg].x += SL.r[i * 3]; mid[sg].y += SL.r[i * 3 + 1]; mid[sg].z += SL.r[i * 3 + 2]; cnt[sg]++; } } });
+    for (const sg of [1, -1]) if (cnt[sg]) mid[sg].divideScalar(cnt[sg]);
+    g.children.forEach((c) => {
+      const SL = c.geometry.userData.sleeve;
+      if (!SL) return;
+      c.geometry = c.geometry.clone();
+      const P = c.geometry.attributes.position, N = c.geometry.attributes.normal;
+      for (let i = 0; i < P.count; i++) {
+        const sg = SL.side[i], w = SL.w[i];
+        if (!sg || w <= 0) continue;
+        const A = arms[sg], t = SL.t[i];
+        // (let out a good deal: the coat was cut for a slimmer arm than his, which would push through it)
+        r.set(SL.r[i * 3], SL.r[i * 3 + 1], SL.r[i * 3 + 2]).sub(mid[sg]).multiplyScalar(1.45 - 0.2 * Math.min(1, Math.max(0, t / L0)));
+        // (the shoulder end stays on the coat; the axis point there is the coat's own pivot)
+        pu.copy(r).applyQuaternion(A.qU).add(A.S).addScaledVector(A.dU, t * A.ku);
+        pf.copy(r).applyQuaternion(A.qF).add(A.E).addScaledVector(A.dF, (t - A.te) * A.kf);
+        const b = sm(A.te - 0.05, A.te + 0.05, t);
+        v.fromBufferAttribute(P, i);
+        const p = pu.lerp(pf, b);
+        // near the shoulder, ease from the coat's own shape into the wrapped sleeve: by distance along the arm, so a
+        // whole ring of the sleeve moves together (its inner seam must not stay behind and tear open)
+        const k = sm(-0.02, 0.06, t);
+        P.setXYZ(i, v.x + (p.x - v.x) * k, v.y + (p.y - v.y) * k, v.z + (p.z - v.z) * k);
+        n.fromBufferAttribute(N, i);
+        nu.copy(n).applyQuaternion(A.qU).lerp(n.clone().applyQuaternion(A.qF), b);
+        n.lerp(nu, k).normalize();
+        N.setXYZ(i, n.x, n.y, n.z);
+      }
+      P.needsUpdate = true; N.needsUpdate = true;
+      c.geometry.computeBoundingSphere();
+    });
+    void pivot;
+  },
   async wear(a, k, fit) {
     const src = await this.load(k);
     if (!src) return null;
@@ -1247,9 +1312,32 @@ const Garments = {
     g.scale.set(sx * (fit.wide || 1), s, s * (fit.deep || 1));
     g.position.set((sh.x + sr.x) / 2 + (fit.x || 0), fit.y || 0, (sh.z + sr.z) / 2 + (fit.z || 0));
     a.root.add(g);
+    let liner = null;
+    if (k === 'tailcoat') {
+      this.wrapSleeves(a, g, src.userData.pivot);
+      // a dark lining round his chest: with his arms down, the coat's armholes (cut for arms held out) open a
+      // gap under each arm, and only dark cloth may show there
+      liner = new THREE.Mesh(new THREE.CapsuleGeometry(1, 1.5, 6, 20), new THREE.MeshStandardMaterial({ color: 0x141418, roughness: 0.85 }));
+      liner.scale.set(0.168, 0.12, 0.118);
+      liner.position.set((sh.x + sr.x) / 2, sh.y - 0.2, (sh.z + sr.z) / 2 - 0.01);
+      liner.castShadow = liner.receiveShadow = true;
+      a.root.add(liner);
+      // and his arms slimmer inside the sleeves (the coat was cut for a slighter man): the upper arm most, the
+      // forearm less, the hands put back to their own size, so no part of his arm comes through the cloth
+      const sk = a.model && a.model.model && a.model.model.userData.skeleton;
+      if (sk) {
+        const B = (n2) => sk.bones.find((b) => b.name === n2), ku = 0.45, kf = 0.62 / ku;
+        this._arms = ['Left', 'Right'].map((S) => [B(S + 'Arm'), B(S + 'ForeArm'), B(S + 'Hand')]).filter((p) => p[0] && p[1] && p[2]);
+        this._arms.forEach(([u, f2, h]) => { u.scale.set(ku, 1, ku); f2.scale.set(kf, 1, kf); h.scale.set(1 / (ku * kf), 1, 1 / (ku * kf)); });
+      }
+    }
     const hidden = [];
     a.root.traverse((o) => { if (o.isMesh && o.visible && fit.hide && fit.hide.test((o.name + ' ' + (o.material && o.material.name)).toLowerCase())) { o.visible = false; hidden.push(o); } });
-    return () => { a.root.remove(g); hidden.forEach((o) => { o.visible = true; }); };
+    return () => {
+      a.root.remove(g); hidden.forEach((o) => { o.visible = true; });
+      if (liner) a.root.remove(liner);
+      if (k === 'tailcoat' && this._arms) { this._arms.forEach((bs) => bs.forEach((b) => b.scale.set(1, 1, 1))); this._arms = null; }
+    };
   },
 };
 
@@ -2397,7 +2485,65 @@ const SCRIPTS = {
       c.shot(mid.clone().addScaledVector(side, 3.2).add(V(0, 1.5, 0)), mid.clone().add(V(0, 1.35, 0)), 36);
       c.move(mid.clone().addScaledVector(side, 2.6).add(V(0, 1.5, 0)), mid.clone().add(V(0, 1.38, 0)), 12, { ease: (t) => t });
       await UI.fade(0, 1.4);
-      await c.say('Jesse', 'The microscopes. The lights at the dance. The bolt that missed the bus by a foot. That was you. All of it.');
+      await c.say('Jesse', 'I worked it out, you know.');
+      // as she lists them, the moments themselves: what we saw happen, in a cold, faded memory grade
+      const U = Game.final.uniforms;
+      const memory = (sc) => {
+        G.flashback = true;
+        if (G.activeScene !== sc) Game.useScene(sc);
+        Game.gradeFor(sc);
+        UI.flash(0.6);
+        if (Sound.tone) Sound.tone({ type: 'sine', f: 1200, f2: 260, dur: 0.6, gain: 0.07 });
+      };
+      const after = (sec, fn) => { let done = false; FX.temp(new THREE.Object3D(), sec + 0.1, (t) => { if (!done && t.age >= sec) { done = true; fn(); } }, false); };
+      const keepB = { pos: B2.root.position.clone(), rot: B2.root.rotation.y };
+      // her phone, dying in her hands
+      J.texting(true); J.look(0, 0);
+      if (J.screen) J.screen.material.color.setRGB(0.55, 0.7, 0.95);
+      for (let i = 0; i < 24; i++) J.update(0.05);
+      memory(Ca.scene);
+      const ph = J.phone.getWorldPosition(new THREE.Vector3());
+      c.shot(ph.clone().add(V(0.32, 0.16, 0.42)), ph.clone().add(V(0, -0.02, 0)), 34);
+      c.move(ph.clone().add(V(0.26, 0.13, 0.34)), ph.clone().add(V(0, -0.02, 0)), 4, { ease: (t) => t });
+      after(1.1, () => { J.phoneDies(); Sound.zap(); });
+      await c.say('Jesse', 'My phone, dying every single time you stood next to me.');
+      J.texting(false);
+      // the vending machine
+      const vf = Ca.vendFront;
+      B2.root.position.set(vf.x, 0, vf.z + 0.15); B2.root.rotation.y = Math.PI; B2.rig.stop(0.01);
+      for (let i = 0; i < 10; i++) B2.update(0.05);
+      if (Ca.vend) Ca.vend.dead = false;
+      memory(Ca.scene);
+      c.shot(vf.clone().add(V(1.1, 1.55, 0.9)), vf.clone().add(V(-0.1, 1.15, -0.7)), 42);
+      after(0.5, () => B2.rig.play('thump', { fade: 0.08 }));
+      after(0.85, () => { Ca.fry(); G.cam.shake(0.6); });
+      await c.say('Jesse', 'The vending machine. Marcus still tells that story.');
+      B2.rig.stop(0.2);
+      // the night on the school roof
+      memory(School.scene);
+      Sound.startRain(); Sound.setRain(0.4);
+      c.shot(V(2.5, 0.6, -6.1), V(1.5, 2.2, -9.6), 55);
+      c.move(V(3.2, 0.5, -5.2), V(1.5, 2.8, -9.6), 3, { fov: 62 });
+      after(1.0, () => {
+        FX.bolt(V(1.0, 120, -16.6), V(1.5, 1.7, -9.6), { radius: 0.18, branches: 6, life: 0.6 });
+        FX.bolt(V(4.0, 120, -13.6), V(1.5, 1.4, -9.6), { radius: 0.08, branches: 3, life: 0.5 });
+        FX.sparks(V(1.5, 1.4, -9.6), null, 70, [1.6, 2.2, 3.6, 1], 8, false);
+        FX.flashLight(V(1.5, 3, -9.6), 0xb8d4ff, 300, 0.5, 30);
+        School.strike(false);
+        Sound.thunder(0);
+        G.cam.shake(1.0);
+      });
+      await c.say('Jesse', 'And the lightning on the school roof, the night you disappeared.');
+      Sound.setRain(0);
+      // back on the steps
+      B2.root.position.copy(keepB.pos); B2.root.rotation.y = keepB.rot; B2.rig.stop(0.01);
+      for (let i = 0; i < 10; i++) B2.update(0.05);
+      G.flashback = false;
+      Game.useScene(Ca.scene);
+      Game.gradeFor(Ca.scene);
+      UI.flash(0.3);
+      c.shot(B2.root.position.clone().add(V(0, 1.6, 0)).addScaledVector(side, -0.6).add(jp.clone().sub(B2.root.position).multiplyScalar(-0.35)), J.root.position.clone().add(V(0, 1.5, 0)), 34);
+      await c.say('Jesse', 'That was you. All of it.');
       c.shot(jp.clone().add(V(0, 1.55, 0)).addScaledVector(side, 0.6).add(B2.root.position.clone().sub(jp).multiplyScalar(-0.35)), head(B2, 1.55), 36);
       await c.say('Ariel', 'Would you believe me if I said yes?');
       c.shot(B2.root.position.clone().add(V(0, 1.6, 0)).addScaledVector(side, -0.6).add(jp.clone().sub(B2.root.position).multiplyScalar(-0.35)), J.root.position.clone().add(V(0, 1.5, 0)), 36);
@@ -2545,7 +2691,7 @@ const SCRIPTS = {
       for (let i = 0; i < 4; i++) { A.rig.poseFrom({ armL: [2, 0, 10], elbowL: [-6, 0, 0], armR: [2, 0, -10], elbowR: [-6, 0, 0], neck: [4, 0, 0] }); if (A.model) A.model.update(); }
       // (the gown's bodice is cut slimmer than she is: wider than it is tall, so it closes round her)
       const u1 = await Garments.wear(J, 'dress', { s: 0.343, wide: 1.4, deep: 1.55, hide: /denim|shoe|heel/, z: 0 });
-      const u2 = await Garments.wear(A, 'tailcoat', { shoulder: 1.8, foot: 0, hide: /outfit_top|outfit_bottom|outfit_shoes/, z: -0.015 });
+      const u2 = await Garments.wear(A, 'tailcoat', { shoulder: 1.8, foot: 0, wide: 1.12, deep: 1.1, hide: /outfit_top|outfit_bottom|outfit_shoes/, z: -0.015 });
       [u1, u2].forEach((u) => u && this.undress.push(u));
       Music.play('victory');
       UI.chapter('THE WEDDING', 'The pier · the seventh summer');
@@ -2674,6 +2820,7 @@ const SCRIPTS = {
       if (SCRIPTS.bossDefeat.zeus) G.scene.remove(SCRIPTS.bossDefeat.zeus.root);
       Vase.hide();
       SCRIPTS.bossDefeat.restoreHall();
+      G.flashback = false;
       SCRIPTS.bossDefeat.endWedding();
       SCRIPTS.bossDefeat.endFirstborn();
       Sound.setRain(0);

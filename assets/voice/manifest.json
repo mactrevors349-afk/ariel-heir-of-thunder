@@ -623,6 +623,12 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Olympus stood again in the light, as it was in the beginning."
  },
+ "64a13edb": {
+  "who": "Zeus",
+  "dur": 6.98,
+  "voice": "en-GB-ThomasNeural",
+  "text": "Olympus stands again. And at my right hand, the God of War — my son."
+ },
  "3492b366": {
   "who": "Anna",
   "dur": 3.62,
@@ -659,11 +665,29 @@
   "voice": "en-US-EmmaMultilingualNeural",
   "text": "Then you will do the one thing your father never could. You will be both."
  },
- "6e1cc359": {
+ "2129e699": {
   "who": "Jesse",
-  "dur": 7.27,
+  "dur": 1.87,
   "voice": "en-US-AvaMultilingualNeural",
-  "text": "The microscopes. The lights at the dance. The bolt that missed the bus by a foot. That was you. All of it."
+  "text": "I worked it out, you know."
+ },
+ "d9d1d022": {
+  "who": "Jesse",
+  "dur": 3.55,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "My phone, dying every single time you stood next to me."
+ },
+ "97919889": {
+  "who": "Jesse",
+  "dur": 3.41,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "The vending machine. Marcus still tells that story."
+ },
+ "6e55eb67": {
+  "who": "Jesse",
+  "dur": 3.72,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "And the lightning on the school roof, the night you disappeared."
  },
  "9bc07c8f": {
   "who": "Ariel",
@@ -875,11 +899,11 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "They finished school together, under a sky that held back its thunder for one whole afternoon."
  },
- "64a13edb": {
-  "who": "Zeus",
-  "dur": 6.98,
-  "voice": "en-GB-ThomasNeural",
-  "text": "Olympus stands again. And at my right hand, the God of War — my son."
+ "94e09c15": {
+  "who": "Narrator",
+  "dur": 13.1,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Seven summers later, on the pier where Anna once met a stranger in the rain, Ariel married Jesse. Anna gave the bride away, and Hermes, of course, was late."
  },
  "6589a168": {
   "who": "Narrator",
@@ -1121,10 +1145,10 @@
   "voice": "en-US-EricNeural",
   "text": "Fire, O fire… when he lifts his blade to the sky, run."
  },
- "94e09c15": {
-  "who": "Narrator",
-  "dur": 13.1,
-  "voice": "en-US-AndrewMultilingualNeural",
-  "text": "Seven summers later, on the pier where Anna once met a stranger in the rain, Ariel married Jesse. Anna gave the bride away, and Hermes, of course, was late."
+ "a9bff25f": {
+  "who": "Jesse",
+  "dur": 2.21,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "That was you. All of it."
  }
 }
