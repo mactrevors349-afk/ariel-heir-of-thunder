@@ -1,6 +1,8 @@
 # ARIEL — HEIR OF THUNDER
 ### Chapter I: The Spark of War
 
+**[▶ Play it in your browser](https://mactrevors349-afk.github.io/ariel-heir-of-thunder/)** (desktop Chrome, Edge or Firefox; mouse and keyboard; the first load is about 200 MB)
+
 A third-person action RPG about Greek gods, in the style of Elden Ring, built with three.js.
 You play **Ariel Stormborn**: a high-school junior at Westbrook High who learns he is the son of **Zeus**.
 
@@ -64,7 +66,7 @@ python tools/make_voices.py
 ```
 It finds every spoken line in the code, records any new or changed ones, and deletes clips that are no longer used. After changing a character's voice in `CAST`, re-record just that character with `python tools/make_voices.py --redo=Narrator`. Recording needs an internet connection; playing the game doesn't.
 
-> These model files came from the internet. Some appear to be taken from commercial games, so keep this project private: don't publish or share it with these models included.
+> **Credits.** This is a non-commercial fan project. The code, the generated world, the music and the sound effects are original. The textures are from Poly Haven (CC0), the texting and running motions are from Adobe Mixamo, and the voices are Microsoft neural voices. The character and clothing models were collected from the internet and belong to their respective creators and rights holders; some appear to come from commercial games. If you own one of them and want it removed, open an issue and it will be taken down.
 
 ---
 
