@@ -342,7 +342,7 @@ const Game = {
       UI.banner('ALTAR KINDLED');
       Sound.bell();
       FX.sparks(a.flame, new THREE.Vector3(0, 1, 0), 60, [2.6, 1.9, 0.7, 1], 5);
-      FX.flashLight(a.flame, 0xffc060, 300, 0.8, 25);
+      FX.flashLight(a.flame, 0xffc060, 140, 0.8, 18);
     } else Sound.bell();
     G.lastAltar = a.id;
     // rest: restore and bring the shades back

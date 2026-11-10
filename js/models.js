@@ -53,7 +53,10 @@ const WOMAN_SHEET = {
   // The donor is an athletic man: his arms are slimmed to a woman's (upper arm, forearm), and their roots
   // reach in under the top's armholes (depth, metres past the cut) instead of a collar of the old mesh,
   // which showed on top of the shoulders in a different tone
-  arms: { url: 'assets/arms/body.glb', hide: /^body_2$/, collar: 0, slim: [0.76, 0.88], root: 1, depth: 0.06 },
+  // (slimmer than a man's at the shoulder too: the cap is drawn in, so no deltoid bulges out of the armhole)
+  arms: { url: 'assets/arms/body.glb', hide: /^body_2$/, collar: 0, slim: [0.7, 0.85], root: 0.88, depth: 0.06,
+    // a short cap sleeve in the top's own fabric over each arm's root: the join of arm and armhole stays hidden
+    sleeve: { mat: /^dress2_1$|Cotton_Oxford/, len: 0.075, gap: 0.009 } },
   // the top, seen from both sides: where its armhole stands off the body you see the inside of the fabric, not a dark slit
   twoSided: /^dress2_1$|Cotton_Oxford/,
 };
@@ -922,6 +925,35 @@ const Models = {
         m.bind(skeleton);
         skinnedMeshes.push(m);
       }
+      // the cap sleeves, in the top's own colour (its fabric, untextured: one even tone of it)
+      const top = d.arms.sleeve && skinnedMeshes.find((m) => d.arms.sleeve.mat.test(m.name) || d.arms.sleeve.mat.test(m.material && m.material.name));
+      if (top && d._graft.L.sleeve) {
+        if (!d._graft.sleeveMat) {
+          const src = top.material, c = this.averageColor(src.map, top.geometry.attributes.uv, 7);
+          const sm = src.clone();
+          sm.map = null; sm.normalMap = null; sm.side = THREE.DoubleSide;
+          if (c) sm.color = new THREE.Color(c.r, c.g, c.b).multiply(src.color || new THREE.Color(1, 1, 1));
+          d._graft.sleeveMat = sm;
+        }
+        for (const S of ['L', 'R']) {
+          const A = d._graft[S].sleeve, pos = new Float32Array(A.pos.length), nor = new Float32Array(A.nor.length);
+          for (let i = 0; i < A.pos.length; i += 3) {
+            v.copy(toRig([A.pos[i], A.pos[i + 1], A.pos[i + 2]])).applyMatrix4(toHolder); pos.set([v.x, v.y, v.z], i);
+            v.set(A.nor[i], A.nor[i + 1], A.nor[i + 2]).applyMatrix3(nm).normalize(); nor.set([v.x, v.y, v.z], i);
+          }
+          const g = new THREE.BufferGeometry();
+          g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+          g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(A.si, 4));
+          g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(A.sw, 4));
+          g.setIndex(new THREE.Uint32BufferAttribute(A.idx, 1));
+          const m = new THREE.SkinnedMesh(g, d._graft.sleeveMat);
+          m.name = 'sleeve' + S; m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+          holder.add(m);
+          m.bind(skeleton);
+          skinnedMeshes.push(m);
+        }
+      }
     }
     // weapon markers (trails, flames, hit sparks) from the sculpted blade, in the right hand's frame
     const markers = {};
@@ -1055,6 +1087,7 @@ const Models = {
     const tone = this.averageColor(arm.material.map, arm.geometry.attributes.uv, 5);
     const D = this.donor, out = { map: D.map };
     for (const S of ['L', 'R']) out[S] = this.graftSide(d, D, S, centre(ring[S]));
+    if (d.arms.sleeve) for (const S of ['L', 'R']) out[S].sleeve = this.capSleeve(d, out[S], centre(ring[S]), S);
     const dt = this.averageColor(D.map, D.g.attributes.uv, 5, out.L.used);
     // (the sculpt's skin texture is a good deal paler than the donor's: up to about twice as bright)
     // (a shade under it, toward the faces, which are a little warmer and darker than the body's texture)
@@ -1081,6 +1114,52 @@ const Models = {
       g.setIndex(tri);
       o.userData.trimmed = true;
     });
+  },
+  /**
+   * A cap sleeve fitted round a grafted arm's root (sheet space): rings from just inside the armhole to
+   * d.arms.sleeve.len down the upper arm, each point standing just off the arm's own surface at that angle,
+   * weighted from the chest (inside) to the upper arm (at the hem), like the arm under it
+   */
+  capSleeve(d, A, ringC, S) {
+    const L = d.landmarks, o = d.arms.sleeve, Jsh = ringC.clone(), Jel = new THREE.Vector3(...L['elbow' + S]);
+    const ax = Jel.clone().sub(Jsh).normalize();
+    const b1 = new THREE.Vector3(0, 0, 1).addScaledVector(ax, -ax.z).normalize(), b2 = new THREE.Vector3().crossVectors(ax, b1);
+    const NA = 28, s0 = -0.06, s1 = o.len, NS = 14, ds = (s1 - s0) / (NS - 1);
+    // the arm's outline: furthest point from the axis in every angle sector and slice
+    const R = new Float32Array(NA * NS), r = new THREE.Vector3();
+    for (let i = 0; i < A.pos.length; i += 3) {
+      r.set(A.pos[i], A.pos[i + 1], A.pos[i + 2]).sub(Jsh);
+      const s = r.dot(ax); if (s < s0 - ds / 2 || s > s1 + ds / 2) continue;
+      r.addScaledVector(ax, -s);
+      const a = Math.atan2(r.dot(b2), r.dot(b1)), ia = ((Math.round((a / (2 * Math.PI)) * NA) % NA) + NA) % NA, is = Math.round((s - s0) / ds);
+      const k = is * NA + ia; R[k] = Math.max(R[k], r.length());
+    }
+    // empty cells take their neighbours' reach (a slice can miss a sector)
+    for (let pass = 0; pass < 4; pass++) for (let is = 0; is < NS; is++) for (let ia = 0; ia < NA; ia++) {
+      const k = is * NA + ia; if (R[k] > 0) continue;
+      const nb = [R[is * NA + (ia + 1) % NA], R[is * NA + (ia + NA - 1) % NA], is > 0 ? R[(is - 1) * NA + ia] : 0, is < NS - 1 ? R[(is + 1) * NA + ia] : 0].filter((x) => x > 0);
+      if (nb.length) R[k] = Math.max(...nb);
+    }
+    const bA = JOINTS.indexOf('arm' + S), bC = JOINTS.indexOf('chest');
+    const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const pos = [], nor = [], si = [], sw = [], idx = [], p = new THREE.Vector3(), n = new THREE.Vector3();
+    for (let is = 0; is < NS; is++) {
+      const s = s0 + is * ds;
+      for (let ia = 0; ia <= NA; ia++) {
+        // (a little fuller toward the armhole, so its edge tucks under the top's and no skin shows between)
+        const a = (ia / NA) * 2 * Math.PI, rad = (R[is * NA + (ia % NA)] || 0.04) + o.gap + 0.01 * (1 - Math.min(1, Math.max(0, (s + 0.01) / 0.05)));
+        n.copy(b1).multiplyScalar(Math.cos(a)).addScaledVector(b2, Math.sin(a));
+        p.copy(Jsh).addScaledVector(ax, s).addScaledVector(n, rad);
+        pos.push(p.x, p.y, p.z); nor.push(n.x, n.y, n.z);
+        const c = 1 - sm(-0.03, 0.08, s);
+        si.push(bC, bA, 0, 0); sw.push(c, 1 - c, 0, 0);
+      }
+    }
+    for (let is = 0; is < NS - 1; is++) for (let ia = 0; ia < NA; ia++) {
+      const a = is * (NA + 1) + ia, b = a + 1, c = a + NA + 1, e = c + 1;
+      idx.push(a, b, c, b, e, c);
+    }
+    return { pos: new Float32Array(pos), nor: new Float32Array(nor), si: new Uint16Array(si), sw: new Float32Array(sw), idx: new Uint32Array(idx) };
   },
   graftSide(d, D, S, ringC) {
     const sg = S === 'L' ? 1 : -1, A = D[S], L = d.landmarks, V3 = (a) => new THREE.Vector3(...a);

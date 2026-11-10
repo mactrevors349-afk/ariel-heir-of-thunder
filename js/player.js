@@ -1071,8 +1071,9 @@ class Player {
     if (quiet) return;
     this.speak('Ariel', pick(GRIP_LINES.Ariel));
     const c = this.root.position.clone().add(new THREE.Vector3(0, 1.4, 0));
-    FX.sparks(c, null, 60, [1.4, 1.9, 3.4, 1], 7);
-    FX.flashLight(c, 0xb8d4ff, 500, 0.4, 14);
+    FX.sparks(c, null, 60, [1.4, 1.9, 3.4, 1], 7, false);
+    // (a light this close to the camera target: kept low, or the frame whites out)
+    FX.flashLight(c, 0xb8d4ff, 90, 0.35, 12);
     Sound.zap();
     this.invuln = Math.max(this.invuln, 0.8);
   }
@@ -1193,7 +1194,8 @@ class Player {
     }
     const chest = this.pos.clone().add(new THREE.Vector3(0, 1.25, 0));
     const away = this.pos.clone().sub(from).setY(0).normalize();
-    FX.sparks(chest, away, 16, [2.4, 1.6, 0.5, 1], 6);
+    FX.blood(chest, away, Math.round(clamp(14 + dmg * 0.4, 16, 40)), [0.62, 0.03, 0.022], { ground: this.pos.y });
+    FX.sparks(chest, away, 6, [2.4, 1.6, 0.5, 1], 6, false);
     Sound.hit('flesh', 1);
     G.cam.shake(opts.knock ? 1.0 : 0.55);
     UI.damage();

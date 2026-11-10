@@ -268,6 +268,9 @@ const Tex = {
     this.glow = this.radial(128, [[0, 'rgba(255,255,255,1)'], [0.2, 'rgba(255,255,255,0.7)'], [0.5, 'rgba(255,255,255,0.18)'], [1, 'rgba(255,255,255,0)']]);
     this.puff = this.cloudPuff(256);
     this.scorch = this.scorchTex(256);
+    // blood on the ground: a few splatters (thrown along +x, the way the blow went) and a pool
+    this.bloodSplats = [11, 23, 37].map((seed) => this.bloodTex(256, seed, true));
+    this.bloodPool = this.bloodTex(256, 51, false);
     this.rune = this.runeTex(256);
     this.ring = this.radial(256, [[0, 'rgba(255,255,255,0)'], [0.78, 'rgba(255,255,255,0)'], [0.9, 'rgba(255,255,255,1)'], [1, 'rgba(255,255,255,0)']]);
     this.capeBlue = this.capeTex(256, '#1c2c63', '#d9b45b');
@@ -334,6 +337,43 @@ const Tex = {
     });
   },
 
+  /** a blood splatter: a wet blot, satellite drops and streaks flung along +x (or a rounder pool) */
+  bloodTex(size, seed, thrown) {
+    const c = this.canvas(size), ctx = c.getContext('2d');
+    let s = seed;
+    const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+    const blob = (x, y, r, a) => {
+      ctx.beginPath();
+      const n = 14;
+      for (let i = 0; i <= n; i++) {
+        const t = (i / n) * TAU, rr = r * (0.78 + rnd() * 0.4);
+        const px = x + Math.cos(t) * rr, py = y + Math.sin(t) * rr;
+        if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+      }
+      ctx.fillStyle = 'rgba(' + Math.round(125 + rnd() * 30) + ',' + Math.round(8 + rnd() * 6) + ',' + Math.round(6 + rnd() * 5) + ',' + a + ')';
+      ctx.fill();
+    };
+    const C = size / 2;
+    if (thrown) {
+      ctx.translate(C * 0.7, C);
+      blob(0, 0, size * 0.16, 0.95);
+      for (let i = 0; i < 6; i++) blob(rnd() * size * 0.14 - size * 0.05, (rnd() - 0.5) * size * 0.18, size * (0.05 + rnd() * 0.06), 0.9);
+      // drops flung on along the blow, smaller and further out
+      for (let i = 0; i < 26; i++) { const d = size * (0.12 + rnd() * 0.5), a = (rnd() - 0.5) * 1.0; blob(Math.cos(a) * d, Math.sin(a) * d, size * (0.006 + rnd() * 0.022) * (1 - d / size), 0.9); }
+      // streaks where drops skidded
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 7; i++) { const a = (rnd() - 0.5) * 0.7, d0 = size * (0.1 + rnd() * 0.1), d1 = d0 + size * (0.08 + rnd() * 0.2); ctx.strokeStyle = 'rgba(132,10,8,0.85)'; ctx.lineWidth = size * (0.006 + rnd() * 0.01); ctx.beginPath(); ctx.moveTo(Math.cos(a) * d0, Math.sin(a) * d0); ctx.lineTo(Math.cos(a) * d1, Math.sin(a) * d1); ctx.stroke(); }
+    } else {
+      ctx.translate(C, C);
+      blob(0, 0, size * 0.3, 0.95);
+      for (let i = 0; i < 9; i++) { const a = rnd() * TAU, d = size * (0.12 + rnd() * 0.14); blob(Math.cos(a) * d, Math.sin(a) * d, size * (0.08 + rnd() * 0.08), 0.95); }
+      for (let i = 0; i < 14; i++) { const a = rnd() * TAU, d = size * (0.3 + rnd() * 0.15); blob(Math.cos(a) * d, Math.sin(a) * d, size * (0.006 + rnd() * 0.014), 0.9); }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  },
+
   runeTex(size) {
     const c = this.canvas(size), ctx = c.getContext('2d');
     ctx.translate(size / 2, size / 2);
@@ -383,15 +423,16 @@ const Tex = {
     return t;
   },
 
-  windows(size = 256) {
+  /** lit office windows on a dark facade (lit: the share of windows with a light on) */
+  windows(size = 256, lit = 0.58) {
     const c = this.canvas(size), ctx = c.getContext('2d');
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, size, size);
     const rnd = mulberry32(5);
     const cols = 8, rows = 16, cw = size / cols, ch = size / rows;
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       const r = rnd();
-      if (r < 0.42) continue;
-      ctx.fillStyle = r < 0.8 ? `rgba(255,${190 + rnd() * 40 | 0},${110 + rnd() * 50 | 0},${0.5 + rnd() * 0.5})` : `rgba(170,200,255,${0.4 + rnd() * 0.4})`;
+      if (r < 1 - lit) continue;
+      ctx.fillStyle = r < 1 - lit * 0.35 ? `rgba(255,${190 + rnd() * 40 | 0},${110 + rnd() * 50 | 0},${0.5 + rnd() * 0.5})` : `rgba(170,200,255,${0.4 + rnd() * 0.4})`;
       ctx.fillRect(x * cw + cw * 0.18, y * ch + ch * 0.2, cw * 0.64, ch * 0.55);
     }
     return this.toTex(c, true, true);

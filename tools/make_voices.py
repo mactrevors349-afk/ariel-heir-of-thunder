@@ -76,6 +76,10 @@ def collect():
     if block:
         for m in re.finditer(STR, block.group(1)):
             lines.append(('Narrator', unescape(m.group(1)), None))
+    # the Fates' tapestry: each painted slide's narration
+    for slides in re.finditer(r'const \w+_SLIDES\w* = \[(.*?)\n\];', cut, re.S):
+        for m in re.finditer(r"\bline:\s*" + STR, slides.group(1)):
+            lines.append(('Narrator', unescape(m.group(1)), None))
     for m in re.finditer(r"\bhermes\(\s*" + STR, js('game.js')):
         lines.append(('Hermes', unescape(m.group(1)), None))
     for m in re.finditer(r"UI\.subtitle\(\s*'(\w+)'\s*,\s*" + STR, js('enemies.js')):

@@ -496,7 +496,10 @@ const CLIPS = {
   /* ---------------------------------------------------------- Ariel's ordinary life */
   // a newborn held against the chest, both forearms under it, head bowed to look at it
   // (an upper arm turned inward — left y<0, right y>0 — swings the bent forearm across the body)
-  cradle: { dur: 1.0, hold: true, keys: [[0, {}], [1, { armL: [-32, -42, 10], elbowL: [-92, -25, 0], handL: [0, 0, 0], armR: [-30, 42, -10], elbowR: [-95, 25, 0], handR: [0, 0, 0], chest: [4, 0, 0], neck: [20, 0, 0], head: [8, 0, 0] }]] },
+  // a newborn carried in front, the way people do: elbows resting at the sides, both forearms forward and side by
+  // side (never crossed), palms turned up under the bundle, held in against the stomach, looking down at him
+  // (solved on the rig for elbow, wrist and palm)
+  cradle: { dur: 1.0, hold: true, keys: [[0, {}], [1, { armL: [1, -17, 9], elbowL: [-101, 38, 0], handL: [-5, 42, 9], armR: [1, 18, -9], elbowR: [-101, -37, 0], handR: [-5, -42, -8], chest: [4, 0, 0], neck: [22, 0, 0], head: [10, 0, 0] }]] },
   // holding something out to someone (an umbrella, a mug)
   offer: { dur: 0.9, hold: true, mask: 'upper', keys: [[0, {}], [1, { armR: [-52, 0, -6], elbowR: [-34, 0, 0], handR: [0, 0, 0], neck: [6, 0, 0] }]] },
   // a fist brought down on the thing in front of him

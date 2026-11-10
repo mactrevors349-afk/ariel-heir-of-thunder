@@ -3,6 +3,17 @@
    enemies.js · hollow hoplites, the cyclops, Ares, Hermes and the echoes
    ========================================================================== */
 
+// the colour each kind bleeds (drops, linear) and the tint its pools take on the ground
+const BLOOD_COL = {
+  blood: Object.assign([0.62, 0.03, 0.022], { tint: [1, 1, 1] }),
+  // the Hollow are long dead: old, dark, thick blood
+  ash: Object.assign([0.4, 0.035, 0.022], { tint: [0.78, 0.6, 0.55] }),
+  // Tartarus' thralls bleed black, with a bruise-purple sheen
+  rot: Object.assign([0.2, 0.025, 0.24], { tint: [0.55, 0.35, 0.7] }),
+  // a god: deep red, a little brighter
+  ichor: Object.assign([0.75, 0.05, 0.025], { tint: [1.1, 1, 0.95] }),
+};
+
 const ENEMY_DEFS = {
   hoplite: {
     name: 'Hollow Hoplite', hp: 150, poise: 34, radius: 0.45, height: 1.85, size: 1, ichor: 130,
@@ -380,10 +391,12 @@ class Enemy {
     this.poise -= poiseDmg;
     this.rig.flinch = Math.min(1, 0.4 + poiseDmg / 40);
     const dir = hitPos.clone().sub(from).setY(0).normalize();
-    if (this.def.blood === 'ash') { FX.ash(hitPos, 10); FX.sparks(hitPos, dir, 10, [1.8, 1.0, 0.4, 1], 6); }
-    else if (this.def.blood === 'ichor') { FX.ichor(hitPos, dir, 24); FX.sparks(hitPos, dir, 8, [2.6, 0.7, 0.2, 1], 7); }
-    else if (this.def.blood === 'rot') { FX.sparks(hitPos, dir, 12, [1.2, 0.4, 2.2, 1], 5); FX.ash(hitPos, 10, [0.3, 0.08, 0.42, 0.7]); }
-    else { FX.sparks(hitPos, dir, 12, [1.4, 0.25, 0.1, 1], 5); FX.ash(hitPos, 6, [0.25, 0.04, 0.03, 0.6]); }
+    // blood: thrown along the blow, more for a heavier one (a burn or a bolt sears the wound: far less)
+    const nb = Math.round(clamp(18 + dmg * 0.45, 22, 60) * (kind === 'fire' || kind === 'lightning' ? 0.35 : 1) * (this.size > 1.5 ? 1.5 : 1));
+    FX.blood(hitPos, dir, nb, BLOOD_COL[this.def.blood] || BLOOD_COL.blood, { ground: this.pos.y });
+    if (this.def.blood === 'ash') { FX.ash(hitPos, 8); FX.sparks(hitPos, dir, 6, [1.8, 1.0, 0.4, 1], 6, false); }
+    else if (this.def.blood === 'ichor') { FX.sparks(hitPos, dir, 8, [2.6, 0.7, 0.2, 1], 7, false); }
+    else if (this.def.blood === 'rot') { FX.ash(hitPos, 6, [0.3, 0.08, 0.42, 0.7]); }
     if (kind === 'lightning') FX.sparks(hitPos, null, 16, [1.4, 1.9, 3.2, 1], 5);
     Sound.hit(this.def.hitSound, 1);
     UI.enemyDamaged(this, dmg);
@@ -403,6 +416,9 @@ class Enemy {
   die() {
     this.alive = false;
     this.state = 'dead';
+    // a pool spreads under the body once it is down
+    const pp = this.pos.clone(), sz = this.size, bc = BLOOD_COL[this.def.blood] || BLOOD_COL.blood;
+    setTimeout(() => FX.bloodPool(pp, 1.2 * Math.max(1, sz * 0.9), bc.tint), 900);
     this.act = null;
     this.airborne = false;
     this.rig.play(this.size > 1.5 ? 'deathFwd' : 'death', { fade: 0.1 });

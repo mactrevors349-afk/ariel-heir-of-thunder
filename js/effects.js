@@ -13,7 +13,8 @@ function smokeAtlas() {
 }
 
 class Particles {
-  constructor(max, additive) {
+  /** drop: little round, glossy droplets (blood) instead of smoke puffs */
+  constructor(max, additive, drop = false) {
     this.max = max;
     this.pos = new Float32Array(max * 3);
     this.vel = new Float32Array(max * 3);
@@ -41,7 +42,7 @@ class Particles {
     geo.setAttribute('aSize', this.aSize);
     geo.setAttribute('aRot', this.aRot);
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { uScale: { value: 600 }, uFog: { value: 0.002 }, uFogColor: { value: new THREE.Color() }, uTex: { value: additive ? null : smokeAtlas() } },
+      uniforms: { uScale: { value: 600 }, uFog: { value: 0.002 }, uFogColor: { value: new THREE.Color() }, uTex: { value: additive || drop ? null : smokeAtlas() } },
       vertexShader: `
         attribute float aSize; attribute vec4 aColor; attribute vec2 aRot;
         uniform float uScale; uniform float uFog;
@@ -60,6 +61,17 @@ class Particles {
           float r = length(gl_PointCoord - 0.5) * 2.0;
           float a = smoothstep(1.0, 0.0, r); a *= a;
           gl_FragColor = vec4(vColor.rgb * (1.0 - vFog), vColor.a * a);
+        }` : drop ? `
+        uniform vec3 uFogColor;
+        varying vec4 vColor; varying float vFog;
+        void main(){
+          vec2 p = gl_PointCoord - 0.5;
+          float r = length(p) * 2.0;
+          if (r > 1.0) discard;
+          // a wet drop: darker at the rim, a small glint up and to the left
+          float glint = smoothstep(0.22, 0.0, length(p - vec2(-0.14, -0.16)));
+          vec3 c = vColor.rgb * (0.6 + 0.4 * (1.0 - r * r)) + vec3(0.5, 0.35, 0.33) * glint * 0.35;
+          gl_FragColor = vec4(mix(c, uFogColor, vFog), vColor.a * smoothstep(1.0, 0.8, r));
         }` : `
         uniform vec3 uFogColor; uniform sampler2D uTex;
         varying vec4 vColor; varying float vFog; varying vec2 vRot;
@@ -180,7 +192,9 @@ const FX = {
     this.scene = scene;
     this.glow = new Particles(6000, true);
     this.smoke = new Particles(1500, false);
-    scene.add(this.glow.points, this.smoke.points);
+    this.drops = new Particles(1400, false, true);
+    this.splats = [];
+    scene.add(this.glow.points, this.smoke.points, this.drops.points);
     // one flash light: every point light costs on every lit pixel, all the time
     this.lights = [0].map(() => {
       const l = new THREE.PointLight(0xaaccff, 0, 80, 1.6);
@@ -193,22 +207,25 @@ const FX = {
   },
   setScene(scene) {
     if (this.scene === scene) return;
-    [this.glow.points, this.smoke.points, ...this.lights].forEach((o) => scene.add(o));
+    [this.glow.points, this.smoke.points, this.drops.points, ...this.lights].forEach((o) => scene.add(o));
     this.scene = scene;
   },
   resize(h, fov) {
     const s = h / (2 * Math.tan((fov * DEG) / 2));
     this.glow.mat.uniforms.uScale.value = s;
     this.smoke.mat.uniforms.uScale.value = s;
+    this.drops.mat.uniforms.uScale.value = s;
   },
   update(dt) {
     const fog = this.scene.fog;
     const d = fog ? (fog.density || 0) : 0;
     this.glow.mat.uniforms.uFog.value = d;
     this.smoke.mat.uniforms.uFog.value = d;
-    if (fog) this.smoke.mat.uniforms.uFogColor.value.copy(fog.color);
+    this.drops.mat.uniforms.uFog.value = d;
+    if (fog) { this.smoke.mat.uniforms.uFogColor.value.copy(fog.color); this.drops.mat.uniforms.uFogColor.value.copy(fog.color); }
     this.glow.update(dt);
     this.smoke.update(dt);
+    this.drops.update(dt);
     for (const l of this.lights) {
       if (l.intensity > 0) l.intensity = Math.max(0, l.intensity - l.userData.decay * dt);
     }
@@ -253,6 +270,53 @@ const FX = {
   },
   ichor(pos, dir, n = 20) {
     this.sparks(pos, dir, n, [2.4, 1.7, 0.5, 1], 6);
+  },
+  /**
+   * Blood from a wound: drops thrown along the blow (dir) and falling, a fine mist, and splatters on the ground
+   * where they come down. col: the blood's colour (linear, dark: it is lit by nothing but itself)
+   */
+  blood(pos, dir, n = 24, col = [0.24, 0.012, 0.01], { splat = true, mist = true, ground = null } = {}) {
+    const d = dir ? dir.clone().setY(0).normalize() : new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize();
+    for (let i = 0; i < n; i++) {
+      const sp = rand(1.5, 5.5), up = rand(0.4, 3.2);
+      const sx = d.x * sp + rand(-1.4, 1.4), sz = d.z * sp + rand(-1.4, 1.4);
+      const s = rand(0.05, 0.1);
+      this.drops.spawn({ x: pos.x + rand(-0.06, 0.06), y: pos.y + rand(-0.08, 0.08), z: pos.z + rand(-0.06, 0.06), vx: sx, vy: up, vz: sz, life: rand(0.45, 0.85), s, s2: s * 0.7, c: [col[0], col[1], col[2], 1], c2: [col[0] * 0.8, col[1], col[2], 0.9], g: -11, drag: 0.6, turb: 0 });
+    }
+    if (mist) for (let i = 0; i < 3; i++) this.smoke.spawn({ x: pos.x, y: pos.y, z: pos.z, vx: d.x * rand(0.6, 1.6), vy: rand(0, 0.6), vz: d.z * rand(0.6, 1.6), life: rand(0.3, 0.5), s: rand(0.12, 0.2), s2: rand(0.4, 0.65), c: [col[0], col[1], col[2], 0.5], c2: [col[0], col[1], col[2], 0], drag: 3, turb: 0.2 });
+    if (!splat || !World.ready || this.scene !== G.scene) return;
+    // where the drops come down: along the blow, a pace or so off
+    const k = Math.max(1, Math.round(n / 16));
+    for (let i = 0; i < k; i++) {
+      const dist = rand(0.25, 1.4), x = pos.x + d.x * dist + rand(-0.25, 0.25), z = pos.z + d.z * dist + rand(-0.25, 0.25);
+      this.bloodSplat(x, ground ?? pos.y, z, rand(0.7, 1.3) * (n > 40 ? 1.25 : 1), Math.atan2(-d.z, d.x), pick(Tex.bloodSplats), 0.28 + dist * 0.12, 26, 0, col.tint, ground !== null);
+    }
+  },
+  /** a pool spreading out under someone who fell */
+  bloodPool(pos, size = 1.4, tint = null) {
+    if (!World.ready || this.scene !== G.scene) return;
+    this.bloodSplat(pos.x, pos.y, pos.z, size, rand(0, TAU), Tex.bloodPool, 0.2, 45, 3.5, tint, true);
+  },
+  /** (onGround: y is the floor itself, as under someone standing on the arena's paving; else find the terrain) */
+  bloodSplat(x, y, z, size, rot, map, delay, life, grow = 0, tint = null, onGround = false) {
+    const mat = new THREE.MeshStandardMaterial({ map, transparent: true, depthWrite: false, roughness: 0.22, metalness: 0, envMapIntensity: 0.6,
+      color: tint ? new THREE.Color(tint[0], tint[1], tint[2]) : 0xffffff, opacity: 0, polygonOffset: true, polygonOffsetFactor: -3 });
+    const m = new THREE.Mesh(this.decalGeo, mat);
+    m.position.set(x, (onGround ? Math.max(y, World.getHeight(x, z, y + 0.4)) : World.getHeight(x, z, y + 1)) + 0.03, z);
+    m.rotation.y = rot;
+    m.scale.setScalar(grow ? size * 0.15 : size);
+    m.renderOrder = 2;
+    m.receiveShadow = true;
+    // (only so many at once: the oldest dries away first)
+    this.splats.push(m);
+    if (this.splats.length > 48) this.splats.shift().userData.dry = true;
+    this.temp(m, life, (t) => {
+      if (m.userData.dry) { mat.opacity = Math.max(0, mat.opacity - 0.03); if (mat.opacity <= 0) t.age = t.life; return; }
+      const a = t.age - delay;
+      mat.opacity = a < 0 ? 0 : Math.min(0.92, a * 6, (t.life - t.age) / 6);
+      if (grow && a > 0) m.scale.setScalar(size * (0.15 + 0.85 * (1 - Math.exp(-a / (grow * 0.45)))));
+      if (t.age + 0.05 >= t.life) { const i = this.splats.indexOf(m); if (i >= 0) this.splats.splice(i, 1); }
+    }, false);
   },
   dust(pos, radius = 1, n = 16, col = [0.55, 0.48, 0.36, 0.45]) {
     for (let i = 0; i < n; i++) {

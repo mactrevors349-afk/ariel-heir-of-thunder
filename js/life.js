@@ -472,6 +472,10 @@ const Memory = {
       this.zeus.model.materials && this.zeus.model.materials().forEach((m) => Models.rim(m, [0.45, 0.6, 1.1], 2.8, 0.22));
     }
     this.zeus.root.visible = false;
+    // how thick their forearms and hands are above the bone (Zeus wears bracers): where the bundle comes to rest
+    // (at: how far along the forearms the bundle sits, so its back rests against their stomach)
+    this.anna.hold = { fore: 0.03, palm: 0.016, at: 0.77 };
+    this.zeus.hold = { fore: 0.05, palm: 0.022, at: 0.88 };
     this.baby = lifeBaby();
     this.baby.visible = false;
     s.add(this.baby);
@@ -484,28 +488,92 @@ const Memory = {
     this.cloudU.uFlash.value = close ? 1.8 : 0.9;
     if (close) UI.flash(0.35);
   },
-  /** hand the baby to someone: it lies across their forearms, between their hands */
+  /** hand the baby to someone: it lies across their forearms, over their upturned hands */
   carry(actor) {
+    if (this.carrier && this.carrier !== actor) this.cupHands(this.carrier, false);
     this.carrier = actor;
     this.baby.visible = true;
+    this.cupHands(actor, true);
     this.placeBaby();
   },
-  placeBaby() {
-    const A = this.carrier; if (!A) return;
+  /** a carrier with finger bones (Zeus) closes his fingers round the bundle's sides, and opens them again after */
+  cupHands(actor, on) {
+    const sk = actor.model && actor.model.model && actor.model.model.userData.skeleton;
+    if (!sk) return;
+    const fingers = actor._fingers || (actor._fingers = sk.bones.filter((b) => /Index|Middle|Ring|Pinky|Thumb/.test(b.name)));
+    if (on && !actor._fingerRest) {
+      actor._fingerRest = fingers.map((b) => b.quaternion.clone());
+      Models.curlFingers(actor.model, 34, 14);
+    } else if (!on && actor._fingerRest) {
+      fingers.forEach((b, i) => b.quaternion.copy(actor._fingerRest[i]));
+      actor._fingerRest = null;
+    }
+  },
+  /** (any carrier and any copy of the bundle: the painted slides of the epilogue hold one too) */
+  placeBaby(A = this.carrier, B = this.baby) {
+    if (!A) return;
     A.root.updateMatrixWorld(true);
     const J = A.rig.j, wp = (n, k) => J[n].getWorldPosition(this['_' + k] || (this['_' + k] = LV(0, 0, 0)));
-    // resting on the forearms, not held between the hands: his head in the crook of the carrier's left
-    // arm, his bottom on the right forearm, lifted by the bundle's own depth so the hands come under it.
-    // His face (in its hood of blanket) is turned up and a little out of the cradle, as a newborn is shown
-    const eL = wp('elbowL', 'eL'), hL = wp('handL', 'hL'), eR = wp('elbowR', 'eR'), hR = wp('handR', 'hR');
-    const sHead = eL.clone().lerp(hL, 0.3), sFeet = eR.clone().lerp(hR, 0.75);
+    // lying across both forearms, over the upturned hands (so the hands are under him, not beside him),
+    // his head to the carrier's left and a little raised, lifted by the bundle's own depth.
+    // His face (in its hood of blanket) is turned up and a little out of the arms, as a newborn is shown
+    const s = A.size || 1;
+    const at = (A.hold && A.hold.at) || 0.8;
+    const pL = wp('elbowL', 'eL').lerp(wp('handL', 'hL'), at), pR = wp('elbowR', 'eR').lerp(wp('handR', 'hR'), at);
     const y = A.root.rotation.y, fwd = LV(Math.sin(y), 0, Math.cos(y));
-    const head = sHead.clone().sub(sFeet).setY(0).normalize().add(LV(0, 0.22, 0)).normalize();
-    const face = LV(0, 1, 0).addScaledVector(fwd, 0.55).normalize();
+    const across = pL.clone().sub(pR).setY(0).normalize();
+    const head = across.clone().add(LV(0, 0.16, 0)).normalize();
+    const face = LV(0, 1, 0).addScaledVector(fwd, 0.4).normalize();
     const side = new THREE.Vector3().crossVectors(head, face).normalize();
     face.crossVectors(side, head).normalize();
-    this.baby.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, head, face));
-    this.baby.position.copy(sHead).add(sFeet).multiplyScalar(0.5).add(LV(0, 0.13 * (A.size || 1), 0));
+    B.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, head, face));
+    B.position.copy(pL).add(pR).multiplyScalar(0.5).add(LV(0, 0.15 * s, 0)).addScaledVector(across, 0.03 * s);
+    this.settleBaby(A, B);
+  },
+  /** the bundle's underside as a height map in its own frame (x across its width, y head to feet, z out of its face) */
+  underside() {
+    const B = this.baby, pts = [], v = LV(0, 0, 0);
+    B.updateMatrixWorld(true);
+    const inv = B.matrixWorld.clone().invert();
+    B.traverse((o) => {
+      if (!o.isMesh) return;
+      const P = o.geometry.attributes.position, m = inv.clone().multiply(o.matrixWorld);
+      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(m); pts.push(v.x, v.y, v.z); }
+    });
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < pts.length; i += 3) { x0 = Math.min(x0, pts[i]); x1 = Math.max(x1, pts[i]); y0 = Math.min(y0, pts[i + 1]); y1 = Math.max(y1, pts[i + 1]); }
+    const cell = 0.012, nx = Math.ceil((x1 - x0) / cell) + 1, ny = Math.ceil((y1 - y0) / cell) + 1, H = new Float32Array(nx * ny).fill(Infinity);
+    for (let i = 0; i < pts.length; i += 3) { const k = Math.floor((pts[i + 1] - y0) / cell) * nx + Math.floor((pts[i] - x0) / cell); H[k] = Math.min(H[k], pts[i + 2]); }
+    return (x, y) => {
+      const i = Math.floor((x - x0) / cell), j = Math.floor((y - y0) / cell);
+      let m = Infinity;
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const ii = i + a, jj = j + b; if (ii >= 0 && jj >= 0 && ii < nx && jj < ny) m = Math.min(m, H[jj * nx + ii]); }
+      return m;
+    };
+  },
+  /**
+   * Let the bundle down onto the carrier's forearms and upturned palms: the nearest point of contact is found
+   * along both arms, and the bundle settled until it rests there, sunk in a little (a blanket gives), so it is
+   * carried, never floating above the hands or cut through by them
+   */
+  settleBaby(A, B = this.baby) {
+    const J = A.rig.j, s = A.size || 1, H = this.under || (this.under = this.underside());
+    const R = A.hold || { fore: 0.035, palm: 0.018 };
+    B.updateMatrixWorld(true);
+    const inv = this._inv || (this._inv = new THREE.Matrix4()); inv.copy(B.matrixWorld).invert();
+    const q = this._q || (this._q = new THREE.Quaternion()), e = LV(0, 0, 0), h = LV(0, 0, 0), p = LV(0, 0, 0), up = LV(0, 0, 0), fin = LV(0, 0, 0);
+    let gap = Infinity;
+    const probe = (r) => { p.addScaledVector(up, r).applyMatrix4(inv); const u = H(p.x, p.y); if (u < Infinity) gap = Math.min(gap, u - p.z); };
+    for (const S of ['L', 'R']) {
+      J['elbow' + S].getWorldPosition(e); J['hand' + S].getWorldPosition(h); J['hand' + S].getWorldQuaternion(q);
+      up.set(S === 'L' ? -1 : 1, 0, 0).applyQuaternion(q);   // the palm's normal (palms are turned up under him)
+      if (up.y < 0.3) up.set(0, 1, 0);
+      fin.set(0, -1, 0).applyQuaternion(q);
+      for (let t = 0.3; t <= 1.001; t += 0.05) { p.copy(e).lerp(h, t); probe(R.fore * s * (1 - 0.3 * t)); }
+      for (let t = 0.01; t <= 0.091; t += 0.02) { p.copy(h).addScaledVector(fin, t * s); probe(R.palm * s); }
+    }
+    if (gap === Infinity) return;
+    B.position.addScaledVector(up.set(0, 0, 1).applyQuaternion(B.quaternion), -(gap + 0.02 * s));
   },
   update(dt) {
     this.anna.update(dt);
@@ -889,7 +957,7 @@ const Campus = {
     const p = this.vendFront.clone().setY(1.1).add(LV(0.15, 0, -0.5));
     FX.sparks(p, LV(0, 0.4, 1), 140, [1.4, 1.9, 3.4, 1], 9);
     FX.sparks(p, LV(0, 1, 0.3), 60, [3, 2.2, 1, 1], 6);
-    FX.flashLight(p, 0xb8d4ff, 260, 0.4, 12);
+    FX.flashLight(p, 0xb8d4ff, 130, 0.4, 10);
     FX.smoke.spawn({ x: p.x, y: p.y + 0.2, z: p.z, vy: 0.6, life: 3, s: 0.3, s2: 1.4, turb: 0.5, c: [0.3, 0.3, 0.32, 0.5], c2: [0.25, 0.25, 0.27, 0] });
     Sound.zap(); Sound.hit('metal', 0.8);
     this.smoking = 6;

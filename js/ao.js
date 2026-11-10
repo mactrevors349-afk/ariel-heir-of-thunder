@@ -7,8 +7,8 @@
      holds in any light
    - sun shafts: when the low sun is in view, its light streams round whatever
      stands against the sky (columns, trees, Ariel himself)
-   - depth of field in cutscenes: like a film lens, the background softens
-     behind whoever the camera is on
+   - depth of field in cutscene close-ups: like a film lens, the background
+     softens a little behind whoever the camera is on
    ========================================================================== */
 
 const AO_VERT = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
@@ -82,7 +82,7 @@ class AOPass {
           vec2 d = (uv - uSun) * vec2(uAspect, 1.0);
           // the sky near the sun, weighted by how bright it actually is there (cloud blocks it)
           float l = dot(texture2D(tDiffuse, uv).rgb, vec3(0.2126, 0.7152, 0.0722));
-          return smoothstep(0.55, 0.0, length(d)) * clamp(l, 0.0, 2.5);
+          return smoothstep(0.55, 0.0, length(d)) * clamp(l, 0.0, 1.6);
         }
         void main() {
           const int N = 40;
@@ -109,7 +109,7 @@ class AOPass {
         varying vec2 vUv;
         float lz(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, uNear, uFar); }
         // the lens: how many pixels across a point at depth z is smeared, focused at uFocus (far away much more than near)
-        float coc(float z) { float c = (z - uFocus) / max(z, 0.01); return uDof * (c > 0.0 ? c * 11.0 : -c * 4.0); }
+        float coc(float z) { float c = (z - uFocus) / max(z, 0.01); return min(uDof * (c > 0.0 ? c * 6.0 : -c * 2.5), 6.0); }
         void main() {
           vec4 col = texture2D(tDiffuse, vUv);
           if (uDof > 0.0) {
@@ -117,8 +117,9 @@ class AOPass {
             if (r > 0.6) {
               // a disc of samples (golden spiral); a sample nearer than the focus can't bleed sharp-edged onto this one
               vec3 acc = col.rgb; float wsum = 1.0;
-              for (int i = 0; i < 20; i++) {
-                float t = (float(i) + 0.5) / 20.0, a = float(i) * 2.39996;
+              // (enough samples for the disc that a small bright light spreads into a soft blur, not a scatter of copies)
+              for (int i = 0; i < 32; i++) {
+                float t = (float(i) + 0.5) / 32.0, a = float(i) * 2.39996;
                 vec2 uv = vUv + vec2(cos(a), sin(a)) * sqrt(t) * r / uRes;
                 float w = clamp(coc(lz(uv)) / r, 0.0, 1.0);
                 acc += texture2D(tDiffuse, uv).rgb * w; wsum += w;
@@ -193,11 +194,12 @@ class AOPass {
       renderer.setRenderTarget(this.rtS);
       renderer.render(this.quad, this.ortho);
     }
-    C.uShaft.value = this.shaftK * (G.shaftStrength ?? 0.42);
+    C.uShaft.value = this.shaftK * (G.shaftStrength ?? 0.28);
     // in a cutscene, focus on whatever the camera looks at; the closer the shot, the softer the background
     const look = G.state === 'cutscene' && Cutscene.active ? (Cutscene.tween ? Cutscene.tween.look : Cutscene.lastLook) : null;
     const focus = look ? cam.position.distanceTo(look) : 0;
-    this.dofK = damp(this.dofK || 0, look && this.dof !== false ? smooth(14, 3, focus) : 0, 3, Math.min(0.1, dt || 0.016));
+    // only a true close-up gets it: a medium or wide shot blurred behind reads as a toy model
+    this.dofK = damp(this.dofK || 0, look && this.dof !== false ? smooth(4.5, 2.2, focus) : 0, 3, Math.min(0.1, dt || 0.016));
     if (look) C.uFocus.value = focus;
     C.uDof.value = this.dofK * (this.dofScale || 1);
     set(this.compMat);

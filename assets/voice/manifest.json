@@ -341,17 +341,23 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "It's a gift."
  },
+ "25243170": {
+  "who": "Jesse",
+  "dur": 4.06,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "Uh-huh. You okay? You look like someone just told you a ghost story."
+ },
  "0f3a9092": {
   "who": "Ariel",
   "dur": 1.87,
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Something like that."
  },
- "25243170": {
+ "390a8ec4": {
   "who": "Jesse",
-  "dur": 4.06,
+  "dur": 5.14,
   "voice": "en-US-AvaMultilingualNeural",
-  "text": "Uh-huh. You okay? You look like someone just told you a ghost story."
+  "text": "Ugh, my phone just died. Again. Every single time you stand next to me."
  },
  "2cd0e5d2": {
   "who": "Ariel",
@@ -359,11 +365,11 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Sorry. Happens a lot."
  },
- "390a8ec4": {
+ "92912975": {
   "who": "Jesse",
-  "dur": 5.14,
+  "dur": 7.58,
   "voice": "en-US-AvaMultilingualNeural",
-  "text": "Ugh, my phone just died. Again. Every single time you stand next to me."
+  "text": "Lab partners don't let lab partners brood before first period. Buy me a soda, and I'll let you copy my chem homework."
  },
  "c33f609c": {
   "who": "Ariel",
@@ -593,6 +599,120 @@
   "voice": "en-GB-ThomasNeural",
   "text": "I am sorry I was not there. Rise now, Heir of Thunder. Olympus awaits."
  },
+ "f0861463": {
+  "who": "Ares",
+  "dur": 8.95,
+  "voice": "en-US-GuyNeural",
+  "text": "Hear me, brother. The mantle of war was never mine to keep. I wore it like a butcher wears his apron."
+ },
+ "70523bd2": {
+  "who": "Ares",
+  "dur": 4.75,
+  "voice": "en-US-GuyNeural",
+  "text": "Take it. Be the god of war that I never was."
+ },
+ "830174be": {
+  "who": "Ariel",
+  "dur": 2.16,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "…Then I will make it mean something."
+ },
+ "0075ba3b": {
+  "who": "Narrator",
+  "dur": 4.22,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Olympus stood again in the light, as it was in the beginning."
+ },
+ "3492b366": {
+  "who": "Anna",
+  "dur": 3.62,
+  "voice": "en-US-EmmaMultilingualNeural",
+  "text": "Three days, Ariel. Three days, and not one word."
+ },
+ "b4fa10bd": {
+  "who": "Ariel",
+  "dur": 4.32,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "I met him, Mom. Dad. He said he was sorry he was not there."
+ },
+ "20d97ea4": {
+  "who": "Anna",
+  "dur": 5.14,
+  "voice": "en-US-EmmaMultilingualNeural",
+  "text": "…He was always there. In every storm that ever passed over this house."
+ },
+ "e1b837fd": {
+  "who": "Ariel",
+  "dur": 5.09,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "They want me on Olympus. A throne, a mantle, all of it. I said yes."
+ },
+ "d566c311": {
+  "who": "Ariel",
+  "dur": 3.72,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "But I am not leaving you. I am not leaving any of this."
+ },
+ "96c49566": {
+  "who": "Anna",
+  "dur": 4.58,
+  "voice": "en-US-EmmaMultilingualNeural",
+  "text": "Then you will do the one thing your father never could. You will be both."
+ },
+ "6e1cc359": {
+  "who": "Jesse",
+  "dur": 7.27,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "The microscopes. The lights at the dance. The bolt that missed the bus by a foot. That was you. All of it."
+ },
+ "9bc07c8f": {
+  "who": "Ariel",
+  "dur": 2.26,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "Would you believe me if I said yes?"
+ },
+ "784b1f8f": {
+  "who": "Jesse",
+  "dur": 4.3,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "Stormborn, I have believed you since the third grade. Try me."
+ },
+ "25f1cf32": {
+  "who": "Narrator",
+  "dur": 4.7,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Anna kept that photograph on her mantel for the rest of her life."
+ },
+ "4aa626a4": {
+  "who": "Anna",
+  "dur": 1.87,
+  "voice": "en-US-EmmaMultilingualNeural",
+  "text": "Hello, little storm."
+ },
+ "cf295e23": {
+  "who": "Jesse",
+  "dur": 3.0,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "He has your eyes. And your father's weather."
+ },
+ "15db8595": {
+  "who": "Ariel",
+  "dur": 2.64,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "Kratos. His name is Kratos."
+ },
+ "f8aec782": {
+  "who": "Zeus",
+  "dur": 6.72,
+  "voice": "en-GB-ThomasNeural",
+  "text": "A grandson. Olympus has not heard a child cry in a thousand years."
+ },
+ "56f343ef": {
+  "who": "Narrator",
+  "dur": 9.82,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "And so the son of a storm became a father, and the story of the gods began again, in the halls of Olympus, in his mother's arms."
+ },
  "07c4c55d": {
   "who": "Ariel",
   "dur": 4.49,
@@ -694,6 +814,108 @@
   "dur": 1.94,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "…inside a mortal child."
+ },
+ "720e16be": {
+  "who": "Narrator",
+  "dur": 5.69,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "And the Fates, who see every thread, wove what was still to come."
+ },
+ "deaca9d9": {
+  "who": "Narrator",
+  "dur": 6.55,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "The son of Zeus took up the mantle of war, and carried it into the dark places of the world."
+ },
+ "01137801": {
+  "who": "Narrator",
+  "dur": 7.94,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "One by one, the stolen sparks came home — until the Titan himself was cast down into Tartarus."
+ },
+ "daa4013e": {
+  "who": "Narrator",
+  "dur": 8.71,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "The gods walked again on Olympus: the sea-king, the grey-eyed one, the lord of the dead — and their King."
+ },
+ "b0ad3067": {
+  "who": "Narrator",
+  "dur": 7.22,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Their fires were lit, their columns stood, and Olympus shone over the world once more."
+ },
+ "4e6e68b9": {
+  "who": "Narrator",
+  "dur": 6.5,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "And at the right hand of Zeus stood the new God of War: Ariel, Heir of Thunder."
+ },
+ "1d8f8cd2": {
+  "who": "Narrator",
+  "dur": 7.37,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "By day he was still Ariel Stormborn of Westbrook High, who turned his chemistry homework in late."
+ },
+ "9b0d27b2": {
+  "who": "Narrator",
+  "dur": 7.27,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "By night the God of War kept watch over the old places of the world, and the old places were quiet."
+ },
+ "83ac90ae": {
+  "who": "Narrator",
+  "dur": 10.22,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "He told Jesse everything: the shard, the storm, the father in the rain. She listened to the very end, and she did not run."
+ },
+ "fa9b2f85": {
+  "who": "Narrator",
+  "dur": 6.29,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "They finished school together, under a sky that held back its thunder for one whole afternoon."
+ },
+ "64a13edb": {
+  "who": "Zeus",
+  "dur": 6.98,
+  "voice": "en-GB-ThomasNeural",
+  "text": "Olympus stands again. And at my right hand, the God of War — my son."
+ },
+ "6589a168": {
+  "who": "Narrator",
+  "dur": 7.97,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Zeus came as a warm summer rain. Ares came in his own fire, and for the first time it warmed instead of burned."
+ },
+ "dc0bdc05": {
+  "who": "Narrator",
+  "dur": 12.41,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Two winters after Kratos came his brother, Deimos: dread. A red ember burned beside the blue in him, the war-god's shard come home in the blood."
+ },
+ "305bbbf8": {
+  "who": "Narrator",
+  "dur": 9.22,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "The brothers grew up between two worlds: Saturday football in Westbrook, and Sunday sword-drill on the slopes of Olympus."
+ },
+ "81b6435a": {
+  "who": "Narrator",
+  "dur": 12.77,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Kratos had his father's strength, and Deimos his grandfather's fury. Ariel, who had carried both, taught them the one thing no god had ever learned: when not to fight."
+ },
+ "fe2c3fc4": {
+  "who": "Narrator",
+  "dur": 8.76,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Anna grew old in the house by the sea. And every storm that ever passed over it stopped there, for a moment, to rest."
+ },
+ "5940d272": {
+  "who": "Narrator",
+  "dur": 4.63,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "This is how the story ends. Everything else is how it happens."
  },
  "36f782c9": {
   "who": "Hermes",
@@ -881,12 +1103,6 @@
   "voice": "en-US-MichelleNeural",
   "text": "Beware the one-eyed giant… and his stomp."
  },
- "92912975": {
-  "who": "Jesse",
-  "dur": 7.58,
-  "voice": "en-US-AvaMultilingualNeural",
-  "text": "Lab partners don't let lab partners brood before first period. Buy me a soda, and I'll let you copy my chem homework."
- },
  "d4f8f218": {
   "who": "Echo",
   "dur": 3.36,
@@ -904,5 +1120,11 @@
   "dur": 5.62,
   "voice": "en-US-EricNeural",
   "text": "Fire, O fire… when he lifts his blade to the sky, run."
+ },
+ "94e09c15": {
+  "who": "Narrator",
+  "dur": 13.1,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Seven summers later, on the pier where Anna once met a stranger in the rain, Ariel married Jesse. Anna gave the bride away, and Hermes, of course, was late."
  }
 }

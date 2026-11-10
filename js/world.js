@@ -395,6 +395,9 @@ const World = {
   },
   getHeight(x, z, refY = Infinity) {
     let h = this.terrainHeight(x, z);
+    // the arena's paving is one flat disc: where the ground dips under it (toward the gate) you stand on the stone
+    const A = this.arenaFloor;
+    if (A && h < A.top) { const dx = x - A.x, dz = z - A.z; if (dx * dx + dz * dz < A.r2) h = A.top; }
     for (const p of this.platforms) {
       if (p.top <= h || p.top > refY + STEP) continue;
       if (this.inPlatform(p, x, z)) h = p.top;
@@ -1473,6 +1476,7 @@ const World = {
     const rep = Tex.photo ? 16 : 6;
     for (const t of [floor.material.map, floor.material.normalMap, floor.material.roughnessMap]) if (t) t.repeat.set(rep, rep);
     floor.position.set(R.x, ry - 0.47, R.z);
+    this.arenaFloor = { x: R.x, z: R.z, r2: 27.9 * 27.9, top: ry + 0.03 };
     floor.receiveShadow = true;
     scene.add(floor);
     const gap = 0.36;
@@ -1535,9 +1539,10 @@ const World = {
           float n2 = texture2D(tNoise, uv * vec2(1.6, 2.0) + vec2(-uTime * 0.06, uTime * 0.03) + n * 0.3).g;
           float edge = smoothstep(0.0, 0.12, uv.x) * smoothstep(1.0, 0.88, uv.x) * smoothstep(0.0, 0.05, uv.y) * smoothstep(1.0, 0.85, uv.y);
           float wisps = smoothstep(0.35, 0.8, n * 0.6 + n2 * 0.6);
-          float a = (0.25 + wisps * 0.75) * edge;
-          vec3 c = mix(vec3(0.62, 0.5, 0.3), vec3(1.0, 0.85, 0.55), n2);
-          gl_FragColor = vec4(c * a, a * uOpacity * 0.7);
+          float a = (0.2 + wisps * 0.8) * edge;
+          // a dim, warm haze: additive over a sunlit sky, anything brighter blows out to a white wall
+          vec3 c = mix(vec3(0.42, 0.27, 0.1), vec3(0.85, 0.58, 0.26), n2);
+          gl_FragColor = vec4(c * a, a * uOpacity * 0.34);
         }`,
       transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
     }));
