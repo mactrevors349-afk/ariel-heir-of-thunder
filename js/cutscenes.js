@@ -410,7 +410,7 @@ const Prologue = {
     b.size = size;
     scene.add(b.root);
     if (spark) {
-      b.spark = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(...spark), fog: false }));
+      b.spark = FX.plasma(0.15, spark);
       b.sparkCol = spark;
       scene.add(b.spark);
     }
@@ -757,7 +757,9 @@ const Prologue = {
         p.lerpVectors(f.from, kh, easeInOut(f.t));
         p.y += Math.sin(f.t * Math.PI) * 3;
         const [r, gg, b] = g.sparkCol;
-        FX.glow.spawn({ x: p.x, y: p.y, z: p.z, vx: rand(-0.4, 0.4), vy: rand(-0.4, 0.4), vz: rand(-0.4, 0.4), life: 0.7, s: 0.28, s2: 0.02, c: [r, gg, b, 1], c2: [r * 0.6, gg * 0.6, b * 0.6, 0] });
+        // a trail of its own fire streaming off it
+        for (let k = 0; k < 2; k++) FX.sparkle.spawn({ x: p.x, y: p.y, z: p.z, vx: rand(-1.2, 1.2), vy: rand(-0.8, 1.2), vz: rand(-1.2, 1.2), s: rand(0.01, 0.024), life: rand(0.4, 0.9), c: [r * 1.2, gg * 1.2, b * 1.2, 1], c2: [r * 0.3, gg * 0.3, b * 0.3, 0], g: -1, drag: 1.2 });
+        if (Math.random() < 0.3) FX.arc(p.clone(), p.clone().add(new THREE.Vector3(rand(-0.5, 0.5), rand(-0.5, 0.5), rand(-0.5, 0.5))), 0.01);
         if (f.t >= 1) {
           g.sparkGone = true; g.spark.visible = false;
           FX.sparks(kh, null, 40, [1.4, 0.4, 2.4, 1], 5);
@@ -766,7 +768,9 @@ const Prologue = {
         }
       } else if (g.sparkHeld) {
         p.copy(this.hand(g)).add(new THREE.Vector3(0, 0.25, 0));
-        if (Math.random() < 0.8) FX.glow.spawn({ x: p.x + rand(-0.3, 0.3), y: p.y + rand(-0.3, 0.3), z: p.z + rand(-0.3, 0.3), vy: rand(0.5, 1.5), life: 0.6, s: 0.12, s2: 0.01, c: [2.4, 2.4, 3.6, 1], c2: [1, 1.4, 3, 0] });
+        // thunder held in a hand: little arcs leaping off it, and sparks
+        if (Math.random() < 0.45) FX.arc(p.clone(), p.clone().add(new THREE.Vector3(rand(-0.45, 0.45), rand(-0.3, 0.5), rand(-0.45, 0.45))), 0.01);
+        if (Math.random() < 0.6) FX.sparkle.spawn({ x: p.x, y: p.y, z: p.z, vx: rand(-2, 2), vy: rand(-1, 2), vz: rand(-2, 2), s: rand(0.008, 0.016), life: rand(0.1, 0.25), c: [2.4, 2.8, 4.5, 1], c2: [0.6, 0.9, 2.4, 0], g: -2, drag: 3 });
       } else {
         p.copy(this.head(g)).add(new THREE.Vector3(0, 0.7 * g.size, 0));
         p.y += Math.sin(G.time * 2 + g.root.position.x) * 0.06;
@@ -2254,7 +2258,7 @@ const SCRIPTS = {
       await c.say('Ares', 'That shard in your chest… I hated you for it before you could walk. A mortal, wearing my strength like a borrowed cloak.');
       await c.say('Ares', 'It was never his to give. So let it be mine. Keep it, brother.');
       // the Spark of War
-      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 20, 14), new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 1.4, 0.4) }));
+      const orb = FX.plasma(0.42, [6, 1.6, 0.45]);
       orb.position.copy(bp).add(V(0, 3.4, 0));
       G.scene.add(orb);
       Sound.bell();
@@ -2267,7 +2271,9 @@ const SCRIPTS = {
         const u = clamp((G.time - t0) / 2.6, 0, 1);
         orb.position.lerpVectors(bp.clone().add(V(0, 3.4, 0)), target, easeInOut(u));
         orb.position.y += Math.sin(u * Math.PI) * 2.5;
-        FX.glow.spawn({ x: orb.position.x, y: orb.position.y, z: orb.position.z, vx: rand(-0.5, 0.5), vy: rand(-0.5, 0.5), vz: rand(-0.5, 0.5), life: 0.8, s: 0.3, s2: 0.02, c: [3, 0.8, 0.2, 1], c2: [2, 0.4, 0.1, 0] });
+        FX.flame(orb.position.clone().add(V(rand(-0.15, 0.15), -0.1, rand(-0.15, 0.15))), 0.55);
+        if (Math.random() < 0.8) FX.sparkle.spawn({ x: orb.position.x, y: orb.position.y, z: orb.position.z, vx: rand(-1.2, 1.2), vy: rand(-0.4, 1.6), vz: rand(-1.2, 1.2), s: rand(0.01, 0.022), life: rand(0.5, 1.1), c: [3.2, 1.6, 0.45, 1], c2: [1.1, 0.18, 0.03, 0], g: -1.5, drag: 1 });
+        if (Math.random() < 0.5) FX.flashLight(orb.position, 0xff6a28, 40, 0.15, 12);
         return false;
       });
       G.scene.remove(orb);

@@ -473,7 +473,8 @@ class Player {
     // the storm trails off his heels
     if (Math.random() < 0.5) {
       const f = this.rig.j[Math.random() < 0.5 ? 'footL' : 'footR'].getWorldPosition(this._v);
-      FX.glow.spawn({ x: f.x, y: f.y, z: f.z, vx: -this.vx * 0.2 + rand(-0.4, 0.4), vy: rand(-1.2, -0.3), vz: -this.vz * 0.2 + rand(-0.4, 0.4), life: rand(0.2, 0.45), s: rand(0.06, 0.14), s2: 0.01, c: [1.4, 1.9, 3.4, 1], c2: [0.6, 0.9, 2.4, 0], drag: 2 });
+      FX.sparkle.spawn({ x: f.x, y: f.y, z: f.z, vx: -this.vx * 0.3 + rand(-0.6, 0.6), vy: rand(-2, -0.4), vz: -this.vz * 0.3 + rand(-0.6, 0.6), s: rand(0.01, 0.02), life: rand(0.15, 0.35), c: [2.2, 2.7, 4.4, 1], c2: [0.5, 0.8, 2.2, 0], g: -2, drag: 2.5 });
+      if (Math.random() < 0.25) FX.arc(f.clone(), f.clone().add(new THREE.Vector3(rand(-0.4, 0.4), rand(-0.7, -0.2), rand(-0.4, 0.4))), 0.009);
     }
     if (!this.flying) return;
     if (inp.fly) { this.land(); return; }
@@ -625,7 +626,7 @@ class Player {
       if (!cur || !cur.alive || i >= links) return;
       const tp = cur.pos.clone().add(new THREE.Vector3(0, cur.height * 0.55, 0));
       FX.bolt(prev, tp, { radius: 0.075, life: 0.34, branches: 3 });
-      FX.flashLight(tp, 0x9cc4ff, 60, 0.25, 12);
+      FX.flashLight(tp, 0xa8c8ff, 26, 0.25, 10);
       this.strike(cur, dmg * (1 - i * 0.07), 30, 'lightning', tp);
       hit.add(cur);
       prev = tp; i++;
@@ -727,13 +728,19 @@ class Player {
     UI.toast('<b>War Cry</b> — Ares\' fury burns in Keraunos');
   }
   spearMesh() {
-    if (!Player.spearGeo) {
-      const shaft = new THREE.CylinderGeometry(0.035, 0.035, 2.1, 8); shaft.translate(0, -0.2, 0);
-      const head = new THREE.ConeGeometry(0.09, 0.42, 8); head.translate(0, 1.06, 0);
-      Player.spearGeo = Addons.mergeGeometries([shaft.toNonIndexed(), head.toNonIndexed()]);
-      Player.spearMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4.5, 1.3, 0.3) });
+    if (!Player.spearParts) {
+      // a dark bronze shaft and a leaf-bladed head heated white-hot by Ares' fire
+      const shaft = new THREE.CylinderGeometry(0.028, 0.034, 2.1, 10); shaft.translate(0, -0.2, 0);
+      const ferrule = new THREE.CylinderGeometry(0.04, 0.03, 0.12, 10); ferrule.translate(0, 0.84, 0);
+      const head = new THREE.SphereGeometry(1, 14, 10); head.scale(0.05, 0.22, 0.018); head.translate(0, 1.1, 0);
+      const butt = new THREE.ConeGeometry(0.035, 0.16, 10); butt.rotateX(Math.PI); butt.translate(0, -1.3, 0);
+      const bronze = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.55, metalness: 0.6, emissive: 0xff3a0a, emissiveIntensity: 0.04 });
+      const hot = new THREE.MeshStandardMaterial({ color: 0x4a2408, roughness: 0.35, metalness: 0.7, emissive: new THREE.Color(1, 0.3, 0.05), emissiveIntensity: 1.3 });
+      Player.spearParts = [[Addons.mergeGeometries([shaft, ferrule, butt].map((g) => g.toNonIndexed())), bronze], [head, hot]];
     }
-    return new THREE.Mesh(Player.spearGeo, Player.spearMat);
+    const g = new THREE.Group();
+    for (const [geo, mat] of Player.spearParts) g.add(new THREE.Mesh(geo, mat));
+    return g;
   }
   /** Spear of Ares: a javelin of his fire, out of the free hand */
   throwSpear() {
@@ -758,7 +765,7 @@ class Player {
     for (let i = this.spears.length - 1; i >= 0; i--) {
       const s = this.spears[i], p = s.mesh.position;
       s.life -= dt;
-      const step = s.speed * dt;
+      const step = s.speed * dt, prev = p.clone();
       let hit = s.life <= 0;
       // swept along the step, so it cannot fly through a body between two frames
       for (let k = 0; k < 4 && !hit; k++) {
@@ -769,8 +776,15 @@ class Player {
           if (Math.hypot(p.x - e.pos.x, p.z - e.pos.z) < e.radius + 0.35 && p.y > e.pos.y - 0.2 && p.y < e.pos.y + e.height + 0.3) { hit = true; break; }
         }
       }
-      FX.flame(p.clone().addScaledVector(s.dir, -0.6), 0.5);
-      if (Math.random() < 0.5) FX.flame(p.clone().addScaledVector(s.dir, -1.2), 0.35);
+      // the head and the front of the shaft wrapped in Ares' fire, streaming off behind it in an unbroken trail
+      // (spawned all along the stretch it flew this frame, not in one clump per frame)
+      const n = Math.max(4, Math.round(step / 0.12));
+      for (let k = 0; k < n; k++) {
+        const u = (k + Math.random()) / n, q = prev.clone().lerp(p, u).addScaledVector(s.dir, rand(-0.6, 1.1));
+        FX.flame(q, rand(0.4, 0.62), [2.6, 1.1, 0.3, rand(0.5, 0.75)]);
+      }
+      if (Math.random() < 0.7) FX.sparkle.spawn({ x: p.x, y: p.y, z: p.z, vx: -s.dir.x * 6 + rand(-1, 1), vy: -s.dir.y * 6 + rand(0, 1.5), vz: -s.dir.z * 6 + rand(-1, 1), s: rand(0.01, 0.02), life: rand(0.4, 0.8), c: [3.2, 1.7, 0.5, 1], c2: [1.1, 0.2, 0.03, 0], g: -3, drag: 1 });
+      if (Math.random() < 0.35) FX.flashLight(p, 0xff7a30, 30, 0.12, 9);
       if (!hit) continue;
       this.spears.splice(i, 1);
       s.mesh.parent.remove(s.mesh);
@@ -866,7 +880,7 @@ class Player {
       this.parts.sword.userData.base.getWorldPosition(this._b);
       const p = this._b.lerp(this._t, Math.random());
       if (Math.random() < 0.6) FX.flame(p, 0.26, [2.4, 0.5, 0.12, 0.7]);
-      if (this.glowK > 0.05 && Math.random() < 0.5) FX.glow.spawn({ x: p.x, y: p.y, z: p.z, vx: rand(-2, 2), vy: rand(-1, 2), vz: rand(-2, 2), life: rand(0.06, 0.16), s: rand(0.05, 0.1), s2: 0.01, c: [1.6, 2.1, 3.6, 1], c2: [0.8, 1.2, 3, 0], drag: 4 });
+      if (this.glowK > 0.05 && Math.random() < 0.3) FX.arc(p.clone(), p.clone().add(new THREE.Vector3(rand(-0.3, 0.3), rand(-0.2, 0.35), rand(-0.3, 0.3))), 0.008);
     }
   }
 

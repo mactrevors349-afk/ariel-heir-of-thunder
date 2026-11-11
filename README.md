@@ -182,6 +182,15 @@ The whole HUD scales with the window.
 ## Graphics
 A dark, weathered look in the spirit of the original Elden Ring and the old God of War games: a drained, overcast sky, deep shadows, heavy haze and a desaturated grade, with each story scene graded on its own (the pier memory is in faded sepia). Physically based lighting, image-based lighting, soft shadows, and soft, billowing smoke from a pre-rendered smoke atlas (`tools/smoke_atlas.js`). Cutscene close-ups are lit like a film: a soft key light from about 45° and a rim light from behind follow whoever the camera is on, so faces have shape instead of flat ambient light. The meadow is tens of thousands of photographed grass tufts that sway in the wind and part as you walk through them. Cypress, olive and street trees, the bushes and the Golden Tree all wear real photographed leaves, and the houses across from the school are built from real siding, shingles, brick and concrete with framed windows, porches, chimneys, gutters and garages. Plus cloth-simulated capes, sea reflections, bloom and a film-grain vignette.
 
+**Powers.** Every power and every scene where a god uses one share the same effects:
+- **Lightning:** camera-facing ribbons with a thin, blinding white core inside a soft blue corona. Each bolt forks, and its forks fork again. The leader races down the channel, the bolt flashes, re-strikes two or three times, then fades. A god's thunderbolt in a cutscene keeps burning and flickering.
+- **Sparks and embers:** streaks stretched along their flight that cool from white-hot to dull red, and skip off the ground.
+- **Fire:** soft wisps eaten into licking tongues by noise that rises with them, burning yellow in the thick of it, orange, then deep red at the edges, with dark smoke rolling up after.
+- **Shock waves:** a faint pressure ring with dust kicked up along it.
+- **The Spear of Ares:** a dark bronze spear with an orange-hot head, trailing an unbroken stream of fire.
+- **The gods' sparks:** orbs that are blinding at the heart and fade at the rim, with arcs leaping off them.
+- **God Mode:** arcs of electricity crawl over Ariel's armour.
+
 **Blood.** In the God of War style: every blow throws a spurt of dark blood along the cut, a rope of drops that arcs out over a tenth of a second, with a fan of fine spray, a few heavy drops and a dark mist. Each drop is drawn stretched along its flight and shaded like a bead of liquid with a wet highlight. The drops land as glossy splatters with satellite drops flung the way the blow went. A pool spreads under each body that falls. Each kind bleeds its own colour: red for the living and for Ares, dark old blood for the Hollow, black-purple for the Thralls of Tartarus. Burns and lightning bleed far less, because they sear the wound.
 
 Three effects are worked out from the depth the scene has already drawn, so they cost no second render of the world (`js/ao.js`):
