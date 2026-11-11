@@ -879,6 +879,31 @@ const Vase = {
     this.S.add(g);
     return (this.props.temple = g);
   },
+  /** a crag for a Titan to be chained to: one weathered lump of rock with a lesser one at its foot, smooth-shaded */
+  rock(r) {
+    let g = this.props.rock;
+    if (!g) {
+      g = new THREE.Group();
+      const m = new THREE.MeshBasicMaterial(), n = new Simplex2(77);
+      const lump = (sx, sy, sz, x, y, seed) => {
+        const geo = weld(new THREE.IcosahedronGeometry(1, 3)), P = geo.attributes.position;
+        for (let k = 0; k < P.count; k++) {
+          const vx = P.getX(k), vy = P.getY(k), vz = P.getZ(k);
+          const d = 1 + n.noise(vx * 1.7 + seed, vz * 1.7 + vy) * 0.16 + n.noise(vx * 4.1 - seed, vy * 4.1) * 0.05;
+          P.setXYZ(k, vx * d * sx, Math.max(vy * d, -0.2) * sy, vz * d * sz);
+        }
+        geo.computeVertexNormals();
+        const o = new THREE.Mesh(geo, m); o.position.set(x, y, 0); g.add(o);
+      };
+      lump(0.62, 0.62, 0.45, 0, 0.5, 1.3);
+      lump(0.38, 0.32, 0.36, 0.55, 0.22, 5.1);
+      this.S.add(g);
+      this.props.rock = g;
+    }
+    g.position.set(r.x || 0, 0, -0.3);
+    g.scale.set(r.w || 1.4, r.h || 1, 1.2);
+    return g;
+  },
   /** draw one slide: pose the figures, render mask and normals, paint the vase */
   render(slide) {
     this.setup();
@@ -905,6 +930,7 @@ const Vase = {
       if (f.label) labels.push({ text: f.label, at: a.rig.j.head.getWorldPosition(V3(0, 0, 0)), side: f.labelSide || -f.face, up: f.labelUp || 0 });
     }
     if (slide.temple) this.temple().visible = true;
+    if (slide.rock) this.rock(slide.rock).visible = true;
     const c = slide.cam || {};
     this.cam.position.set(c.x || 0, c.y ?? 1.5, c.dist || 16);
     this.cam.fov = c.fov || 17; this.cam.updateProjectionMatrix();
@@ -1109,7 +1135,7 @@ const LIFE_SLIDES_A = [
       { key: 'ares', model: 'ares', stance: 'aresCourt', size: 1.2, x: 3.1, face: -1, pose: {}, label: 'ΑΡΗΣ' }], cam: { y: 1.3, dist: 16 } },
 ];
 const LIFE_SLIDES_B = [
-  { line: 'Two winters after Kratos came his brother, Deimos: dread. A red ember burned beside the blue in him, the war-god\'s shard come home in the blood.',
+  { line: 'Two winters after Kratos came his brother, Deimos. The old poets had a word for him before he was born: Dread, who rides at the War-god\'s side. A red ember burned beside the blue in him, the war-god\'s shard come home in the blood.',
     figures: [{ key: 'teen', model: 'arielTeen', size: 1.0, x: -1.3, face: 1, pose: 'look', t: 1, label: 'ΑΡΙΕΛ' },
       { key: 'jesse', model: 'jesse', size: 0.95, x: 0.2, face: -1, pose: 'cradle', t: 1, carry: true, label: 'ΤΖΕΣΣΙ' },
       { key: 'kid1', model: 'arielTeen', size: 0.56, x: 1.6, face: -1, pose: 'lookUp', t: 1, label: 'ΚΡΑΤΟΣ' }], cam: { y: 1.0, dist: 10 } },
@@ -1117,10 +1143,28 @@ const LIFE_SLIDES_B = [
     figures: [{ key: 'ariel', model: 'arielGod', stance: 'sword', size: 1.1, x: -2.2, face: 1, pose: 'point', t: 0.8, label: 'ΑΡΙΕΛ' },
       { key: 'kid1', model: 'arielTeen', size: 0.62, x: 0.6, face: 1, pose: 'heavy', t: 0.4, label: 'ΚΡΑΤΟΣ' },
       { key: 'kid2', model: 'arielTeen', size: 0.5, x: 2.3, face: -1, pose: 'backstep', t: 0.5, label: 'ΔΕΙΜΟΣ' }], cam: { y: 1.0, dist: 12 } },
-  { line: 'Kratos had his father\'s strength, and Deimos his grandfather\'s fury. Ariel, who had carried both, taught them the one thing no god had ever learned: when not to fight.',
+  { line: 'Kratos had his father\'s strength, and Deimos the War-god\'s fury. Ariel, who had carried both, taught them the one thing no god had ever learned: when not to fight.',
     figures: [{ key: 'kid1', model: 'arielTeen', size: 0.66, x: -1.7, face: 1, pose: 'charge', t: 0.3, label: 'ΚΡΑΤΟΣ' },
       { key: 'ariel', model: 'arielGod', stance: 'sword', size: 1.1, x: 0, face: 1, pose: 'raise', t: 0.6, label: 'ΑΡΙΕΛ' },
       { key: 'kid2', model: 'arielTeen', size: 0.55, x: 1.7, face: -1, pose: 'charge', t: 0.3, label: 'ΔΕΙΜΟΣ' }], cam: { y: 1.0, dist: 13 } },
+  // Kratos as the myths remember him (Hesiod's Theogony; Aeschylus' Prometheus Bound): Strength, who stands by Zeus' throne
+  // with his sister Bia, Force, and who held Prometheus to the Caucasus rock while Hephaestus drove the chains
+  { line: 'Kratos grew into his name. Strength, the poets called him, who stands at the right hand of Zeus with his sister Bia, Force. When the Titan Prometheus stole fire for mankind, it was Kratos who held him to the Caucasus rock while Hephaestus drove the chains.',
+    rock: { x: 0.5, w: 1.5, h: 1.0 },
+    figures: [{ key: 'grownK', model: 'arielGod', stance: 'sword', size: 1.08, x: -2.2, face: 1, pose: 'point', t: 1, label: 'ΚΡΑΤΟΣ' },
+      { key: 'prometheus', model: 'zeus', size: 1.0, x: 0.45, y: 1.02, face: 1, pose: { armL: [-155, 0, 12], elbowL: [-18, 0, 0], armR: [-155, 0, -12], elbowR: [-18, 0, 0], chest: [6, 0, 0], neck: [24, 0, 0], head: [10, 0, 0] }, label: 'ΠΡΟΜΗΘΕΥΣ', labelUp: 0.3 },
+      { key: 'hephaestus', model: 'poseidon', size: 1.05, x: 2.6, face: -1, pose: 'raise', t: 1, label: 'ΗΦΑΙΣΤΟΣ' }], cam: { y: 1.7, dist: 15.5 } },
+  { line: 'And it was Kratos, too, who walked beside Heracles on the day the chains were broken. His father had taught him that strength is also knowing when to let go.',
+    rock: { x: 0.5, w: 1.5, h: 1.0 },
+    figures: [{ key: 'grownK', model: 'arielGod', stance: 'sword', size: 1.08, x: -1.9, face: 1, pose: 'offer', t: 1, label: 'ΚΡΑΤΟΣ' },
+      { key: 'prometheus', model: 'zeus', size: 1.0, x: 0.45, y: 1.02, face: -1, pose: 'raise', t: 1, label: 'ΠΡΟΜΗΘΕΥΣ', labelUp: 0.3 },
+      { key: 'heracles', model: 'spartan', stance: 'hopliteSword', size: 1.06, x: 2.9, face: -1, pose: 'point', t: 1, label: 'ΗΡΑΚΛΗΣ' }], cam: { y: 1.6, dist: 15.5 } },
+  // Deimos as the myths remember him (Hesiod; the Iliad): Dread, who goes into battle beside Ares with his brother Phobos, Fear
+  { line: 'Deimos rode out with his uncle Ares, Dread beside the War-god as in every song since. But wherever the two of them came, the armies laid down their spears before a blow was struck.',
+    figures: [{ key: 'grownD', model: 'arielTeen', size: 1.0, x: -2.6, face: 1, pose: 'offer', t: 1, label: 'ΔΕΙΜΟΣ' },
+      { key: 'ares', model: 'ares', stance: 'aresCourt', size: 1.2, x: -0.9, face: 1, pose: 'point', t: 1, label: 'ΑΡΗΣ' },
+      { key: 'hop1', model: 'spartan', stance: 'hopliteSword', size: 1.0, x: 1.4, face: -1, pose: 'kneelBowed', t: 1 },
+      { key: 'hop2', model: 'spartan', stance: 'hopliteSword', size: 1.0, x: 3.0, face: -1, pose: 'kneelBowed', t: 1 }], cam: { y: 1.3, dist: 15 } },
   { line: 'Anna grew old in the house by the sea. And every storm that ever passed over it stopped there, for a moment, to rest.',
     rosettes: 10, figures: [{ key: 'anna', model: 'anna', size: 0.97, x: 0, face: 1, pose: 'lookUp', t: 1, label: 'ΑΝΝΑ' }], cam: { y: 1.0, dist: 8.5 } },
   { line: 'This is how the story ends. Everything else is how it happens.',
@@ -1825,9 +1869,11 @@ const SCRIPTS = {
       Z.rig.stop(0.5); YA.rig.play('cradle', { fade: 0.5 });
       await c.wait(0.4);
       Me.carry(YA);
-      // on her, from where he stands (he is behind the lens)
-      c.shot(aH().addScaledVector(zDir(), -1.25).addScaledVector(side(), 0.35).add(V(0, 0.05, 0)), aH(), 36);
-      await c.say('Anna', 'Will we ever see you again?');
+      // on her, from where he stands (he is behind the lens, so he is hidden: the lens sat inside his cloak and
+      // shoulder, which filled the frame)
+      c.shot(aH().addScaledVector(zDir(), -1.25).addScaledVector(side(), 0.9).add(V(0, 0.05, 0)), aH(), 36);
+      Z.root.visible = false;
+      try { await c.say('Anna', 'Will we ever see you again?'); } finally { Z.root.visible = true; }
       // from his left, at his height: his face lifted to the storm (in front of him she stood in the way)
       c.shot(Z.root.position.clone().addScaledVector(zf(), 1.6).addScaledVector(zr(), -1.3).add(V(0, 1.6, 0)), zH().add(V(0, 0.15, 0)), 42);
       Z.rig.play('lookUp', { fade: 0.5 });
@@ -2458,6 +2504,9 @@ const SCRIPTS = {
       Sound.startRain(); Sound.setRain(0.12);
       Music.play('none');
       Hm.holdMug(false);
+      // (the morning scene left Ariel walking out of the door: he would carry on walking straight out of these shots)
+      const halt = (b) => { b.walkTo = null; b.queue = []; b.turnTo = null; b.speed = 0; };
+      halt(A); halt(M);
       M.root.position.set(-1.25, 0, -2.09); M.rig.stop(0.01);
       A.root.position.set(-0.55, 0, -0.35); A.rig.stop(0.01);
       A.faceTo(M.root.position.x, M.root.position.z); M.faceTo(A.root.position.x, A.root.position.z);
@@ -2481,6 +2530,7 @@ const SCRIPTS = {
       Game.useScene(Ca.scene);
       Sound.setRain(0);
       const B2 = Ca.ariel;
+      halt(B2); halt(J);
       J.texting(false);
       const jp = J.root.position;
       B2.root.position.set(jp.x + 1.25, 0, jp.z + 0.6); B2.rig.stop(0.01);
@@ -2711,9 +2761,8 @@ const SCRIPTS = {
       // the photograph
       c.shot(V(0.8, 1.45, 3.5), V(0.85, 1.2, 5.85), 32);
       await c.wait(0.4);
-      Sound.ui && Sound.ui('ok');
-      FX.flashLight(V(0.8, 1.6, 3.8), 0xfff4e6, 60, 0.4, 9);
-      UI.flash(0.25);
+      // the picture is taken before the flash lights the pier (rendered with the flash at full strength, the
+      // print came out a white blaze with the couple lost in it); the flash is what we see after
       Game.render();
       const src = G.renderer.domElement, W = 1280, Hh = 720, pc = document.createElement('canvas');
       pc.width = W; pc.height = Hh;
@@ -2740,6 +2789,9 @@ const SCRIPTS = {
       x.font = '18px "Cormorant Garamond", Georgia, serif'; x.fillStyle = '#7a6550';
       x.fillText('the pier  ·  the seventh summer', 0, ph / 2 - 20);
       x.restore();
+      Sound.ui && Sound.ui('ok');
+      FX.flashLight(V(0.8, 1.6, 3.8), 0xfff4e6, 18, 0.35, 9);
+      UI.flash(0.25);
       await c.wait(0.8);
       await UI.fade(1, 0.6);
       Vase.open();
@@ -2796,7 +2848,7 @@ const SCRIPTS = {
       c.shot(J.root.position.clone().add(V(0.5, 1.48, 0.95)), J.root.position.clone().add(V(0, 1.22, 0.1)), 34);
       await c.say('Jesse', 'He has your eyes. And your father\'s weather.');
       c.shot(J.root.position.clone().add(V(0.6, 1.62, 0.7)), Ag.root.position.clone().add(V(0, 1.75, 0)), 36);
-      await c.say('Ariel', 'Kratos. His name is Kratos.');
+      await c.say('Ariel', 'Kratos. His name is Kratos. In the old tongue it means strength.');
       // his grandfather, on the throne behind them
       c.shot(V(-1.2, 2.0, -4.2), V(0, top + 2.6, -14.9), 34);
       PR.zeusGlow = true;

@@ -131,9 +131,12 @@ Double-click `index.html` to open it in **Chrome** or **Edge**. The game runs, b
       - Painted scenes of his mortal life (school by day, god by night, graduation, the wedding with Zeus and Ares as guests).
       - The **wedding photograph** on the pier where Anna met Zeus: Ariel in a tailcoat, Jesse in an ivory gown with veil and bouquet.
       - Years later, on **Olympus**, their son **Kratos** is born. Jesse wears a goddess gown, Anna is in white and gold, Ariel is in his god form, and Zeus looks on from his throne.
-      - Then **Deimos**, the brothers growing up between Westbrook and Olympus, Anna growing old, and the credits.
+      - Then **Deimos**, the brothers growing up between Westbrook and Olympus, and the brothers as the myths remember them.
+        - **Kratos** grows into his name, Strength. He stands at Zeus' right hand with his sister Bia, Force. He holds the Titan Prometheus to the Caucasus rock while Hephaestus drives the chains, and later walks beside Heracles on the day the chains are broken.
+        - **Deimos**, Dread, rides out at the side of his uncle Ares, the War-god, and armies lay down their spears before a blow is struck.
+      - Then Anna grows old, and the credits roll.
 
-    (Kratos, "strength", and Deimos, "dread", are figures from Greek myth, written fresh for this story.) Afterwards you can keep exploring.
+    (Kratos, "strength", and Deimos, "dread", are figures from Greek myth: Kratos and Bia at Zeus' throne in Hesiod's *Theogony*, Kratos binding Prometheus in Aeschylus' *Prometheus Bound*, and Deimos beside Ares in Hesiod and the *Iliad*. They are written fresh for this story.) Afterwards you can keep exploring.
 
 ### The war-shard: why Ariel wears Ares' armour
 When Kronos began to stir, Zeus knew his thunder alone would never keep a mortal child alive, so he cut a shard from Ares' spark and sealed it in his newborn son beside his own. (In Anna's memory you can see it happen: a red ember beside the blue.) Ares was never asked, and that grudge is the crack Kronos' rot crept in through. The shard is why god-form Ariel has Ares' armour and face. In **the Mirror** cutscene Ares' voice gets into Ariel's head. A vision shows the God of War kneeling in his arena, and he tells Ariel why that armour and that face look like his own. Hermes explains the rest.
