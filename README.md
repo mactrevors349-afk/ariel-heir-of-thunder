@@ -180,7 +180,13 @@ Laid out like a modern action MMO:
 The whole HUD scales with the window.
 
 ## Graphics
-A dark, weathered look in the spirit of the original Elden Ring and the old God of War games: a drained, overcast sky, deep shadows, heavy haze and a desaturated grade, with each story scene graded on its own (the pier memory is in faded sepia). Physically based lighting, image-based lighting, soft shadows, and soft, billowing smoke from a pre-rendered smoke atlas (`tools/smoke_atlas.js`). Cutscene close-ups are lit like a film: a soft key light from about 45° and a rim light from behind follow whoever the camera is on, so faces have shape instead of flat ambient light. The meadow is tens of thousands of photographed grass tufts that sway in the wind and part as you walk through them. Cypress, olive and street trees, the bushes and the Golden Tree all wear real photographed leaves, and the houses across from the school are built from real siding, shingles, brick and concrete with framed windows, porches, chimneys, gutters and garages. Plus cloth-simulated capes, sea reflections, bloom and a film-grain vignette.
+A late-afternoon look in the spirit of God of War:
+- a low golden sun throwing long shadows across the meadow, filled by a cool sky light
+- a hazy gold sky toward the sun, with blue still in it above and behind
+- distant hills and mountains fading into a pale blue haze behind the warm foreground
+- a filmic grade with fuller colour
+
+Each story scene is still graded on its own (the pier memory is in faded sepia). The boulders are smooth, weathered stone, and the Fallen Colossus lies among broken marble blocks. Physically based lighting, image-based lighting, soft shadows, and soft, billowing smoke from a pre-rendered smoke atlas (`tools/smoke_atlas.js`). Cutscene close-ups are lit like a film: a soft key light from about 45° and a rim light from behind follow whoever the camera is on, so faces have shape instead of flat ambient light. The meadow is tens of thousands of photographed grass tufts that sway in the wind and part as you walk through them. Cypress, olive and street trees, the bushes and the Golden Tree all wear real photographed leaves, and the houses across from the school are built from real siding, shingles, brick and concrete with framed windows, porches, chimneys, gutters and garages. Plus cloth-simulated capes, sea reflections, bloom and a film-grain vignette.
 
 **Powers.** Every power and every scene where a god uses one share the same effects:
 - **Lightning:** camera-facing ribbons with a thin, blinding white core inside a soft blue corona. Each bolt forks, and its forks fork again. The leader races down the channel, the bolt flashes, re-strikes two or three times, then fades. A god's thunderbolt in a cutscene keeps burning and flickering.

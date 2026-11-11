@@ -6,6 +6,46 @@
 
 const STEP = 0.55;
 
+/** merge vertices that sit on the same spot (a polyhedron's faces each have their own), so normals come out smooth */
+function weld(g, tol = 1e-4) {
+  if (g.index) g = g.toNonIndexed();
+  const P = g.attributes.position, map = new Map(), idx = [], pos = [];
+  for (let i = 0; i < P.count; i++) {
+    const k = Math.round(P.getX(i) / tol) + ',' + Math.round(P.getY(i) / tol) + ',' + Math.round(P.getZ(i) / tol);
+    let j = map.get(k);
+    if (j === undefined) { j = pos.length / 3; map.set(k, j); pos.push(P.getX(i), P.getY(i), P.getZ(i)); }
+    idx.push(j);
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  out.setIndex(idx);
+  return out;
+}
+
+/**
+ * A broken block of marble: a squared block whose faces are chipped and dented, with a few corners sheared off
+ * at an angle (smooth-shaded, so the breaks read as worn stone rather than a cut gem). s: rough size, seed: its shape.
+ */
+function rubbleChunk(s, seed) {
+  const r = mulberry32(seed), n = new Simplex2(seed % 997);
+  const g = weld(new THREE.BoxGeometry(1, 1, 1, 5, 5, 5));
+  const P = g.attributes.position, v = new THREE.Vector3();
+  const sx = 0.7 + r() * 0.8, sy = 0.45 + r() * 0.5, sz = 0.6 + r() * 0.7;
+  const cuts = [];
+  for (let i = 0; i < 3; i++) cuts.push([new THREE.Vector3(r() - 0.5, r() - 0.3, r() - 0.5).normalize(), 0.25 + r() * 0.2]);
+  for (let i = 0; i < P.count; i++) {
+    v.fromBufferAttribute(P, i);
+    // round the edges a little, then shear off whatever lies past each break
+    v.multiplyScalar(1 - 0.12 * (Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z) - 0.5));
+    for (const [nrm, d] of cuts) { const k = v.dot(nrm) - d; if (k > 0) v.addScaledVector(nrm, -k); }
+    const bump = n.noise(v.x * 3.1 + v.y * 2.3, v.z * 3.1 - v.y * 1.7) * 0.06 + n.noise(v.x * 9, v.z * 9 + v.y * 5) * 0.02;
+    v.multiplyScalar(1 + bump);
+    P.setXYZ(i, v.x * sx * s, v.y * sy * s, v.z * sz * s);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
 /** Patch a standard material so distant landmarks get thinner fog. */
 function farFog(mat, k) {
   const prev = mat.onBeforeCompile, base = mat.customProgramCacheKey();
@@ -21,11 +61,11 @@ function farFog(mat, k) {
   return mat;
 }
 
-/** The physical sky is far too clean and bright for a fallen realm: dim it and drain most of its blue. */
+/** The physical sky is too clean and bright for a fallen realm: a little dimmer, a little less blue, warmed toward gold. */
 function darkenSky(mat) {
   mat.fragmentShader = mat.fragmentShader.replace('gl_FragColor = vec4( retColor, 1.0 );', `
     float skL = dot(retColor, vec3(0.2126, 0.7152, 0.0722));
-    retColor = mix(vec3(skL), retColor, 0.3) * vec3(1.0, 0.93, 0.8) * 0.56;
+    retColor = mix(vec3(skL), retColor, 0.72) * vec3(1.0, 0.95, 0.88) * 0.8;
     // a sun veiled by overcast: a soft bright patch, never a glare that blooms over the whole screen
     retColor = retColor / (1.0 + max(vec3(0.0), retColor - 0.9) * 0.9);
     gl_FragColor = vec4( retColor, 1.0 );`);
@@ -296,7 +336,7 @@ const World = {
   fires: [], altars: [], messages: [], apples: [], phantomPaths: [],
   sunDir: new THREE.Vector3(-0.78, 0.17, 0.6).normalize(),
   // cold grey-brown haze, the colour of ash and old stone
-  fogColor: new THREE.Color(0x5d5852),
+  fogColor: new THREE.Color(0x7f8488),
   sites: {
     start: { x: 0, z: 248 },
     agora: { x: -58, z: 22 },
@@ -537,8 +577,8 @@ const World = {
     const sky = new Addons.Sky();
     sky.scale.setScalar(10000);
     const u = sky.material.uniforms;
-    // a dying day over a fallen realm: thick, grey-gold air, the sun low and veiled
-    u.turbidity.value = 10; u.rayleigh.value = 0.75; u.mieCoefficient.value = 0.008; u.mieDirectionalG.value = 0.84;
+    // late afternoon over a fallen realm: hazy gold toward the low sun, blue still in the sky above and behind
+    u.turbidity.value = 7; u.rayleigh.value = 1.15; u.mieCoefficient.value = 0.005; u.mieDirectionalG.value = 0.86;
     darkenSky(sky.material);
     u.sunPosition.value.copy(this.sunDir).multiplyScalar(1000);
     scene.add(sky);
@@ -557,11 +597,11 @@ const World = {
     scene.environment = pm.fromScene(env, 0.03, 0.1, 2000).texture;
     pm.dispose();
 
-    scene.fog = new THREE.FogExp2(this.fogColor.clone(), 0.0032);
+    scene.fog = new THREE.FogExp2(this.fogColor.clone(), 0.0029);
     scene.background = new THREE.Color(0x34322f);
 
-    // sun + sky light: a weak, low, amber sun; the shadows are cold and deep
-    const sun = new THREE.DirectionalLight(0xffc48a, 2.5);
+    // sun + sky light: a low golden sun throwing long shadows; the shadows are filled by a cool sky
+    const sun = new THREE.DirectionalLight(0xffc887, 3.3);
     sun.castShadow = true;
     const shadowRes = { low: 1024, medium: 2048, high: 2048, ultra: 4096 }[G.settings.quality] || 2048;
     sun.shadow.mapSize.set(shadowRes, shadowRes);
@@ -572,7 +612,7 @@ const World = {
     sun.shadow.camera.layers.enable(2);
     scene.add(sun, sun.target);
     this.sun = sun;
-    this.hemi = new THREE.HemisphereLight(0x7d8592, 0x2e261c, 0.7);
+    this.hemi = new THREE.HemisphereLight(0x8f9cb0, 0x3b2f22, 0.78);
     scene.add(this.hemi);
 
     // horizon haze ring blends the sky into the fog
@@ -1118,7 +1158,7 @@ const World = {
     this.rockMat = rockMat;
     const variants = [];
     for (let v = 0; v < 4; v++) {
-      const g = new THREE.IcosahedronGeometry(1, 4);
+      const g = weld(new THREE.IcosahedronGeometry(1, 4));
       const P = g.attributes.position, n = new Simplex2(100 + v), vv = new THREE.Vector3();
       for (let i = 0; i < P.count; i++) {
         vv.fromBufferAttribute(P, i);
@@ -1459,7 +1499,7 @@ const World = {
     this.footprints.push({ x: C.x, z: C.z, r: 10 });
     for (let i = 0; i < 9; i++) {
       const a = rng() * TAU, d = 6 + rng() * 10, gx = C.x + Math.cos(a) * d, gz = C.z + Math.sin(a) * d, s = 0.6 + rng() * 1.4;
-      addTo('colossus', new THREE.DodecahedronGeometry(s, 0), gx, this.terrainHeight(gx, gz) + s * 0.4, gz, rng() * 3, rng(), rng());
+      addTo('colossus', rubbleChunk(s, Math.floor(rng() * 1e6)), gx, this.terrainHeight(gx, gz) + s * 0.35, gz, rng() * 3, rng(), rng());
       this.circle(gx, gz, s * 0.85);
     }
 

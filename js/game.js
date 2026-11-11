@@ -783,12 +783,13 @@ const Game = {
     else if (sc === Memory.scene) { U.uTint.value.set(1.1, 0.98, 0.82); U.uSat.value = 0.4; }
     else if (sc === Home.scene) { U.uTint.value.set(1.02, 1.0, 0.97); U.uSat.value = 0.8; }
     else if (sc === Campus.scene) { U.uTint.value.set(0.99, 1.0, 1.02); U.uSat.value = 0.8; }
+    else if (sc === G.scene) { U.uTint.value.set(1, 1, 1); U.uSat.value = 0.94; }
     else { U.uTint.value.set(1, 1, 1); U.uSat.value = 0.8; }
     U.uVignette.value = sc === Memory.scene ? 1.6 : 1.15;
     // a remembered moment (Jesse's flashbacks): cold, faded, closed in at the edges, whatever the stage
     if (G.flashback) { U.uTint.value.set(0.9, 0.97, 1.1); U.uSat.value = 0.16; U.uVignette.value = 1.85; }
     G.renderer.toneMappingExposure = sc === School.scene ? 1.25 : sc === Prologue.olympus ? 0.74 : sc === Prologue.tartarus ? 1.05
-      : sc === Home.scene ? 1.05 : sc === Memory.scene ? 1.2 : sc === Campus.scene ? 1.15 : 0.9;
+      : sc === Home.scene ? 1.05 : sc === Memory.scene ? 1.2 : sc === Campus.scene ? 1.15 : sc === G.scene ? 1.02 : 0.9;
   },
 
   updateWorld(dt, cameraFollow) {
