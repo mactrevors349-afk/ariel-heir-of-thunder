@@ -520,6 +520,11 @@ const CLIPS = {
   // both hands on a phone held at the chest, head bowed over the screen
   // (elbows in at the ribs; the forearms meet by bending, not by twisting the upper arms, which flattens them)
   phone: { dur: 0.8, hold: true, mask: 'upper', keys: [[0, {}], [1, { armL: [-28, -18, -10], elbowL: [-96, -4, 0], handL: [-8, 0, 0], armR: [-28, 16, 10], elbowR: [-98, 4, 0], handR: [-8, 0, 0], neck: [24, 0, 0], head: [10, 0, 0] }]] },
+  // a phone held in both hands in front of her, the hands side by side with their palms turned in to the phone's edges
+  // and the thumbs over the screen, her head bowed to it (solved on the rig: the hands never cross or overlap)
+  phoneGrip: { dur: 0.6, hold: true, mask: 'upper', keys: [[0, {}], [1, { armL: [-11, -27, 8], elbowL: [-101, 19, 0], handL: [-15, 4, 31], armR: [-11, 28, -7], elbowR: [-101, -19, 0], handR: [-15, -4, -31], neck: [26, 0, 0], head: [12, 0, 0] }]] },
+  // the same hold with her head up: a bride's bouquet
+  bouquet: { dur: 0.6, hold: true, mask: 'upper', keys: [[0, {}], [1, { armL: [-11, -27, 8], elbowL: [-101, 19, 0], handL: [-15, 4, 31], armR: [-11, 28, -7], elbowR: [-101, -19, 0], handR: [-15, -4, -31], neck: [3, 0, 0], head: [0, 0, 0] }]] },
   // arms folded across the chest
   fold: { dur: 0.8, hold: true, mask: 'upper', keys: [[0, {}], [1, { armL: [-28, -60, 6], elbowL: [-108, -50, 0], armR: [-28, 60, -6], elbowR: [-108, 50, 0], chest: [-3, 0, 0] }]] },
   rise: {

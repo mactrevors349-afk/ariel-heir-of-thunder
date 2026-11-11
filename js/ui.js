@@ -3,6 +3,8 @@
    ui.js · HUD, cinematic overlays, dialogue and menus
    ========================================================================== */
 
+const QICON = '<svg viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v13a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1h11v1a1 1 0 0 0 2 0V5H8v9H6Z" fill="currentColor"/></svg>';
+
 const UI = {
   _c: {},
   el(id) { return this._c[id] || (this._c[id] = document.getElementById(id)); },
@@ -49,18 +51,20 @@ const UI = {
       fly: `<path d="M4 42 C16 22 34 14 60 12 C48 20 42 26 38 32 C46 30 52 30 58 33 C46 39 30 46 4 42 Z" ${Z}/>`,
       god: `<path d="M32 4 C38 16 50 22 48 40 a16 16 0 0 1 -32 0 c0-9 6-14 7-22 c4 5 6 9 6 14 c3-8 0-18 5-28 Z" fill="url(#gGod)" stroke="#fff1c8" stroke-width="1.2"/><path d="M34 22 L24 40 h7 l-3 14 L42 34 h-7 l4-12 Z" fill="#ffffff" opacity=".95"/>`,
     };
-    const box = this.el('abilities');
     this.slots = {};
-    const add = (id, key, name, cls) => {
+    const add = (id, key, name, cls, box) => {
       const el = document.createElement('div');
       el.className = 'slot mini ' + cls; el.id = 'slot-' + id;
       el.innerHTML = `<svg viewBox="0 0 64 64">${ICON[id]}</svg><span class="key">${key}</span><span class="slot-name">${name}</span><div class="cd"></div><span class="cd-num"></span>`;
+      el.title = `${name} (${key})`;
       box.appendChild(el);
       this.slots[id] = { el, cd: el.querySelector('.cd'), num: el.querySelector('.cd-num'), f: -1 };
     };
-    for (const ab of ABILITIES) add(ab.id, ab.key.slice(-1), ab.short, ab.god);
-    add('fly', 'F', 'Fly', 'zeus');
-    add('god', 'G', 'God Mode', 'god');
+    // Zeus's three after his Bolt (Q) on the left, Ares's three and flight on the right, God Mode between them
+    const L = this.el('ab-left'), R = this.el('ab-right'), M = this.el('ab-mid');
+    for (const ab of ABILITIES) add(ab.id, ab.key.slice(-1), ab.short, ab.god, ab.god === 'zeus' ? L : R);
+    add('fly', 'F', 'Fly', 'zeus', R);
+    add('god', 'G', 'God Mode', 'god', M);
   },
 
   loading(label, pct) {
@@ -69,8 +73,14 @@ const UI = {
   },
 
   /* ---------------------------------------------------------- HUD */
+  /** one scale for the whole HUD: 1 at 1440 x 900, smaller on small windows, a little larger on big ones */
+  fitHud() {
+    const s = clamp(Math.min(innerWidth / 1440, innerHeight / 860), 0.62, 1.2);
+    document.documentElement.style.setProperty('--hs', s.toFixed(3));
+  },
   update(dt) {
     const P = G.player;
+    if (this._hsW !== innerWidth || this._hsH !== innerHeight) { this._hsW = innerWidth; this._hsH = innerHeight; this.fitHud(); }
     if (P && this.visible('hud')) {
       this.bar('hp', P.hp, P.maxHp, 180 + P.maxHp * 0.3, dt);
       this.bar('fp', P.fp, P.maxFp, 110 + P.maxFp * 1.5, dt);
@@ -81,7 +91,7 @@ const UI = {
       // the gifts: the cooldown's shade drains off each slot; Rage, flight and God Mode light up
       for (const ab of ABILITIES) {
         const s = this.slots[ab.id], left = P.cd[ab.id] || 0, f = left / ab.cd;
-        if (Math.abs(s.f - f) > 0.002) { s.f = f; s.cd.style.height = (f * 100).toFixed(1) + '%'; s.num.textContent = left > 0.05 ? Math.ceil(left) : ''; }
+        if (Math.abs(s.f - f) > 0.002) { s.f = f; s.cd.style.background = f > 0.001 ? `conic-gradient(from 0deg, rgba(0,0,0,.7) ${(f * 360).toFixed(1)}deg, rgba(0,0,0,0) 0)` : 'none'; s.num.textContent = left > 0.05 ? Math.ceil(left) : ''; }
         const a = PLAYER_ACTIONS[ab.id];
         s.el.classList.toggle('empty', !P.god && ((a.fp && P.fp < a.fp) || (a.st && P.st <= 0)));
       }
@@ -91,13 +101,28 @@ const UI = {
       this.slots.god.el.classList.toggle('ready', full);
       this.slots.god.el.classList.toggle('active', !!P.god);
       this.slots.god.el.classList.toggle('empty', !full && !P.god);
-      this.bar('rage', P.rage, 100, 220, dt);
-      const rb = this.el('bar-rage');
-      rb.classList.toggle('full', full);
-      rb.classList.toggle('god', !!P.god);
-      const rl = P.god ? 'GOD MODE' : full ? 'RAGE · PRESS G' : 'RAGE';
+      // Rage fills the ring round God Mode
+      const mid = this.el('ab-mid'), rg = Math.round(clamp(P.rage, 0, 100));
+      if (this._rg !== rg) { this._rg = rg; mid.style.setProperty('--rage', rg); }
+      mid.classList.toggle('full', full);
+      mid.classList.toggle('god', !!P.god);
+      const rl = P.god ? 'GOD MODE' : full ? 'PRESS G' : 'RAGE';
       if (this._rl !== rl) { this._rl = rl; this.el('rage-label').textContent = rl; }
-      if (this._ichor !== P.ichor) { this._ichor = P.ichor; this.el('ichor-val').textContent = P.ichor.toLocaleString(); }
+      // stamina shows only while it's being spent
+      const stOn = P.st < P.maxSt - 0.5;
+      if (this._stOn !== stOn) { this._stOn = stOn; this.el('bar-st').classList.toggle('on', stOn); }
+      if (this._ichor !== P.ichor || this._lvl !== P.level) {
+        this._ichor = P.ichor; this._lvl = P.level;
+        this.el('ichor-val').textContent = P.ichor.toLocaleString();
+        this.el('uf-level').textContent = P.level;
+        const need = Player.levelCost(P.level), pct = clamp(P.ichor / need, 0, 1);
+        this.el('exp-pct').textContent = (pct * 100).toFixed(1) + '%';
+        this.el('exp-fill').style.width = (pct * 100).toFixed(2) + '%';
+      }
+      if ((this._mmT = (this._mmT || 0) - dt) <= 0) { this._mmT = 0.05; this.updateMinimap(P); }
+      if ((this._qT = (this._qT || 0) - dt) <= 0) { this._qT = 0.5; this.updateQuest(P); }
+      this.updatePlates(P, dt);
+      this.updateWaypoint(P);
       // lock reticle
       if (P.lock && P.lock.alive) {
         const s = this.toScreen(P.lock.pos.clone().add(new THREE.Vector3(0, P.lock.height * 0.6, 0)));
@@ -119,24 +144,164 @@ const UI = {
       const de = this.el('boss-dmg');
       if (B.dmgT <= 0) { B.dmg = 0; de.style.opacity = 0; } else { de.textContent = Math.round(B.dmg); de.style.opacity = 1; }
     }
-    // enemy bars
-    for (const [e, b] of this.ebars) {
-      b.t -= dt; b.dt -= dt;
-      if (b.t <= 0 || !e.root.visible || (!e.alive && b.t < 4)) { b.el.remove(); this.ebars.delete(e); continue; }
-      const s = this.toScreen(e.pos.clone().add(new THREE.Vector3(0, e.height + 0.35, 0)));
-      if (!s) { b.el.style.display = 'none'; continue; }
-      b.el.style.display = 'block';
-      b.el.style.left = s.x + 'px'; b.el.style.top = s.y + 'px';
-      b.fill.style.width = (clamp(e.hp / e.maxHp, 0, 1) * 100) + '%';
-      b.num.textContent = b.dt > 0 ? Math.round(b.dmg) : '';
-      if (b.dt <= 0) b.dmg = 0;
-    }
     for (const [, l] of this.labels) {
       if (!l.pos) continue;
       const s = this.toScreen(l.pos);
       if (!s) { l.el.style.display = 'none'; continue; }
       l.el.style.display = 'block'; l.el.style.left = s.x + 'px'; l.el.style.top = s.y + 'px';
     }
+  },
+  /** names and health over the foes in the fight (and the one you're locked on to) */
+  updatePlates(P, dt) {
+    const want = new Set();
+    for (const e of G.enemies) {
+      if (!e.alive || !e.root.visible || e.def.boss || this.bossState.enemy === e) continue;
+      const d = e.pos.distanceTo(P.pos);
+      if (e === P.lock || (e.aggro && d < 28) || (this.ebars.get(e) && this.ebars.get(e).dt > 0)) want.add(e);
+    }
+    for (const [e, b] of this.ebars) if (!want.has(e)) { b.el.remove(); this.ebars.delete(e); }
+    for (const e of want) {
+      let b = this.ebars.get(e);
+      if (!b) b = this.plate(e);
+      b.dt -= dt;
+      const s = this.toScreen(e.pos.clone().add(new THREE.Vector3(0, e.height + 0.45, 0)));
+      if (!s) { b.el.style.display = 'none'; continue; }
+      b.el.style.display = 'block';
+      b.el.style.left = s.x + 'px'; b.el.style.top = s.y + 'px';
+      const f = clamp(e.hp / e.maxHp, 0, 1);
+      if (f < b.v) b.hold = 0.7;
+      b.v = f; b.hold -= dt;
+      if (b.hold <= 0) b.chip = Math.max(b.v, b.chip - dt * 0.6);
+      b.fill.style.transform = `scaleX(${b.v})`; b.chipEl.style.transform = `scaleX(${b.chip})`;
+      const pz = e.def.poise ? clamp((e.poise ?? e.def.poise) / e.def.poise, 0, 1) : 1;
+      b.poise.style.transform = `scaleX(${pz})`;
+      b.el.classList.toggle('locked', e === P.lock);
+      b.num.textContent = b.dt > 0 ? Math.round(b.dmg) : '';
+      if (b.dt <= 0) b.dmg = 0;
+    }
+  },
+  plate(e) {
+    const el = document.createElement('div'); el.className = 'ebar';
+    el.innerHTML = `<div class="ep-name"></div><div class="ep-bar"><div class="ep-chip"></div><div class="ep-fill"></div></div><div class="ep-poise"><div></div></div><span class="ep-num"></span>`;
+    el.querySelector('.ep-name').textContent = e.name || e.def.name;
+    this.el('enemy-bars').appendChild(el);
+    const b = { el, fill: el.querySelector('.ep-fill'), chipEl: el.querySelector('.ep-chip'), poise: el.querySelector('.ep-poise div'), num: el.querySelector('.ep-num'), v: 1, chip: 1, hold: 0, dmg: 0, dt: 0 };
+    this.ebars.set(e, b);
+    return b;
+  },
+  /** the map: north up, the island painted from the terrain, foes in red, you as the arrow with your view */
+  updateMinimap(P) {
+    const cv = this.el('mm-canvas'); if (!cv || !World.ready) return;
+    const x = cv.getContext('2d'), W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, k = 2.9;   // canvas pixels per metre
+    const to = (wx, wz) => [cx + (wx - P.pos.x) * k, cy + (wz - P.pos.z) * k];
+    x.fillStyle = '#3a3c38'; x.fillRect(0, 0, W, H);
+    const base = this.mapBase();
+    if (base) { x.imageSmoothingEnabled = true; const [ox, oy] = to(-World.HALF, -World.HALF); x.drawImage(base, ox, oy, World.HALF * 2 * k, World.HALF * 2 * k); }
+    // the road
+    if (World.PATH) { x.strokeStyle = 'rgba(236,224,196,.85)'; x.lineWidth = 4; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); World.PATH.forEach(([px, pz], i) => { const [mx, my] = to(px, pz); i ? x.lineTo(mx, my) : x.moveTo(mx, my); }); x.stroke(); }
+    if (World.arena) { const [ax, ay] = to(World.arena.x, World.arena.z); x.strokeStyle = 'rgba(70,52,36,.9)'; x.lineWidth = 3; x.beginPath(); x.arc(ax, ay, 28 * k, 0, Math.PI * 2); x.stroke(); }
+    const dot = (wx, wz, r, col, ring) => { const [mx, my] = to(wx, wz); if (mx < -10 || my < -10 || mx > W + 10 || my > H + 10) return; x.fillStyle = col; x.beginPath(); x.arc(mx, my, r, 0, Math.PI * 2); x.fill(); if (ring) { x.strokeStyle = ring; x.lineWidth = 1.5; x.stroke(); } };
+    for (const a of World.altars || []) dot(a.pos.x, a.pos.z, 6, a.lit ? '#ffb347' : '#8a7a5a', '#2a1a08');
+    for (const ap of World.apples || []) if (!G.flags[ap.id]) dot(ap.pos.x, ap.pos.z, 5, '#ffd84a', '#3a2a04');
+    if (G.hermes && G.hermes.root.visible) dot(G.hermes.pos.x, G.hermes.pos.z, 6, '#7ad0ff', '#04202a');
+    for (const e of G.enemies) if (e.alive && e.root.visible) dot(e.pos.x, e.pos.z, e.def.boss || e.def.field ? 8 : 5, '#e0342a', 'rgba(60,0,0,.8)');
+    // your view, then you
+    const yaw = G.cam ? G.cam.yaw : 0, va = Math.atan2(-Math.cos(yaw), -Math.sin(yaw));
+    const cone = x.createRadialGradient(cx, cy, 4, cx, cy, 70); cone.addColorStop(0, 'rgba(255,250,230,.42)'); cone.addColorStop(1, 'rgba(255,250,230,0)');
+    x.fillStyle = cone; x.beginPath(); x.moveTo(cx, cy); x.arc(cx, cy, 70, va - 0.55, va + 0.55); x.closePath(); x.fill();
+    const h = P.heading || 0;
+    x.save(); x.translate(cx, cy); x.rotate(Math.atan2(Math.cos(h), Math.sin(h)) + Math.PI / 2);
+    x.fillStyle = '#ffffff'; x.strokeStyle = 'rgba(20,20,20,.85)'; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(0, -11); x.lineTo(8, 9); x.lineTo(0, 4); x.lineTo(-8, 9); x.closePath(); x.stroke(); x.fill();
+    x.restore();
+  },
+  /** the island from above, painted once from the terrain heights in the map's parchment tones, hill-shaded */
+  mapBase() {
+    if (this._mapBase !== undefined) return this._mapBase;
+    this._mapBase = null;
+    const H = World.H, N = World.N;
+    if (!H || !N) return null;
+    const cv = document.createElement('canvas'); cv.width = cv.height = N;
+    const x = cv.getContext('2d'), img = x.createImageData(N, N), d = img.data, st = World.step || 2.5;
+    const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    const DEEP = [52, 58, 60], SHAL = [92, 100, 98], SAND = [206, 192, 160], LAND = [184, 170, 140], HIGH = [160, 146, 118], ROCK = [134, 124, 108];
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const h = H[j * N + i];
+      const hl = H[j * N + Math.max(0, i - 1)], hr = H[j * N + Math.min(N - 1, i + 1)], hu = H[Math.max(0, j - 1) * N + i], hd = H[Math.min(N - 1, j + 1) * N + i];
+      const nx = (hl - hr) / (2 * st), nz = (hu - hd) / (2 * st), slope = Math.hypot(nx, nz);
+      let c;
+      if (h < 0) c = mix(SHAL, DEEP, clamp(-h / 12, 0, 1));
+      else if (h < 2.2) c = mix(SAND, LAND, clamp((h - 0.8) / 1.4, 0, 1));
+      else { c = mix(LAND, HIGH, clamp((h - 10) / 50, 0, 1)); c = mix(c, ROCK, clamp((slope - 0.5) * 2, 0, 1)); }
+      const sh = h < 0 ? 1 : clamp(1 + (nx + nz) * 0.9, 0.62, 1.25);
+      const o = (j * N + i) * 4;
+      d[o] = c[0] * sh; d[o + 1] = c[1] * sh; d[o + 2] = c[2] * sh; d[o + 3] = 255;
+    }
+    x.putImageData(img, 0, 0);
+    // the shore, inked
+    x.globalCompositeOperation = 'source-over';
+    return (this._mapBase = cv);
+  },
+  /** the quests, from how far the story has got: the main quest, then the altars and the apples */
+  updateQuest(P) {
+    const F = G.flags || {};
+    let main;
+    if (F.bossDefeated) main = { t: 'The Two Lives', s: 'Speak with Hermes', n: '' };
+    else if (G.arenaLock) main = { t: 'The Spark of War', s: 'Defeat Ares', n: '(0/1)' };
+    else if (F.mirrorSeen) main = { t: 'The Spark of War', s: 'Pass the golden mist', n: '' };
+    else main = { t: 'The Spark of War', s: 'Reach the Colosseum of Ares', n: '' };
+    const alt = World.altars || [], lit = alt.filter((a) => a.lit).length;
+    const ap = World.apples || [], got = ap.filter((a) => F[a.id]).length;
+    const cards = [
+      `<div class="qc main"><span class="qc-ico">${QICON}</span><div class="qc-title"><span><i>[Main]</i>${main.t}</span></div><div class="qc-step"><b>${main.s}</b><span>${main.n}</span></div></div>`,
+      `<div class="qc side${lit >= alt.length ? ' done' : ''}"><span class="qc-ico">${QICON}</span><div class="qc-title"><span>Altars of Hestia</span><span>${lit >= alt.length ? 'Complete' : ''}</span></div><div class="qc-step"><b>Kindle the altars</b><span>(${lit}/${alt.length})</span></div></div>`,
+      `<div class="qc side${got >= ap.length ? ' done' : ''}"><span class="qc-ico">${QICON}</span><div class="qc-title"><span>The Hesperides</span><span>${got >= ap.length ? 'Complete' : ''}</span></div><div class="qc-step"><b>Find the golden apples</b><span>(${got}/${ap.length})</span></div></div>`,
+    ].join('');
+    if (this._qhtml !== cards) { this._qhtml = cards; this.el('quests').innerHTML = cards; }
+    const zone = this._zone || '';
+    if (this._z2 !== zone) { this._z2 = zone; this.el('mm-zone').textContent = zone.toUpperCase(); }
+    // where the main quest leads
+    let wp = null;
+    if (F.bossDefeated) {
+      const left = ap.filter((a) => !F[a.id]).sort((a, b) => a.pos.distanceTo(P.pos) - b.pos.distanceTo(P.pos))[0];
+      if (G.hermes && G.hermes.root.visible) wp = { name: 'Hermes', x: G.hermes.pos.x, z: G.hermes.pos.z };
+      else if (left) wp = { name: 'Golden Apple', x: left.pos.x, z: left.pos.z };
+    } else if (!G.arenaLock && World.sites.arena) wp = { name: 'Colosseum of Ares', x: World.sites.arena.x, z: World.sites.arena.z + 30 };
+    this._wp = wp;
+  },
+  /** the distance to the objective under Ariel, with an arrow turned toward it (hidden in a fight) */
+  updateWaypoint(P) {
+    const wp = this._wp, box = this.el('waypoint');
+    const busy = P.lock || G.enemies.some((e) => e.alive && e.aggro && e.pos.distanceTo(P.pos) < 22) || this.visible('boss') || this.visible('prompt');
+    const d = wp ? Math.hypot(wp.x - P.pos.x, wp.z - P.pos.z) : 0;
+    if (!wp || busy || d < 12) { if (!box.classList.contains('hidden')) box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    if (this._wpn !== wp.name) { this._wpn = wp.name; this.el('wp-name').textContent = wp.name; }
+    const m = Math.round(d) + 'm';
+    if (this._wpd !== m) { this._wpd = m; this.el('wp-dist').textContent = m; }
+    // the bearing against the camera's forward (forward is (-sin yaw, -cos yaw))
+    const yaw = G.cam ? G.cam.yaw : 0, dx = wp.x - P.pos.x, dz = wp.z - P.pos.z;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+    const ang = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz);
+    this.el('wp-arrow').style.transform = `rotate(${ang.toFixed(3)}rad)`;
+  },
+  /** a line in the log under the quests: tag is system, quest, combat or notice */
+  log(tag, html) {
+    const box = this.el('log');
+    const name = { system: 'System', quest: 'Quest', combat: 'Combat', notice: 'Notice' }[tag] || 'System';
+    const l = document.createElement('div'); l.className = 'lg';
+    l.innerHTML = `<span class="tag ${tag}">${name}</span><span></span>`;
+    l.lastChild.innerHTML = html;
+    box.appendChild(l);
+    while (box.children.length > 6) box.firstChild.remove();
+    setTimeout(() => l.classList.add('old'), 14000);
+  },
+  /** the system line across the top */
+  sysmsg(html, dur = 4.5) {
+    this.el('sysmsg-text').innerHTML = html;
+    this.replay('sysmsg');
+    clearTimeout(this._smT);
+    this._smT = setTimeout(() => this.hide('sysmsg'), dur * 1000);
   },
   bar(k, v, max, width, dt) {
     const b = this.bars[k], f = clamp(v / max, 0, 1);
@@ -145,31 +310,15 @@ const UI = {
     b.hold -= dt;
     if (b.hold <= 0 || b.chip < b.v) b.chip = b.chip < b.v ? b.v : Math.max(b.v, b.chip - dt * 0.5);
     const e = this.el('bar-' + k);
-    const w = Math.round(width);
-    if (b.w !== w) { b.w = w; e.style.width = w + 'px'; }
     e.children[1].style.transform = `scaleX(${b.v})`;
     e.children[0].style.transform = `scaleX(${b.chip})`;
+    const val = e.querySelector('.bar-val');
+    if (val) { const t = `${Math.ceil(Math.max(0, v))} / ${Math.round(max)}`; if (b.t !== t) { b.t = t; val.textContent = t; } }
   },
   toScreen(p) {
     const v = p.clone().project(G.camera);
     if (v.z > 1 || v.z < -1 || Math.abs(v.x) > 1.2 || Math.abs(v.y) > 1.2) return null;
     return { x: (v.x * 0.5 + 0.5) * innerWidth, y: (-v.y * 0.5 + 0.5) * innerHeight };
-  },
-  enemyDamaged(e, dmg) {
-    if (e.def.boss || e.def.field && this.bossState.enemy === e) {
-      this.bossState.dmg += dmg; this.bossState.dmgT = 2.2;
-      return;
-    }
-    let b = this.ebars.get(e);
-    if (!b) {
-      const el = document.createElement('div'); el.className = 'ebar';
-      const fill = document.createElement('div'); const num = document.createElement('span');
-      el.append(fill, num);
-      this.el('enemy-bars').appendChild(el);
-      b = { el, fill, num, t: 0, dmg: 0, dt: 0 };
-      this.ebars.set(e, b);
-    }
-    b.t = 6; b.dmg += dmg; b.dt = 2;
   },
   clearEnemyBars() { for (const [, b] of this.ebars) b.el.remove(); this.ebars.clear(); },
   label(id, text, pos) {
@@ -177,6 +326,11 @@ const UI = {
     if (!text) { if (l) { l.el.remove(); this.labels.delete(id); } return; }
     if (!l) { const el = document.createElement('div'); el.className = 'label'; this.el('labels').appendChild(el); l = { el }; this.labels.set(id, l); }
     l.el.textContent = text; l.pos = pos;
+  },
+  enemyDamaged(e, dmg) {
+    if (e.def.boss || e.def.field && this.bossState.enemy === e) { this.bossState.dmg += dmg; this.bossState.dmgT = 2.2; return; }
+    const b = this.ebars.get(e) || this.plate(e);
+    b.dmg += dmg; b.dt = 2;
   },
   pulseSlot(id) { const e = this.el(id); e.classList.remove('pulse'); void e.offsetWidth; e.classList.add('pulse'); },
   ichorGain() { const e = this.el('ichor'); e.classList.remove('gain'); void e.offsetWidth; e.classList.add('gain'); },
@@ -203,18 +357,19 @@ const UI = {
     this._hintT = setTimeout(() => this.hide('hint'), dur * 1000);
   },
   toast(html) {
-    const t = document.createElement('div');
-    t.className = 'toast'; t.innerHTML = html;
-    this.el('toasts').appendChild(t);
-    setTimeout(() => t.remove(), 4100);
+    this.log('notice', html);
+    this.sysmsg('[System] ' + html);
   },
   area(name) {
+    this._zone = name;
+    this.log('system', `Entered <b>${name}</b>`);
     this.el('area-name').textContent = name;
     this.replay('area');
     clearTimeout(this._areaT);
     this._areaT = setTimeout(() => this.hide('area'), 5200);
   },
   banner(text, cls = '') {
+    if (this.visible('hud')) this.log('quest', text.charAt(0) + text.slice(1).toLowerCase());
     this.el('banner-text').textContent = text;
     const b = this.el('banner');
     b.className = cls;

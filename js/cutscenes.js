@@ -1880,7 +1880,8 @@ const SCRIPTS = {
       J.screen.material.color.setRGB(0.55, 0.7, 0.95);
       A.root.position.set(16, 0, 2.2); A.root.rotation.y = -Math.PI / 2; A.rig.stop(0.01);
       B.rig.play('talk', { fade: 0.01 });
-      S.vend.dead = false; S.vend.front.emissiveIntensity = 0.55; S.vend.light.intensity = 1.6;
+      S.vend.dead = false; S.vend.front.emissiveIntensity = 0.55; S.vend.light.intensity = 0.9;
+      (S.vend.front.userData.also || []).forEach((m, i) => { m.emissiveIntensity = i === 1 ? 0.9 : 0.55; });
       S.principal.root.visible = false;
       const stand = V(jp.x + 0.35, 0, jp.z + 1.15);
       A.route([[9, 1.8], [stand.x + 0.4, stand.z + 0.4], [stand.x, stand.z]], 1.35);
@@ -2671,7 +2672,7 @@ const SCRIPTS = {
       // groom: arms down at his sides, as the tailcoat hangs; bride: the bouquet held in front
       A.rig.poseFrom({ armL: [2, 0, 10], elbowL: [-6, 0, 0], armR: [2, 0, -10], elbowR: [-6, 0, 0] });
       A.rig.play('look', { fade: 0.01 }); A.rig.stop(0.01);
-      J.texting(true); J.rig.play(CLIPS.textingHold ? 'textingHold' : 'phone', { fade: 0.01 }); J.look(0, -0.05);
+      J.texting(true); J.rig.play('bouquet', { fade: 0.01 }); J.look(0, -0.05);
       M.rig.stop(0.01);
       for (let i = 0; i < 50; i++) { J.update(0.05); A.update(0.05); M.update(0.05); }
       // the clothes
@@ -3047,7 +3048,7 @@ const SCRIPTS = {
       UI.show('hud');
       G.cam.yaw = P.heading + Math.PI; G.cam.pitch = 0.22;
       G.cam.snap(P);
-      G.camera.fov = 58; G.camera.updateProjectionMatrix();
+      G.camera.fov = 55; G.cam.fov = 55; G.camera.updateProjectionMatrix();
       if (!Input.locked && !Input.lockFailed) UI.show('click-resume');
     },
   },

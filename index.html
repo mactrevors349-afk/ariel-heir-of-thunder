@@ -6,7 +6,7 @@
   <title>Ariel — Heir of Thunder</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20261111a">
   <!-- three.js r160 ships with the game (lib/three): no internet connection needed -->
   <script type="importmap">
   {
@@ -53,33 +53,60 @@
 
   <!-- ============ HUD ============ -->
   <div id="hud" class="hidden">
-    <div id="bars">
-      <div class="bar" id="bar-hp"><div class="bar-chip"></div><div class="bar-fill"></div></div>
-      <div class="bar" id="bar-fp"><div class="bar-chip"></div><div class="bar-fill"></div></div>
-      <div class="bar" id="bar-st"><div class="bar-chip"></div><div class="bar-fill"></div></div>
-      <div class="bar" id="bar-rage"><div class="bar-chip"></div><div class="bar-fill"></div><span class="bar-label" id="rage-label">RAGE</span></div>
+    <!-- quests, top left: the main quest and the side quests as cards -->
+    <div id="tracker">
+      <div class="tr-rail"><div class="tr-badge">!</div></div>
+      <div id="quests"></div>
     </div>
-    <!-- the gifts of Zeus and Ares, flight and God Mode (the slots are made by UI.buildAbilities) -->
-    <div id="abilities"></div>
+    <!-- the log under the quests: system, quest, combat and notice lines -->
+    <div id="log"></div>
+    <!-- a system message across the top -->
+    <div id="sysmsg" class="hidden"><span id="sysmsg-text"></span></div>
+    <!-- the map, top right: north up, foes in red -->
+    <div id="minimap"><canvas id="mm-canvas" width="460" height="340"></canvas>
+      <span class="mm-ico mm-zoom">+</span>
+      <span class="mm-ico mm-pin"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" fill="currentColor"/></svg></span>
+      <div class="mm-zone" id="mm-zone"></div>
+    </div>
+    <!-- where the quest leads, under Ariel -->
+    <div id="waypoint" class="hidden"><div class="wp-arrow" id="wp-arrow"></div><div class="wp-name" id="wp-name"></div><div class="wp-dist" id="wp-dist"></div></div>
+    <!-- the slot bar, bottom centre: health and favour over Zeus's gifts, God Mode with the Rage ring, Ares's gifts, Ambrosia -->
+    <div id="actionbar">
+      <div class="ab-vitals">
+        <div class="vital"><div class="v-head"><span>HP</span><span class="bar-val" id="val-hp"></span></div><div class="bar" id="bar-hp"><div class="bar-chip"></div><div class="bar-fill"></div></div></div>
+        <div class="vital"><div class="v-head"><span>FAVOUR</span><span class="bar-val" id="val-fp"></span></div><div class="bar" id="bar-fp"><div class="bar-chip"></div><div class="bar-fill"></div></div></div>
+      </div>
+      <div class="bar" id="bar-st"><div class="bar-chip"></div><div class="bar-fill"></div></div>
+      <div class="ab-row">
+        <div class="ab-group" id="ab-left">
+          <div class="slot" id="slot-spell">
+            <svg viewBox="0 0 64 64"><path d="M36 4 L14 36 h14 l-6 24 L50 24 H35 L42 4 Z" fill="url(#gBolt)" stroke="#e8f2ff" stroke-width="1.2"/><defs><linearGradient id="gBolt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#6fa8ff"/></linearGradient></defs></svg>
+            <span class="slot-name">Zeus's Bolt</span><span class="key">Q</span>
+          </div>
+        </div>
+        <div class="ab-mid" id="ab-mid">
+          <div class="rage-ring" id="rage-ring"></div>
+          <div class="bar" id="bar-rage"><div class="bar-chip"></div><div class="bar-fill"></div></div>
+          <span class="rage-label" id="rage-label">RAGE</span>
+        </div>
+        <div class="ab-group" id="ab-right"></div>
+        <div class="slot diamond" id="slot-flask">
+          <div class="dia-in"><svg viewBox="0 0 64 64"><path d="M14 10 h36 c0 16 -6 24 -14 26 v12 h8 v6 H20 v-6 h8 V36 C20 34 14 26 14 10 Z" fill="url(#gCup)" stroke="#ffe7a8" stroke-width="1.2"/><ellipse cx="32" cy="14" rx="16" ry="3" fill="#ffd36b" opacity=".9"/><defs><linearGradient id="gCup" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd970"/><stop offset="1" stop-color="#a8761f"/></linearGradient></defs></svg></div>
+          <span class="count" id="flask-count">4</span><span class="key">R</span>
+        </div>
+      </div>
+    </div>
+    <!-- who you are, bottom left, and the line of Ichor toward the next level along the bottom edge -->
+    <div id="player-info">
+      <div class="pi-name">Ariel <span class="pi-lv">Lv <b id="uf-level">1</b></span></div>
+      <div class="pi-ichor" id="ichor"><svg viewBox="0 0 64 64"><path d="M32 6 C24 20 16 28 16 40 a16 16 0 0 0 32 0 C48 28 40 20 32 6 Z" fill="url(#gIchor)"/><defs><radialGradient id="gIchor" cx=".4" cy=".6" r=".7"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#f0b93a"/><stop offset="1" stop-color="#8a5a10"/></radialGradient></defs></svg><span id="ichor-val">0</span><span class="pi-pct" id="exp-pct"></span></div>
+    </div>
+    <div id="expbar"><div id="exp-fill"></div></div>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
       <linearGradient id="gZeus" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#6fa8ff"/></linearGradient>
       <linearGradient id="gAres" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd27a"/><stop offset=".5" stop-color="#ff6a1f"/><stop offset="1" stop-color="#9c1a08"/></linearGradient>
       <linearGradient id="gGod" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfe4ff"/><stop offset=".45" stop-color="#fff0b8"/><stop offset="1" stop-color="#ff5a14"/></linearGradient>
     </defs></svg>
-    <div id="quick">
-      <div class="slot" id="slot-spell">
-        <svg viewBox="0 0 64 64"><path d="M36 4 L14 36 h14 l-6 24 L50 24 H35 L42 4 Z" fill="url(#gBolt)" stroke="#e8f2ff" stroke-width="1.2"/><defs><linearGradient id="gBolt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#6fa8ff"/></linearGradient></defs></svg>
-        <span class="slot-name">Zeus's Bolt</span><span class="key">Q</span>
-      </div>
-      <div class="slot" id="slot-flask">
-        <svg viewBox="0 0 64 64"><path d="M14 10 h36 c0 16 -6 24 -14 26 v12 h8 v6 H20 v-6 h8 V36 C20 34 14 26 14 10 Z" fill="url(#gCup)" stroke="#ffe7a8" stroke-width="1.2"/><ellipse cx="32" cy="14" rx="16" ry="3" fill="#ffd36b" opacity=".9"/><defs><linearGradient id="gCup" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd970"/><stop offset="1" stop-color="#a8761f"/></linearGradient></defs></svg>
-        <span class="count" id="flask-count">4</span><span class="key">R</span>
-      </div>
-    </div>
-    <div id="ichor">
-      <svg viewBox="0 0 64 64"><path d="M32 6 C24 20 16 28 16 40 a16 16 0 0 0 32 0 C48 28 40 20 32 6 Z" fill="url(#gIchor)"/><defs><radialGradient id="gIchor" cx=".4" cy=".6" r=".7"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#f0b93a"/><stop offset="1" stop-color="#8a5a10"/></radialGradient></defs></svg>
-      <span id="ichor-val">0</span>
-    </div>
     <div id="boss" class="hidden">
       <div class="boss-name" id="boss-name"></div>
       <div class="boss-bar"><div class="bar-chip"></div><div class="bar-fill"></div></div>
@@ -174,6 +201,7 @@
       <p>Hollow hoplites: "Rigged for UE4 – Spartan" by Andy Woodhead (sketchfab.com/Andywoodhead), CC BY 4.0.</p>
       <p>Wedding and Olympus clothes: "Fancy Tailcoat Suit" by LuuHung (sketchfab.com/LuuHung), CC BY-ND 4.0, used unmodified; "Wedding Dress 2" by Brian Trepanier (sketchfab.com/CMBC), CC BY 4.0; "Maniqui di_or godess" by Roberto Domínguez (sketchfab.com/vmmaniac), CC BY 4.0 (the mannequin's head and arms are removed in the game).</p>
       <p>Running and texting motion capture: Mixamo. Voices: Microsoft neural voices.</p>
+      <p>Recorded impact, footstep and foley sounds: Kenney (kenney.nl), CC0.</p>
       <p>Rendering: three.js (MIT License)<br>Fonts: Cinzel &amp; Cormorant Garamond (Google Fonts, OFL)</p>
     </div>
     <div class="menu row"><button data-act="back">Back</button></div>
@@ -221,11 +249,12 @@
     window.Addons = { EffectComposer, RenderPass, UnrealBloomPass, OutputPass, ShaderPass, Sky, Water, mergeGeometries, FBXLoader, GLTFLoader, SkeletonUtils, FXAAShader };
 
     // Game code is plain scripts loaded in order, so the game also runs when index.html is opened directly.
+    const BUILD = '20261111a';
     const files = ['core', 'textures', 'humanoid', 'models', 'effects', 'world', 'player', 'enemies', 'ui', 'cutscenes', 'life', 'ao', 'game'];
     const load = (i) => {
       if (i >= files.length) return;
       const s = document.createElement('script');
-      s.src = 'js/' + files[i] + '.js';
+      s.src = 'js/' + files[i] + '.js?v=' + BUILD;   // a new build never runs on yesterday's cached scripts
       s.onload = () => load(i + 1);
       s.onerror = () => { throw new Error('Could not load js/' + files[i] + '.js'); };
       document.body.appendChild(s);

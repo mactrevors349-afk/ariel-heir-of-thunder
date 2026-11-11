@@ -7,11 +7,12 @@ class CameraRig {
   constructor(camera) {
     this.cam = camera;
     this.yaw = 0; this.pitch = 0.2;
-    this.dist = 4.4; this.curDist = 4.4;
+    // close and over the right shoulder, pulling back a little when a fight starts
+    this.dist = 3.5; this.curDist = 3.5; this.fightAmt = 0;
     this.pivot = new THREE.Vector3();
     this.look = new THREE.Vector3();
     this.shakeAmt = 0;
-    this.fov = 58;
+    this.fov = 55;
     this.manual = false;
     this._v = new THREE.Vector3();
   }
@@ -53,9 +54,12 @@ class CameraRig {
     const cp = Math.cos(this.pitch);
     const dx = Math.sin(this.yaw) * cp, dy = Math.sin(this.pitch), dz = Math.cos(this.yaw) * cp;
     const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
-    const sh = 0.42;
+    let fight = 0;
+    for (const e of G.enemies) if (e.alive && e.aggro && e.pos.distanceTo(player.pos) < 16) { fight = 1; break; }
+    this.fightAmt = damp(this.fightAmt, fight, 1.5, dt);
+    const sh = 0.62 - this.fightAmt * 0.12;
     // keep the camera above ground and out of rock walls
-    let dist = this.dist + (lock ? 0.8 : 0);
+    let dist = this.dist + this.fightAmt * 0.8 + (lock ? 0.9 : 0);
     for (let d = 0.6; d <= dist; d += 0.3) {
       const px = this.pivot.x + dx * d + rx * sh, py = this.pivot.y + dy * d, pz = this.pivot.z + dz * d + rz * sh;
       if (World.terrainHeight(px, pz) + 0.35 > py || (d > 1.2 && World.cameraBlocked(px, py, pz))) { dist = Math.max(0.9, d - 0.3); break; }
@@ -82,7 +86,7 @@ class CameraRig {
       this.shakeAmt = Math.max(0, this.shakeAmt - dt * 2.4);
     }
     c.lookAt(this.look);
-    const fovT = player.sprinting ? 66 : 58;
+    const fovT = (player.sprinting ? 63 : 55) + this.fightAmt * 3;
     this.fov = damp(this.fov, fovT, 4, dt);
     if (Math.abs(c.fov - this.fov) > 0.01) { c.fov = this.fov; c.updateProjectionMatrix(); }
   }
@@ -1194,7 +1198,7 @@ class Player {
     }
     const chest = this.pos.clone().add(new THREE.Vector3(0, 1.25, 0));
     const away = this.pos.clone().sub(from).setY(0).normalize();
-    FX.blood(chest, away, Math.round(clamp(14 + dmg * 0.4, 16, 40)), [0.62, 0.03, 0.022], { ground: this.pos.y });
+    FX.blood(chest, away, Math.round(clamp(14 + dmg * 0.4, 16, 40)), [0.17, 0.006, 0.004], { ground: this.pos.y });
     FX.sparks(chest, away, 6, [2.4, 1.6, 0.5, 1], 6, false);
     Sound.hit('flesh', 1);
     G.cam.shake(opts.knock ? 1.0 : 0.55);

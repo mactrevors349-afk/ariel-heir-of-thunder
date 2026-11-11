@@ -5,13 +5,13 @@
 
 // the colour each kind bleeds (drops, linear) and the tint its pools take on the ground
 const BLOOD_COL = {
-  blood: Object.assign([0.62, 0.03, 0.022], { tint: [1, 1, 1] }),
+  blood: Object.assign([0.17, 0.006, 0.004], { tint: [1, 1, 1] }),
   // the Hollow are long dead: old, dark, thick blood
-  ash: Object.assign([0.4, 0.035, 0.022], { tint: [0.78, 0.6, 0.55] }),
+  ash: Object.assign([0.12, 0.008, 0.006], { tint: [0.78, 0.62, 0.58] }),
   // Tartarus' thralls bleed black, with a bruise-purple sheen
-  rot: Object.assign([0.2, 0.025, 0.24], { tint: [0.55, 0.35, 0.7] }),
+  rot: Object.assign([0.05, 0.007, 0.06], { tint: [0.55, 0.35, 0.7] }),
   // a god: deep red, a little brighter
-  ichor: Object.assign([0.75, 0.05, 0.025], { tint: [1.1, 1, 0.95] }),
+  ichor: Object.assign([0.26, 0.014, 0.006], { tint: [1.1, 1, 0.95] }),
 };
 
 const ENEMY_DEFS = {
@@ -393,8 +393,10 @@ class Enemy {
     const dir = hitPos.clone().sub(from).setY(0).normalize();
     // blood: thrown along the blow, more for a heavier one (a burn or a bolt sears the wound: far less)
     const nb = Math.round(clamp(18 + dmg * 0.45, 22, 60) * (kind === 'fire' || kind === 'lightning' ? 0.35 : 1) * (this.size > 1.5 ? 1.5 : 1));
-    FX.blood(hitPos, dir, nb, BLOOD_COL[this.def.blood] || BLOOD_COL.blood, { ground: this.pos.y });
-    if (this.def.blood === 'ash') { FX.ash(hitPos, 8); FX.sparks(hitPos, dir, 6, [1.8, 1.0, 0.4, 1], 6, false); }
+    // thrown across the cut, the way the swing went, more than straight away from the blade (so it sweeps across the screen)
+    const across = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(Math.random() < 0.5 ? 1 : -1);
+    FX.blood(hitPos, dir.clone().multiplyScalar(0.6).add(across).normalize(), nb, BLOOD_COL[this.def.blood] || BLOOD_COL.blood, { ground: this.pos.y });
+    if (this.def.blood === 'ash') FX.ash(hitPos, 4);
     else if (this.def.blood === 'ichor') { FX.sparks(hitPos, dir, 8, [2.6, 0.7, 0.2, 1], 7, false); }
     else if (this.def.blood === 'rot') { FX.ash(hitPos, 6, [0.3, 0.08, 0.42, 0.7]); }
     if (kind === 'lightning') FX.sparks(hitPos, null, 16, [1.4, 1.9, 3.2, 1], 5);

@@ -209,9 +209,66 @@ const Sound = {
     this.brown = this._noise(5, true);
     this.ready = true;
     this.applyVolumes();
+    this.loadSamples();
     if (this._pendingMusic) Music.play(this._pendingMusic);
     if (this._pendingWind) this.startWind();
     Voice.preload();
+  },
+  /**
+   * Recorded sounds: Kenney's "Impact Sounds" and "RPG Audio" (CC0, assets/sfx). Each group holds variations, one is
+   * picked at random (never the same twice running) and pitched a little each time. Until they have loaded, or where
+   * a browser can't decode Ogg, the synthesized versions below play instead.
+   */
+  SAMPLES: {
+    flesh: ['impactPunch_heavy_000', 'impactPunch_heavy_001', 'impactPunch_heavy_002', 'impactPunch_heavy_003', 'impactPunch_heavy_004'],
+    fleshLight: ['impactPunch_medium_000', 'impactPunch_medium_001', 'impactPunch_medium_002', 'impactPunch_medium_003', 'impactPunch_medium_004'],
+    cut: ['knifeSlice', 'knifeSlice2', 'chop'],
+    plate: ['impactPlate_heavy_000', 'impactPlate_heavy_001', 'impactPlate_heavy_002', 'impactPlate_heavy_003', 'impactPlate_heavy_004'],
+    metal: ['impactMetal_heavy_000', 'impactMetal_heavy_001', 'impactMetal_heavy_002', 'impactMetal_heavy_003', 'impactMetal_heavy_004'],
+    thud: ['impactSoft_heavy_000', 'impactSoft_heavy_001', 'impactSoft_heavy_002', 'impactSoft_heavy_003', 'impactSoft_heavy_004'],
+    grass: ['footstep_grass_000', 'footstep_grass_001', 'footstep_grass_002', 'footstep_grass_003', 'footstep_grass_004'],
+    stone: ['footstep_concrete_000', 'footstep_concrete_001', 'footstep_concrete_002', 'footstep_concrete_003', 'footstep_concrete_004'],
+    wood: ['footstep_wood_000', 'footstep_wood_001', 'footstep_wood_002', 'footstep_wood_003', 'footstep_wood_004'],
+    dirt: ['footstep00', 'footstep01', 'footstep02', 'footstep03', 'footstep04', 'footstep05', 'footstep06', 'footstep07', 'footstep08', 'footstep09'],
+    cloth: ['cloth1', 'cloth2', 'cloth3', 'cloth4', 'clothBelt', 'clothBelt2'],
+  },
+  loadSamples() {
+    if (this._samples) return;
+    this._samples = {}; this._lastSample = {};
+    for (const [g, names] of Object.entries(this.SAMPLES)) {
+      this._samples[g] = [];
+      for (const n of names) {
+        fetch(`assets/sfx/${n}.ogg`).then((r) => r.arrayBuffer()).then((ab) => this.ctx.decodeAudioData(ab)).then((b) => this._samples[g].push(b)).catch(() => {});
+      }
+    }
+  },
+  /** play one of a group's recordings; false if none is ready (so the caller can synthesize instead) */
+  sample(g, { gain = 1, rate = 1, delay = 0, rev = 0, spread = 0.06 } = {}) {
+    const list = this.ready && this._samples && this._samples[g];
+    if (!list || !list.length || gain < 0.002) return false;
+    let i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && i === this._lastSample[g]) i = (i + 1) % list.length;
+    this._lastSample[g] = i;
+    const c = this.ctx, src = c.createBufferSource(), out = c.createGain();
+    src.buffer = list[i];
+    src.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * spread);
+    out.gain.value = gain;
+    src.connect(out); out.connect(this.sfx);
+    if (rev) { const s = c.createGain(); s.gain.value = rev; out.connect(s); s.connect(this.revIn); }
+    src.start(c.currentTime + delay);
+    return true;
+  },
+  /** what Ariel (or whoever) is walking on: grass, the road's dirt, stone, or the pier's boards */
+  surface(pos = G.player && G.player.pos) {
+    try {
+      const sc = FX.scene;
+      if (typeof Memory !== 'undefined' && sc === Memory.scene) return 'wood';
+      if (sc !== G.scene || !pos) return 'stone';
+      const A = World.arenaFloor;
+      if (A && (pos.x - A.x) ** 2 + (pos.z - A.z) ** 2 < A.r2) return 'stone';
+      if (World.pathInfo(pos.x, pos.z).d < 3.2) return 'dirt';
+      return 'grass';
+    } catch (e) { return 'grass'; }
   },
   applyVolumes() {
     if (!this.ready) return;
@@ -298,23 +355,60 @@ const Sound = {
   },
 
   /* ---- effects library ---- */
+  /** a blade through the air: a rising whistle over a heavy push of air */
   swing(heavy, v = 1) {
-    this.noise({ type: 'bandpass', f: heavy ? 380 : 700, f2: heavy ? 1600 : 2900, q: 1.6, dur: heavy ? 0.45 : 0.26, gain: (heavy ? 0.55 : 0.32) * v, attack: 0.05 });
+    const p = rand(0.92, 1.08);
+    this.noise({ type: 'bandpass', f: (heavy ? 340 : 620) * p, f2: (heavy ? 1500 : 2700) * p, q: 2.2, dur: heavy ? 0.42 : 0.24, gain: (heavy ? 0.5 : 0.3) * v, attack: heavy ? 0.12 : 0.07 });
+    this.noise({ buf: 'brown', type: 'lowpass', f: heavy ? 520 : 700, f2: 160, dur: heavy ? 0.5 : 0.3, gain: (heavy ? 0.55 : 0.28) * v, attack: 0.08 });
+    this.sample('cloth', { gain: (heavy ? 0.32 : 0.2) * v, rate: 0.9 });
   },
+  /**
+   * A blow landing. Flesh: a deep body thump, the crack of the cut, a wet tear and the spatter of what it threw.
+   * Metal: struck plate rings with a bar's uneven overtones (not a square wave's buzz), over the clack of the hit.
+   */
   hit(kind = 'flesh', v = 1) {
+    const p = rand(0.9, 1.1);
+    if (kind === 'metal' && this.sample('plate', { gain: 0.8 * v, rate: 0.82, rev: 0.12 })) {
+      // armour rings, and under it the body behind the plate takes the blow (and bleeds)
+      this.sample('metal', { gain: 0.4 * v, rate: 0.78 });
+      this.sample('flesh', { gain: 0.5 * v, rate: 0.8, delay: 0.01 });
+      this.tone({ f: 105 * p, f2: 40, dur: 0.2, gain: 0.45 * v, attack: 0.002 });
+      this.splat(0.5 * v);
+      return;
+    }
+    if (kind !== 'metal' && this.sample('flesh', { gain: 1.0 * v, rate: 0.8 })) {
+      this.sample('cut', { gain: 0.6 * v, rate: 0.92, delay: 0.004 });
+      this.tone({ f: 115 * p, f2: 40, dur: 0.22, gain: 0.55 * v, attack: 0.002 });
+      this.splat(0.85 * v);
+      return;
+    }
     if (kind === 'metal') {
-      [820, 1310, 2170, 3020].forEach((f, i) => this.tone({ type: i % 2 ? 'triangle' : 'square', f: f * rand(0.97, 1.03), dur: 0.35 - i * 0.05, gain: 0.07 * v, lp: 5000, rev: 0.25 }));
-      this.noise({ type: 'highpass', f: 2500, dur: 0.06, gain: 0.4 * v });
+      const f0 = rand(380, 520);
+      [[1, 0.1, 0.5], [2.76, 0.07, 0.36], [5.4, 0.05, 0.24], [8.93, 0.03, 0.16]].forEach(([k, g, d]) => this.tone({ f: f0 * k, dur: d, gain: g * v, rev: 0.3 }));
+      this.noise({ type: 'bandpass', f: 3200 * p, q: 0.8, dur: 0.05, gain: 0.45 * v });
+      this.noise({ buf: 'brown', type: 'lowpass', f: 900, dur: 0.12, gain: 0.4 * v });
     } else {
-      this.noise({ type: 'lowpass', f: 1100, f2: 300, dur: 0.18, gain: 0.7 * v, q: 0.7 });
-      this.tone({ type: 'sine', f: 150, f2: 55, dur: 0.16, gain: 0.55 * v });
+      this.tone({ f: 120 * p, f2: 42, dur: 0.2, gain: 0.7 * v, attack: 0.002 });
+      this.noise({ buf: 'brown', type: 'lowpass', f: 900 * p, f2: 180, dur: 0.22, gain: 0.85 * v, q: 0.6 });
+      this.noise({ type: 'highpass', f: 3600, dur: 0.045, gain: 0.32 * v });
+      this.noise({ type: 'bandpass', f: 1400 * p, f2: 520, q: 1.8, dur: 0.16, gain: 0.42 * v, attack: 0.012, delay: 0.01 });
+      this.splat(v * 0.8);
     }
   },
+  /** wet spatter: a scatter of tiny drops landing */
+  splat(v = 1) {
+    for (let i = 0; i < 7; i++) this.noise({ type: 'bandpass', f: rand(900, 3200), q: rand(2, 5), dur: rand(0.025, 0.06), gain: rand(0.06, 0.16) * v, delay: 0.05 + rand(0, 0.22) });
+  },
   step(big = false, v = 1) {
+    if (big && this.sample('thud', { gain: 0.85 * v, rate: 0.62 })) { this.tone({ f: 62, f2: 30, dur: 0.35, gain: 0.45 * v }); return; }
+    if (!big && this.sample(this.surface(), { gain: 0.5 * v, rate: 0.95 })) return;
     if (big) { this.tone({ f: 70, f2: 35, dur: 0.35, gain: 0.5 * v }); this.noise({ buf: 'brown', type: 'lowpass', f: 300, dur: 0.3, gain: 0.5 * v }); }
     else this.noise({ type: 'bandpass', f: rand(900, 1400), q: 0.8, dur: 0.07, gain: 0.05 * v });
   },
-  roll() { this.noise({ type: 'lowpass', f: 600, f2: 200, dur: 0.4, gain: 0.3, attack: 0.04 }); this.noise({ type: 'bandpass', f: 1500, q: 0.6, dur: 0.3, gain: 0.08, attack: 0.05 }); },
+  roll() {
+    if (this.sample('cloth', { gain: 0.55, rate: 0.85 })) { this.sample('thud', { gain: 0.4, rate: 0.85, delay: 0.18 }); this.noise({ type: 'lowpass', f: 500, f2: 180, dur: 0.4, gain: 0.18, attack: 0.04 }); return; }
+    this.noise({ type: 'lowpass', f: 600, f2: 200, dur: 0.4, gain: 0.3, attack: 0.04 }); this.noise({ type: 'bandpass', f: 1500, q: 0.6, dur: 0.3, gain: 0.08, attack: 0.05 });
+  },
   thunder(distance = 0) {
     const v = clamp(1 - distance / 3000, 0.15, 1);
     const delay = distance / 343;
@@ -579,8 +673,8 @@ const Voice = {
     Ariel: { rev: 0.08 },
     Hermes: { rev: 0.12 },
     // the gods: big, but still a voice in the room, not a cathedral (a long tail and a slap-back muddied every word)
-    Ares: { rev: 0.24, low: 4, presence: 1.5 },
-    Zeus: { rev: 0.42, low: 5, presence: 1.5 },
+    Ares: { rev: 0.24, low: 4, presence: 1.5, rate: 0.955 },
+    Zeus: { rev: 0.42, low: 5, presence: 1.5, rate: 0.95 },
     Echo: { rev: 0.75, lp: 3800, gain: 0.85 },
   },
   async init() {

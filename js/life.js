@@ -75,7 +75,8 @@ function lifeJesse(scene, opts) {
   // texting: the motion-captured clip (both thumbs on the screen, head bowed over it), the phone between her hands
   J.texting = (on) => {
     hold.both = on;
-    if (on) J.rig.play(CLIPS.texting ? 'texting' : 'phone', { fade: 0.6 }); else J.rig.stop(0.6);
+    // (both hands on the phone, side by side: the motion capture crossed her hands through each other)
+    if (on) J.rig.play('phoneGrip', { fade: 0.6 }); else J.rig.stop(0.6);
   };
   /** the screen goes dark (his luck with anything electric) */
   J.phoneDies = () => { J.screen.material.color.setRGB(0.02, 0.02, 0.025); FX.sparks(J.screen.getWorldPosition(new THREE.Vector3()), null, 6, [1.4, 1.9, 3.4, 1], 1.2); };
@@ -385,7 +386,8 @@ const Home = {
   holdMug(on) {
     const H = this.mugHold, A = this.anna;
     H.off = !on; H.both = on; H.k = on ? 1 : 0;
-    if (on) A.rig.play(CLIPS.textingHold ? 'textingHold' : 'offer', { fade: 0.01 });
+    // (hands side by side round it: the motion-captured hold crossed them through each other)
+    if (on) A.rig.play('bouquet', { fade: 0.01 });
     else { this.mug.position.copy(this.mugRest); this.mug.quaternion.identity(); }
   },
   /** the lights stutter (his temper, his father's blood) */
@@ -921,33 +923,130 @@ const Campus = {
     this.principal.root.visible = false;
   },
   /** a soda machine with a lit front: red cabinet, a window of cans, a coin slot */
+  /**
+   * A glass-front drinks machine, built as one: a glossy painted cabinet, a lit window onto steel shelves of real
+   * cans and bottles (each with its own label), a control panel (card reader, coin slot, keypad, price display),
+   * a backlit header and a pickup door. front: every lit surface, so it all goes dark together when it dies
+   */
   vending(s, x, z) {
-    const c = Tex.canvas(256, 512), ctx = c.getContext('2d');
-    ctx.fillStyle = '#7a1414'; ctx.fillRect(0, 0, 256, 512);
-    ctx.fillStyle = '#f4f0e8'; ctx.font = 'bold 38px Arial'; ctx.textAlign = 'center'; ctx.fillText('ICE COLD', 128, 52);
-    ctx.fillStyle = '#101418'; ctx.fillRect(18, 74, 160, 340);
-    const cans = ['#c8202a', '#1a4ab0', '#e8a020', '#20a050', '#e0e0e0', '#7a2aa8'];
-    for (let r = 0; r < 5; r++) for (let k = 0; k < 4; k++) {
-      const col = cans[(r * 4 + k) % cans.length];
-      ctx.fillStyle = col; ctx.fillRect(26 + k * 38, 86 + r * 64, 30, 50);
-      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(30 + k * 38, 88 + r * 64, 5, 46);
-    }
-    ctx.fillStyle = '#222'; ctx.fillRect(192, 90, 48, 150);
-    for (let i = 0; i < 8; i++) { ctx.fillStyle = '#c8c4b8'; ctx.fillRect(198 + (i % 2) * 20, 100 + Math.floor(i / 2) * 26, 16, 16); }
-    ctx.fillStyle = '#0d2a10'; ctx.fillRect(194, 250, 44, 22);
-    ctx.fillStyle = '#4cff6a'; ctx.font = 'bold 14px monospace'; ctx.fillText('1.50', 216, 266);
-    ctx.fillStyle = '#111'; ctx.fillRect(208, 290, 14, 36);
-    ctx.fillStyle = '#0a0a0a'; ctx.fillRect(30, 438, 150, 46);
-    const face = Tex.toTex(c, true, false);
-    const glow = Tex.toTex(c, true, false);
-    const body = new THREE.MeshStandardMaterial({ color: 0x7a1414, roughness: 0.4, metalness: 0.3 });
-    const front = new THREE.MeshStandardMaterial({ map: face, emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: 0.55, roughness: 0.25 });
     const g = new THREE.Group(); g.position.set(x, 0, z); s.add(g);
-    const box = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.85, 0.8), [body, body, body, body, front, body]);
-    box.position.y = 0.925; box.castShadow = box.receiveShadow = true; g.add(box);
-    const light = new THREE.PointLight(0xdfe8ff, 1.6, 3.5, 2);
-    light.position.set(0, 1.1, 0.7); g.add(light);
-    return { group: g, front, light, box, dead: false };
+    const W = 0.95, H = 1.85, D = 0.8, F = D / 2;
+    const add = (geo, mat, px, py, pz, cast = true) => { const m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); m.castShadow = cast; m.receiveShadow = true; g.add(m); return m; };
+    const paint = new THREE.MeshPhysicalMaterial({ color: 0x8a1010, roughness: 0.42, metalness: 0.15, clearcoat: 0.6, clearcoatRoughness: 0.22 });
+    const trim = new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.38, metalness: 0.7 });
+    const steel = new THREE.MeshStandardMaterial({ color: 0xb9bdc2, roughness: 0.3, metalness: 0.9 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.55, metalness: 0.2 });
+    // the cabinet: back and sides, the roof and the plinth, and the frame round the window
+    add(new THREE.BoxGeometry(W, H - 0.06, D - 0.12), paint, 0, 0.06 + (H - 0.06) / 2, -0.06);
+    const wx0 = -W / 2 + 0.05, wx1 = 0.17, wy0 = 0.5, wy1 = 1.58, ww = wx1 - wx0, wh = wy1 - wy0, wcx = (wx0 + wx1) / 2, wcy = (wy0 + wy1) / 2;
+    add(new THREE.BoxGeometry(W, 0.06, D), paint, 0, H - 0.03, 0);                         // roof lip
+    add(new THREE.BoxGeometry(W, wy0 - 0.06, 0.12), paint, 0, 0.06 + (wy0 - 0.06) / 2, F - 0.06);   // kick panel
+    add(new THREE.BoxGeometry(W, H - 0.06 - wy1, 0.12), paint, 0, wy1 + (H - 0.06 - wy1) / 2, F - 0.06); // header block
+    add(new THREE.BoxGeometry(0.05, wh, 0.12), paint, wx0 - 0.025, wcy, F - 0.06);          // left stile
+    add(new THREE.BoxGeometry(W / 2 - wx1, wh, 0.12), paint, (wx1 + W / 2) / 2, wcy, F - 0.06); // right of the window: panel block
+    add(new THREE.BoxGeometry(W + 0.02, 0.06, D + 0.02), trim, 0, 0.03, 0);                 // plinth
+    for (const fx of [-1, 1]) for (const fz of [-1, 1]) add(new THREE.CylinderGeometry(0.025, 0.03, 0.03, 10), black, fx * (W / 2 - 0.06), 0.015, fz * (F - 0.06), false);
+    // the window: a lit interior (back wall, side walls) with steel shelves of drinks
+    const lit = new THREE.MeshStandardMaterial({ color: 0xdfe6ee, roughness: 0.6, emissive: 0xe8f0ff, emissiveIntensity: 0.55 });
+    const inner = new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.7 });
+    const zBack = F - 0.42, zGlass = F - 0.02;
+    add(new THREE.BoxGeometry(ww, wh, 0.01), lit, wcx, wcy, zBack, false);
+    add(new THREE.BoxGeometry(0.01, wh, zGlass - zBack), inner, wx0, wcy, (zBack + zGlass) / 2, false);
+    add(new THREE.BoxGeometry(0.01, wh, zGlass - zBack), inner, wx1, wcy, (zBack + zGlass) / 2, false);
+    // the labels: six drinks, painted round each can
+    const label = (bg, band, ink, word) => {
+      const c = Tex.canvas(256, 128), x2 = c.getContext('2d');
+      x2.fillStyle = bg; x2.fillRect(0, 0, 256, 128);
+      x2.fillStyle = band; x2.beginPath(); x2.moveTo(0, 82); for (let i = 0; i <= 256; i += 8) x2.lineTo(i, 76 + Math.sin(i / 20) * 7); x2.lineTo(256, 128); x2.lineTo(0, 128); x2.fill();
+      x2.fillStyle = ink; x2.font = 'bold 34px Arial'; x2.textAlign = 'center'; x2.fillText(word, 64, 58); x2.fillText(word, 192, 58);
+      x2.fillStyle = 'rgba(255,255,255,0.25)'; x2.fillRect(0, 8, 256, 3); x2.fillRect(0, 118, 256, 3);
+      return Tex.toTex(c, true, false);
+    };
+    const kinds = [['#b8141c', '#ffffff', '#ffffff', 'COLA'], ['#e6d21c', '#2a8a2a', '#1a5a1a', 'LEMON'], ['#ef7a12', '#ffd27a', '#ffffff', 'ORANGE'],
+      ['#5a1e7a', '#c896e0', '#ffffff', 'GRAPE'], ['#dfeefc', '#2a78c8', '#1a4a8a', 'WATER'], ['#1e5a3a', '#e8d8a0', '#f4ecd0', 'ICE TEA']];
+    const cans = kinds.map((k) => new THREE.MeshStandardMaterial({ map: label(...k), roughness: 0.28, metalness: 0.55 }));
+    const lid = new THREE.MeshStandardMaterial({ color: 0xc8ccd2, roughness: 0.25, metalness: 0.95 });
+    const canGeo = new THREE.CylinderGeometry(0.031, 0.031, 0.115, 20, 1, true), lidGeo = new THREE.CylinderGeometry(0.027, 0.031, 0.008, 20);
+    const bottlePts = [[0, 0], [0.032, 0], [0.034, 0.01], [0.034, 0.12], [0.03, 0.15], [0.016, 0.18], [0.014, 0.205], [0, 0.205]].map(([r2, y2]) => new THREE.Vector2(r2, y2));
+    const bottleGeo = new THREE.LatheGeometry(bottlePts, 20);
+    const plastic = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.32, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false });
+    const drinks = [0x7a2a10, 0xe8c820, 0xef7a12, 0x5a1e7a, 0xcfe6ff, 0x6a4a1a].map((c2) => new THREE.MeshStandardMaterial({ color: c2, roughness: 0.2, transparent: true, opacity: 0.85 }));
+    const capMat = kinds.map((k) => new THREE.MeshStandardMaterial({ color: k[0], roughness: 0.4 }));
+    const shelves = 5, sh = wh / shelves;
+    for (let r = 0; r < shelves; r++) {
+      const y0 = wy0 + r * sh + 0.012;
+      add(new THREE.BoxGeometry(ww - 0.02, 0.008, zGlass - zBack - 0.02), steel, wcx, y0 - 0.004, (zBack + zGlass) / 2, false);
+      // a price strip on the shelf's front edge
+      add(new THREE.BoxGeometry(ww - 0.02, 0.018, 0.004), black, wcx, y0 + 0.005, zGlass - 0.02, false);
+      const n = 6, kind = r % kinds.length;
+      for (let k = 0; k < n; k++) {
+        const px = wx0 + 0.05 + k * ((ww - 0.1) / (n - 1)), t = (kind + k) % kinds.length;
+        for (let d2 = 0; d2 < 2; d2++) {
+          const pz = zGlass - 0.07 - d2 * 0.1;
+          if (r % 2 === 0) {
+            const can = add(new THREE.Mesh(canGeo).geometry, cans[t], px, y0 + 0.058, pz, false);
+            can.rotation.y = Math.PI / 2 + (k * 0.7);
+            add(lidGeo, lid, px, y0 + 0.119, pz, false);
+          } else {
+            add(bottleGeo, plastic, px, y0, pz, false);
+            const liquid = add(new THREE.CylinderGeometry(0.03, 0.03, 0.12, 16), drinks[t], px, y0 + 0.068, pz, false);
+            liquid.renderOrder = 1;
+            const band = add(new THREE.CylinderGeometry(0.0345, 0.0345, 0.05, 20, 1, true), cans[t], px, y0 + 0.075, pz, false);
+            band.rotation.y = k;
+            add(new THREE.CylinderGeometry(0.015, 0.015, 0.018, 12), capMat[t], px, y0 + 0.212, pz, false);
+          }
+        }
+      }
+    }
+    // the glass, catching the street
+    const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.04, metalness: 0, transparent: true, opacity: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.4, depthWrite: false });
+    const gl = add(new THREE.PlaneGeometry(ww, wh), glass, wcx, wcy, zGlass, false);
+    gl.renderOrder = 3;
+    // the control panel: card reader, coin slot, keypad, price display, coin return
+    const px0 = (wx1 + W / 2) / 2, pz = F + 0.002;
+    add(new THREE.BoxGeometry(0.2, 0.86, 0.012), trim, px0, 1.12, pz + 0.004);
+    const c = Tex.canvas(128, 48), cx = c.getContext('2d');
+    cx.fillStyle = '#061208'; cx.fillRect(0, 0, 128, 48); cx.fillStyle = '#5cff7a'; cx.font = 'bold 30px monospace'; cx.textAlign = 'center'; cx.fillText('1.50', 64, 35);
+    const lcd = new THREE.MeshStandardMaterial({ map: Tex.toTex(c, true, false), emissive: 0xffffff, emissiveMap: Tex.toTex(c, true, false), emissiveIntensity: 0.9, roughness: 0.2 });
+    add(new THREE.PlaneGeometry(0.13, 0.05), lcd, px0, 1.46, pz + 0.012, false);
+    add(new THREE.BoxGeometry(0.11, 0.05, 0.02), black, px0, 1.36, pz + 0.018);            // card reader
+    add(new THREE.BoxGeometry(0.06, 0.006, 0.02), steel, px0, 1.375, pz + 0.03, false);     // its slot
+    add(new THREE.BoxGeometry(0.03, 0.05, 0.02), steel, px0 + 0.05, 1.27, pz + 0.015);     // coin slot plate
+    add(new THREE.BoxGeometry(0.004, 0.03, 0.022), black, px0 + 0.05, 1.27, pz + 0.02, false);
+    for (let r = 0; r < 4; r++) for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.03, 0.022, 0.012), steel, px0 - 0.045 + k * 0.04, 1.2 - r * 0.034, pz + 0.014, false);
+    add(new THREE.BoxGeometry(0.07, 0.06, 0.03), black, px0, 0.88, pz + 0.01);              // coin return
+    // the backlit header
+    const hc = Tex.canvas(512, 96), hx = hc.getContext('2d');
+    const hg = hx.createLinearGradient(0, 0, 0, 96); hg.addColorStop(0, '#d8262c'); hg.addColorStop(1, '#8a0c12');
+    hx.fillStyle = hg; hx.fillRect(0, 0, 512, 96);
+    hx.fillStyle = '#ffffff'; hx.font = 'italic bold 52px Arial'; hx.textAlign = 'center'; hx.fillText('ICE COLD DRINKS', 256, 66);
+    hx.fillStyle = 'rgba(255,255,255,0.35)'; hx.fillRect(0, 6, 512, 3);
+    const header = new THREE.MeshStandardMaterial({ map: Tex.toTex(hc, true, false), emissive: 0xffffff, emissiveMap: Tex.toTex(hc, true, false), emissiveIntensity: 0.55, roughness: 0.3 });
+    add(new THREE.PlaneGeometry(W - 0.08, 0.16), header, 0, H - 0.15, F + 0.002, false);
+    // the pickup door
+    add(new THREE.BoxGeometry(0.5, 0.16, 0.02), black, wcx, 0.27, F + 0.004);
+    const flap = add(new THREE.BoxGeometry(0.46, 0.12, 0.01), new THREE.MeshStandardMaterial({ color: 0x18191c, roughness: 0.3, metalness: 0.4 }), wcx, 0.27, F + 0.016);
+    flap.rotation.x = -0.12;
+    // the many small parts merged, one draw for each material (a shelf of drinks is a lot of little meshes)
+    const byMat = new Map();
+    for (const m of g.children.slice()) {
+      if (!m.isMesh || m.material.transparent) continue;
+      m.updateMatrix();
+      const geo = m.geometry.clone().applyMatrix4(m.matrix);
+      for (const a of Object.keys(geo.attributes)) if (!['position', 'normal', 'uv'].includes(a)) geo.deleteAttribute(a);
+      if (!geo.index) geo.setIndex([...Array(geo.attributes.position.count).keys()]);
+      if (!byMat.has(m.material)) byMat.set(m.material, { geos: [], cast: false });
+      const e = byMat.get(m.material); e.geos.push(geo); e.cast = e.cast || m.castShadow;
+      g.remove(m);
+    }
+    for (const [mat, e] of byMat) { const mm = new THREE.Mesh(Addons.mergeGeometries(e.geos, false), mat); mm.castShadow = e.cast; mm.receiveShadow = true; g.add(mm); }
+    // (a single material stands for everything lit, for the update's dying flicker)
+    const front = lit;
+    front.userData.also = [header, lcd];
+    // (inside, behind the glass: in front of it the lamp glared off the glass as a white spot)
+    const light = new THREE.PointLight(0xdfe8ff, 0.9, 1.6, 2);
+    light.position.set(wcx, 1.15, F - 0.22); g.add(light);
+    return { group: g, front, light, box: g, dead: false };
   },
   /** the machine dies in a shower of sparks */
   fry() {
@@ -974,7 +1073,8 @@ const Campus = {
       V.flick = Math.max(0, (V.flick || 0) - dt);
       const on = V.flick > 0 && Math.random() < 0.4;
       V.front.emissiveIntensity = on ? 0.4 : 0.0;
-      V.light.intensity = on ? 1.2 : 0;
+      for (const m of V.front.userData.also || []) m.emissiveIntensity = on ? 0.4 : 0.0;
+      V.light.intensity = on ? 0.7 : 0;
       if (this.smoking > 0) {
         this.smoking -= dt;
         if (Math.random() < 0.3) { const p = this.vendFront; FX.smoke.spawn({ x: p.x + rand(-0.2, 0.2), y: 1.6 + rand(0, 0.3), z: p.z - 0.6, vy: rand(0.3, 0.6), life: 2.5, s: 0.15, s2: 0.8, turb: 0.4, c: [0.32, 0.32, 0.34, 0.35], c2: [0.3, 0.3, 0.32, 0] }); }

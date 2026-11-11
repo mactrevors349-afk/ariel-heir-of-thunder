@@ -33,19 +33,20 @@ OUT = ROOT / 'assets' / 'voice'
 
 # speaker: (voice, rate, pitch)
 CAST = {
-    # Andrew is the most human-sounding neural voice: slowed and lowered he becomes a warm, deep storyteller
-    # (the game also plays him back a little slower with a low-end lift, see Voice.FX in js/core.js)
-    'Narrator': ('en-US-AndrewMultilingualNeural', '-14%', '-11Hz'),
+    # no pitch shifts here: the service's pitch shifting is what made voices sound processed. Depth comes from the
+    # game playing a voice back a touch slower with a low-end lift instead (Voice.FX in js/core.js)
+    # Andrew is the most human-sounding neural voice: a warm, deep storyteller
+    'Narrator': ('en-US-AndrewMultilingualNeural', '-8%', '+0Hz'),
     'Ariel': ('en-US-BrianMultilingualNeural', '+4%', '+0Hz'),
     'Hermes': ('en-GB-RyanNeural', '+7%', '+0Hz'),
     # Guy carries anger best of the deep voices: the God of War raging, not reading a statement
-    'Ares': ('en-US-GuyNeural', '-7%', '-11Hz'),
-    'Zeus': ('en-GB-ThomasNeural', '-12%', '-7Hz'),
+    'Ares': ('en-US-GuyNeural', '-4%', '+0Hz'),
+    'Zeus': ('en-GB-ThomasNeural', '-8%', '+0Hz'),
     # Ariel's ordinary life: the most human-sounding voices, each kept to one person
-    'Anna': ('en-US-EmmaMultilingualNeural', '-5%', '-2Hz'),      # his mother: warm, tired, wry
-    'Jesse': ('en-US-AvaMultilingualNeural', '+3%', '+1Hz'),      # seventeen, quick, teasing
-    'Marcus': ('en-US-RogerNeural', '+4%', '+2Hz'),               # a classmate: lively
-    'Principal': ('en-US-EricNeural', '-4%', '-3Hz'),
+    'Anna': ('en-US-EmmaMultilingualNeural', '-5%', '+0Hz'),      # his mother: warm, tired, wry
+    'Jesse': ('en-US-AvaMultilingualNeural', '+3%', '+0Hz'),      # seventeen, quick, teasing
+    'Marcus': ('en-US-RogerNeural', '+4%', '+0Hz'),               # a classmate: lively
+    'Principal': ('en-US-EricNeural', '-4%', '+0Hz'),
 }
 # each echo message is a different fallen demigod (none shares a voice with the cast above)
 ECHO_VOICES = [

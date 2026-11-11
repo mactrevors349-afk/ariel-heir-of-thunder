@@ -350,19 +350,29 @@ const Tex = {
         const px = x + Math.cos(t) * rr, py = y + Math.sin(t) * rr;
         if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
       }
-      ctx.fillStyle = 'rgba(' + Math.round(125 + rnd() * 30) + ',' + Math.round(8 + rnd() * 6) + ',' + Math.round(6 + rnd() * 5) + ',' + a + ')';
+      ctx.fillStyle = 'rgba(' + Math.round(78 + rnd() * 26) + ',' + Math.round(3 + rnd() * 5) + ',' + Math.round(3 + rnd() * 4) + ',' + a + ')';
       ctx.fill();
+    };
+    // a drop that hit at a slant: a round head and a tail pointing the way it flew (a, from the blow)
+    const flung = (x, y, r, a, len) => {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+      ctx.fillStyle = 'rgba(' + Math.round(70 + rnd() * 30) + ',4,3,0.95)';
+      ctx.beginPath(); ctx.moveTo(-r * 0.2, -r); ctx.quadraticCurveTo(len * 0.6, -r * 0.35, len, 0); ctx.quadraticCurveTo(len * 0.6, r * 0.35, -r * 0.2, r);
+      ctx.arc(0, 0, r, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+      ctx.restore();
     };
     const C = size / 2;
     if (thrown) {
-      ctx.translate(C * 0.7, C);
-      blob(0, 0, size * 0.16, 0.95);
-      for (let i = 0; i < 6; i++) blob(rnd() * size * 0.14 - size * 0.05, (rnd() - 0.5) * size * 0.18, size * (0.05 + rnd() * 0.06), 0.9);
-      // drops flung on along the blow, smaller and further out
-      for (let i = 0; i < 26; i++) { const d = size * (0.12 + rnd() * 0.5), a = (rnd() - 0.5) * 1.0; blob(Math.cos(a) * d, Math.sin(a) * d, size * (0.006 + rnd() * 0.022) * (1 - d / size), 0.9); }
-      // streaks where drops skidded
-      ctx.lineCap = 'round';
-      for (let i = 0; i < 7; i++) { const a = (rnd() - 0.5) * 0.7, d0 = size * (0.1 + rnd() * 0.1), d1 = d0 + size * (0.08 + rnd() * 0.2); ctx.strokeStyle = 'rgba(132,10,8,0.85)'; ctx.lineWidth = size * (0.006 + rnd() * 0.01); ctx.beginPath(); ctx.moveTo(Math.cos(a) * d0, Math.sin(a) * d0); ctx.lineTo(Math.cos(a) * d1, Math.sin(a) * d1); ctx.stroke(); }
+      ctx.translate(C * 0.6, C);
+      blob(0, 0, size * 0.12, 0.96);
+      for (let i = 0; i < 5; i++) blob(rnd() * size * 0.16 - size * 0.04, (rnd() - 0.5) * size * 0.16, size * (0.035 + rnd() * 0.05), 0.94);
+      // drops flung on along the blow: further out they are smaller and longer
+      for (let i = 0; i < 30; i++) {
+        const d = size * (0.1 + rnd() * 0.52), a = (rnd() - 0.5) * 0.9, r = size * (0.006 + rnd() * 0.02) * (1 - d / size * 0.8);
+        flung(Math.cos(a) * d, Math.sin(a) * d, r, a + (rnd() - 0.5) * 0.2, r * (2 + d / size * 9));
+      }
+      // fine spatter
+      for (let i = 0; i < 70; i++) { const d = size * (0.06 + rnd() * 0.5), a = (rnd() - 0.5) * 1.6; blob(Math.cos(a) * d, Math.sin(a) * d, size * (0.002 + rnd() * 0.005), 0.85); }
     } else {
       ctx.translate(C, C);
       blob(0, 0, size * 0.3, 0.95);

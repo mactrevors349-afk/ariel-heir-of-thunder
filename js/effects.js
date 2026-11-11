@@ -133,6 +133,104 @@ class Particles {
   }
 }
 
+/**
+ * Blood in flight: each drop is a quad stretched along its own motion (on screen), so a spray reads as streaks and
+ * arcs rather than dots: thick at the head, tapering to a thread behind, dark and wet with a glint down one side.
+ * Drops stop where they meet the ground (gy).
+ */
+class BloodStreaks {
+  constructor(max) {
+    this.max = max; this.cursor = 0; this.live = 0;
+    this.pos = new Float32Array(max * 3); this.vel = new Float32Array(max * 3);
+    this.size = new Float32Array(max); this.s0 = new Float32Array(max);
+    this.col = new Float32Array(max * 4);
+    this.life = new Float32Array(max); this.age = new Float32Array(max).fill(1); this.gy = new Float32Array(max);
+    this.drag = new Float32Array(max);
+    const g = new THREE.InstancedBufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
+    g.setIndex([0, 1, 2, 0, 2, 3]);
+    this.aPos = new THREE.InstancedBufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage);
+    this.aVel = new THREE.InstancedBufferAttribute(this.vel, 3).setUsage(THREE.DynamicDrawUsage);
+    this.aSize = new THREE.InstancedBufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage);
+    this.aCol = new THREE.InstancedBufferAttribute(this.col, 4).setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('iPos', this.aPos); g.setAttribute('iVel', this.aVel); g.setAttribute('iSize', this.aSize); g.setAttribute('iCol', this.aCol);
+    g.instanceCount = max;
+    this.mat = new THREE.ShaderMaterial({
+      uniforms: { uFog: { value: 0.002 }, uFogColor: { value: new THREE.Color() }, uStretch: { value: 0.028 } },
+      vertexShader: `
+        attribute vec3 iPos; attribute vec3 iVel; attribute float iSize; attribute vec4 iCol;
+        uniform float uFog, uStretch;
+        varying vec2 vUv; varying vec4 vCol; varying float vFog;
+        void main(){
+          vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
+          vec3 vv = (modelViewMatrix * vec4(iVel, 0.0)).xyz;
+          vec2 dir = vv.xy; float sp = length(dir);
+          dir = sp > 1e-4 ? dir / sp : vec2(0.0, 1.0);
+          vec2 side = vec2(-dir.y, dir.x);
+          float len = iSize * 1.25 + min(sp * uStretch, iSize * 2.2);
+          // the head leads at the drop, the tail trails behind it
+          mv.xy += dir * (position.y * 0.5 - 0.5) * len + side * position.x * iSize * 0.5;
+          gl_Position = projectionMatrix * mv;
+          vUv = position.xy; vCol = iCol;
+          float d = -mv.z * uFog; vFog = 1.0 - exp(-d * d);
+          if (iSize <= 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+        }`,
+      fragmentShader: `
+        uniform vec3 uFogColor;
+        varying vec2 vUv; varying vec4 vCol; varying float vFog;
+        void main(){
+          float t = vUv.y * 0.5 + 0.5;                          // 0 tail, 1 head
+          float w = mix(0.22, 1.0, smoothstep(0.0, 0.7, t));     // a thread behind, a full drop in front
+          float qx = vUv.x / w;
+          float r = length(vec2(qx, (vUv.y - 0.45) / 1.45));
+          float a = smoothstep(1.0, 0.8, r) * mix(0.5, 1.0, t);  // thin tails are see-through
+          if (a <= 0.01) discard;
+          // shaded as a bead of liquid: round across its width, lit from above, with a sharp wet highlight
+          vec3 n = normalize(vec3(qx, 0.3 * (t - 0.4), sqrt(max(0.0, 1.0 - qx * qx))));
+          vec3 L = normalize(vec3(-0.45, 0.65, 0.6));
+          float diff = 0.3 + 0.7 * max(dot(n, L), 0.0);
+          float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 28.0);
+          vec3 c = vCol.rgb * diff + vec3(0.85, 0.7, 0.66) * spec * 0.4;
+          gl_FragColor = vec4(mix(c, uFogColor, vFog), vCol.a * a);
+        }`,
+      // (the quad is laid along the drop's flight, which can face either way)
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    });
+    this.mesh = new THREE.Mesh(g, this.mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 9;
+  }
+  spawn(x, y, z, vx, vy, vz, size, life, col, gy, drag = 0.4) {
+    const i = this.cursor; this.cursor = (this.cursor + 1) % this.max;
+    const i3 = i * 3, i4 = i * 4;
+    this.pos[i3] = x; this.pos[i3 + 1] = y; this.pos[i3 + 2] = z;
+    this.vel[i3] = vx; this.vel[i3 + 1] = vy; this.vel[i3 + 2] = vz;
+    this.s0[i] = size; this.size[i] = size; this.life[i] = life; this.age[i] = 0; this.gy[i] = gy; this.drag[i] = drag;
+    const v = 0.75 + Math.random() * 0.4;
+    this.col[i4] = col[0] * v; this.col[i4 + 1] = col[1] * v; this.col[i4 + 2] = col[2] * v; this.col[i4 + 3] = 1;
+    this.live = Math.max(this.live, 1);
+  }
+  update(dt) {
+    if (!this.live) return;
+    const P = this.pos, V = this.vel;
+    let any = 0;
+    for (let i = 0; i < this.max; i++) {
+      if (this.age[i] >= this.life[i]) { if (this.size[i]) this.size[i] = 0; continue; }
+      any = 1;
+      this.age[i] += dt;
+      const i3 = i * 3, dr = 1 - Math.min(1, this.drag[i] * dt);
+      V[i3] *= dr; V[i3 + 2] *= dr; V[i3 + 1] = V[i3 + 1] * dr - 13.5 * dt;
+      P[i3] += V[i3] * dt; P[i3 + 1] += V[i3 + 1] * dt; P[i3 + 2] += V[i3 + 2] * dt;
+      if (P[i3 + 1] < this.gy[i]) { this.age[i] = this.life[i]; this.size[i] = 0; continue; }
+      const t = this.age[i] / this.life[i];
+      this.size[i] = this.s0[i] * (1 - t * t * 0.5);
+      this.col[i * 4 + 3] = Math.min(1, (1 - t) * 4);
+    }
+    this.live = any;
+    this.aPos.needsUpdate = true; this.aVel.needsUpdate = true; this.aSize.needsUpdate = true; this.aCol.needsUpdate = true;
+  }
+}
+
 class Trail {
   constructor(color, width = 1, maxPts = 22, life = 0.14) {
     this.max = maxPts; this.life = life;
@@ -193,8 +291,9 @@ const FX = {
     this.glow = new Particles(6000, true);
     this.smoke = new Particles(1500, false);
     this.drops = new Particles(1400, false, true);
+    this.streaks = new BloodStreaks(2400);
     this.splats = [];
-    scene.add(this.glow.points, this.smoke.points, this.drops.points);
+    scene.add(this.glow.points, this.smoke.points, this.drops.points, this.streaks.mesh);
     // one flash light: every point light costs on every lit pixel, all the time
     this.lights = [0].map(() => {
       const l = new THREE.PointLight(0xaaccff, 0, 80, 1.6);
@@ -207,7 +306,7 @@ const FX = {
   },
   setScene(scene) {
     if (this.scene === scene) return;
-    [this.glow.points, this.smoke.points, this.drops.points, ...this.lights].forEach((o) => scene.add(o));
+    [this.glow.points, this.smoke.points, this.drops.points, this.streaks.mesh, ...this.lights].forEach((o) => scene.add(o));
     this.scene = scene;
   },
   resize(h, fov) {
@@ -222,7 +321,9 @@ const FX = {
     this.glow.mat.uniforms.uFog.value = d;
     this.smoke.mat.uniforms.uFog.value = d;
     this.drops.mat.uniforms.uFog.value = d;
-    if (fog) { this.smoke.mat.uniforms.uFogColor.value.copy(fog.color); this.drops.mat.uniforms.uFogColor.value.copy(fog.color); }
+    this.streaks.mat.uniforms.uFog.value = d;
+    if (fog) { this.smoke.mat.uniforms.uFogColor.value.copy(fog.color); this.drops.mat.uniforms.uFogColor.value.copy(fog.color); this.streaks.mat.uniforms.uFogColor.value.copy(fog.color); }
+    this.streaks.update(dt);
     this.glow.update(dt);
     this.smoke.update(dt);
     this.drops.update(dt);
@@ -275,15 +376,34 @@ const FX = {
    * Blood from a wound: drops thrown along the blow (dir) and falling, a fine mist, and splatters on the ground
    * where they come down. col: the blood's colour (linear, dark: it is lit by nothing but itself)
    */
-  blood(pos, dir, n = 24, col = [0.24, 0.012, 0.01], { splat = true, mist = true, ground = null } = {}) {
+  blood(pos, dir, n = 24, col = [0.17, 0.006, 0.004], { splat = true, mist = true, ground = null } = {}) {
     const d = dir ? dir.clone().setY(0).normalize() : new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize();
-    for (let i = 0; i < n; i++) {
-      const sp = rand(1.5, 5.5), up = rand(0.4, 3.2);
-      const sx = d.x * sp + rand(-1.4, 1.4), sz = d.z * sp + rand(-1.4, 1.4);
-      const s = rand(0.05, 0.1);
-      this.drops.spawn({ x: pos.x + rand(-0.06, 0.06), y: pos.y + rand(-0.08, 0.08), z: pos.z + rand(-0.06, 0.06), vx: sx, vy: up, vz: sz, life: rand(0.45, 0.85), s, s2: s * 0.7, c: [col[0], col[1], col[2], 1], c2: [col[0] * 0.8, col[1], col[2], 0.9], g: -11, drag: 0.6, turb: 0 });
+    const gy = ground ?? (World.ready && this.scene === G.scene ? World.getHeight(pos.x, pos.z, pos.y + 1) : pos.y - 1.4);
+    const S = this.streaks, side = new THREE.Vector3(-d.z, 0, d.x);
+    // the spurt: a stream thrown along the blow over a tenth of a second, so it arcs out as one rope of blood
+    const lift = rand(1.6, 3.2), sp0 = rand(4.2, 6.4), sideK = rand(-0.5, 0.5), rope = Math.round(n * 2.2);
+    let emitted = 0;
+    const emit = (frac) => {
+      const want = Math.min(rope, Math.round(rope * frac));
+      for (; emitted < want; emitted++) {
+        const f = emitted / rope, sp = sp0 * (1 - f * 0.5) * rand(0.85, 1.12), s = rand(0.028, 0.07) * (1 - f * 0.4);
+        S.spawn(pos.x + rand(-0.03, 0.03), pos.y + rand(-0.03, 0.03), pos.z + rand(-0.03, 0.03),
+          d.x * sp + side.x * sideK * sp * 0.4 + rand(-0.55, 0.55), lift * (1 - f * 0.5) + rand(-0.45, 0.45), d.z * sp + side.z * sideK * sp * 0.4 + rand(-0.55, 0.55),
+          s, rand(0.7, 1.1), col, gy, 0.25);
+      }
+    };
+    emit(0.35);
+    this.temp(new THREE.Object3D(), 0.15, (t) => emit(0.35 + 0.65 * Math.min(1, t.age / 0.15)), false);
+    // the spray: a fan of fine droplets, fast and wide
+    for (let i = 0; i < n * 1.4; i++) {
+      const sp = rand(2, 6.5), a = rand(-0.9, 0.9), ca = Math.cos(a), sa = Math.sin(a);
+      const vx = (d.x * ca - d.z * sa) * sp, vz = (d.z * ca + d.x * sa) * sp;
+      S.spawn(pos.x, pos.y + rand(-0.05, 0.05), pos.z, vx, rand(-0.5, 3.4), vz, rand(0.012, 0.032), rand(0.4, 0.8), col, gy, 0.9);
     }
-    if (mist) for (let i = 0; i < 3; i++) this.smoke.spawn({ x: pos.x, y: pos.y, z: pos.z, vx: d.x * rand(0.6, 1.6), vy: rand(0, 0.6), vz: d.z * rand(0.6, 1.6), life: rand(0.3, 0.5), s: rand(0.12, 0.2), s2: rand(0.4, 0.65), c: [col[0], col[1], col[2], 0.5], c2: [col[0], col[1], col[2], 0], drag: 3, turb: 0.2 });
+    // a few heavy drops that fall close by
+    for (let i = 0; i < 2 + n / 12; i++) S.spawn(pos.x, pos.y, pos.z, d.x * rand(0.8, 2.2) + rand(-0.6, 0.6), rand(0.2, 1.6), d.z * rand(0.8, 2.2) + rand(-0.6, 0.6), rand(0.075, 0.115), rand(0.6, 1), col, gy, 0.3);
+    // a fine dark mist hanging where the blade went through
+    if (mist) for (let i = 0; i < 4; i++) this.smoke.spawn({ x: pos.x, y: pos.y, z: pos.z, vx: d.x * rand(0.8, 2.2), vy: rand(-0.1, 0.5), vz: d.z * rand(0.8, 2.2), life: rand(0.35, 0.6), s: rand(0.14, 0.24), s2: rand(0.6, 1.0), c: [col[0] * 1.1, col[1], col[2], 0.5], c2: [col[0] * 0.6, col[1], col[2], 0], drag: 3.2, turb: 0.25 });
     if (!splat || !World.ready || this.scene !== G.scene) return;
     // where the drops come down: along the blow, a pace or so off
     const k = Math.max(1, Math.round(n / 16));
@@ -299,7 +419,7 @@ const FX = {
   },
   /** (onGround: y is the floor itself, as under someone standing on the arena's paving; else find the terrain) */
   bloodSplat(x, y, z, size, rot, map, delay, life, grow = 0, tint = null, onGround = false) {
-    const mat = new THREE.MeshStandardMaterial({ map, transparent: true, depthWrite: false, roughness: 0.22, metalness: 0, envMapIntensity: 0.6,
+    const mat = new THREE.MeshStandardMaterial({ map, transparent: true, depthWrite: false, roughness: 0.14, metalness: 0, envMapIntensity: 0.9,
       color: tint ? new THREE.Color(tint[0], tint[1], tint[2]) : 0xffffff, opacity: 0, polygonOffset: true, polygonOffsetFactor: -3 });
     const m = new THREE.Mesh(this.decalGeo, mat);
     m.position.set(x, (onGround ? Math.max(y, World.getHeight(x, z, y + 0.4)) : World.getHeight(x, z, y + 1)) + 0.03, z);

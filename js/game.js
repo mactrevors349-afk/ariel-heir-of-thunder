@@ -6,7 +6,7 @@
 const FinalShader = {
   uniforms: {
     tDiffuse: { value: null }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uSharp: { value: 0 },
-    uVignette: { value: 1.15 }, uGrain: { value: 0.045 }, uCA: { value: 0.0035 },
+    uVignette: { value: 1.15 }, uGrain: { value: 0.016 }, uCA: { value: 0.0008 },
     uSat: { value: 0.8 }, uContrast: { value: 1.13 }, uTint: { value: new THREE.Vector3(1, 1, 1) },
     uLift: { value: new THREE.Vector3(0.004, 0.006, 0.011) }, uDamage: { value: 0 }, uDesat: { value: 0 },
     // split toning: cold, steel-blue shadows under warm, tarnished-gold highlights
@@ -40,8 +40,9 @@ const FinalShader = {
       col += uLift * (1.0 - col);
       col *= mix(1.0, smoothstep(0.95, 0.22, r), uVignette);
       col = mix(col, vec3(0.32, 0.0, 0.0), uDamage * smoothstep(0.25, 0.8, r));
-      float n = fract(sin(dot(vUv * uRes + fract(uTime * 7.31) * 113.0, vec2(12.9898, 78.233))) * 43758.5453);
-      col += (n - 0.5) * uGrain;
+      // film grain, kept fine and soft (sharp per-pixel noise read as flicker on a scaled-up frame), weaker in the lights
+      float n = fract(sin(dot(floor(vUv * uRes * 0.5) + fract(uTime * 2.3) * 61.0, vec2(12.9898, 78.233))) * 43758.5453);
+      col += (n - 0.5) * uGrain * (1.0 - 0.6 * smoothstep(0.2, 0.8, l));
       gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
     }`,
 };
@@ -139,8 +140,9 @@ const Game = {
     // integrated graphics start from a pixel budget (about 1 megapixel, sharpened);
     // during play the resolution governor (autoQuality) tunes it from real frame times
     if (this.gpuTier() === 'integrated') {
+      // (a generous pixel budget: below it the picture turns soft and blocky, and the governor sheds effects first)
       const px = innerWidth * innerHeight * this.prCap() ** 2;
-      this.renderScale = clamp(Math.sqrt(1.0e6 / px), 0.6, 1);
+      this.renderScale = clamp(Math.sqrt(2.4e6 / px), 0.75, 1);
       this.applyQuality();
     }
 
@@ -305,7 +307,7 @@ const Game = {
     G.cam.yaw = P.heading + Math.PI;
     G.cam.pitch = 0.2;
     G.cam.snap(P);
-    G.camera.fov = 58; G.camera.updateProjectionMatrix();
+    G.camera.fov = 55; G.cam.fov = 55; G.camera.updateProjectionMatrix();
     if (Music.mode !== 'boss') Music.play('explore');
     if (!Input.locked && !Input.lockFailed) UI.show('click-resume');
     if (fadeIn) await UI.fade(0, 1.4); else UI.setFade(0);
@@ -462,6 +464,7 @@ const Game = {
     const P = G.player;
     P.ichor += e.def.ichor;
     UI.ichorGain();
+    UI.log('combat', `${e.name || e.def.name} slain · <b>+${e.def.ichor.toLocaleString()}</b> Ichor`);
     if (e === G.cyclops) {
       G.flags.cyclopsDead = true;
       setTimeout(() => {
@@ -567,10 +570,10 @@ const Game = {
 
   /* ---------------------------------------------------------- quality */
   /** the highest pixel ratio each preset may use (before the render scale) */
-  prCap(q = G.settings.quality) { return Math.min(devicePixelRatio, { low: 1, medium: 1.25, high: 1.5, ultra: 2 }[q] || 1); },
+  prCap(q = G.settings.quality) { return Math.min(devicePixelRatio, { low: 1, medium: 1.5, high: 1.75, ultra: 2 }[q] || 1); },
   applyQuality(initial = false) {
     const q = G.settings.quality, R = G.renderer;
-    this.renderScale = clamp(this.renderScale || 1, 0.5, 1);
+    this.renderScale = clamp(this.renderScale || 1, 0.75, 1);
     const pr = this.prCap(q) * this.renderScale;
     R.setPixelRatio(pr);
     this.composer.setPixelRatio(pr);
@@ -581,8 +584,9 @@ const Game = {
       if (rt.samples !== samples) { rt.samples = samples; rt.dispose(); }
     }
     this.fxaa.enabled = !msaa;
-    this.bloom.enabled = q !== 'low';
-    this.ao.enabled = q !== 'low';
+    const shed = this.shed || [];
+    this.bloom.enabled = q !== 'low' && !shed.includes('bloom');
+    this.ao.enabled = q !== 'low' && !shed.includes('ao');
     // soft shadow filtering samples the shadow map many times per pixel: plain PCF below High
     const st = msaa ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     if (R.shadowMap.type !== st) {
@@ -691,9 +695,18 @@ const Game = {
     a.first = false;
     const sorted = a.frames.sort((x, y) => x - y), fps = 1 / sorted[Math.floor(sorted.length / 2)];
     a.t = 0; a.frames = [];
+    // too slow: shed the costliest effects first (ambient occlusion, then bloom), and only then resolution, never
+    // below three quarters (lower than that the picture turns blocky); fast again: resolution first, then effects
+    const shed = (this.shed = this.shed || []);
     let s = this.renderScale;
-    if (fps < 40 && s > 0.5) s = Math.max(0.5, s - (fps < 28 ? 0.15 : 0.08));
-    else if (fps > 58 && s < 1) s = Math.min(1, s + 0.06);
+    if (fps < 40) {
+      if (this.ao.enabled && !shed.includes('ao')) { shed.push('ao'); this.applyQuality(); return; }
+      if (this.bloom.enabled && !shed.includes('bloom')) { shed.push('bloom'); this.applyQuality(); return; }
+      if (s > 0.75) s = Math.max(0.75, s - (fps < 28 ? 0.12 : 0.06));
+    } else if (fps > 58) {
+      if (s < 1) s = Math.min(1, s + 0.06);
+      else if (shed.length && fps > 64) { shed.pop(); this.applyQuality(); return; }
+    }
     if (s !== this.renderScale) { this.renderScale = s; this.applyQuality(); }
   },
 
@@ -765,10 +778,11 @@ const Game = {
    */
   gradeFor(sc) {
     const U = this.final.uniforms;
-    if (sc === School.scene) { U.uTint.value.set(0.95, 1.0, 1.08); U.uSat.value = 0.85; }
+    // one filmic look everywhere (the split-tone and contrast in FinalShader): the modern-day scenes keep only a gentle tint
+    if (sc === School.scene) { U.uTint.value.set(0.97, 1.0, 1.05); U.uSat.value = 0.8; }
     else if (sc === Memory.scene) { U.uTint.value.set(1.1, 0.98, 0.82); U.uSat.value = 0.4; }
-    else if (sc === Home.scene) { U.uTint.value.set(1.03, 1.0, 0.96); U.uSat.value = 0.88; }
-    else if (sc === Campus.scene) { U.uTint.value.set(0.98, 1.0, 1.03); U.uSat.value = 0.82; }
+    else if (sc === Home.scene) { U.uTint.value.set(1.02, 1.0, 0.97); U.uSat.value = 0.8; }
+    else if (sc === Campus.scene) { U.uTint.value.set(0.99, 1.0, 1.02); U.uSat.value = 0.8; }
     else { U.uTint.value.set(1, 1, 1); U.uSat.value = 0.8; }
     U.uVignette.value = sc === Memory.scene ? 1.6 : 1.15;
     // a remembered moment (Jesse's flashbacks): cold, faded, closed in at the edges, whatever the stage

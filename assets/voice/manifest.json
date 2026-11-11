@@ -11,17 +11,17 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "It's not my fault metal sparks when I touch it. Nothing about me is ever my fault."
  },
- "c0d40b54": {
-  "who": "Ariel",
-  "dur": 4.32,
-  "voice": "en-US-BrianMultilingualNeural",
-  "text": "…Seventeen years, and the storms still follow me everywhere."
- },
  "52d41446": {
   "who": "Ariel",
   "dur": 2.5,
   "voice": "en-US-BrianMultilingualNeural",
   "text": "…The rain stopped. In mid-air."
+ },
+ "c0d40b54": {
+  "who": "Ariel",
+  "dur": 4.32,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "…Seventeen years, and the storms still follow me everywhere."
  },
  "18d32609": {
   "who": "Hermes",
@@ -59,17 +59,17 @@
   "voice": "en-GB-RyanNeural",
   "text": "Your father is Zeus, King of Olympus. And right now, Olympus is dying."
  },
- "b519c113": {
-  "who": "Hermes",
-  "dur": 9.79,
-  "voice": "en-GB-RyanNeural",
-  "text": "Kronos has corrupted the gods. Ares, Athena, Poseidon — all of them. Only the blood of Zeus can reclaim their stolen sparks."
- },
  "153018c5": {
   "who": "Ariel",
   "dur": 2.33,
   "voice": "en-US-BrianMultilingualNeural",
   "text": "I have a chemistry test on Monday."
+ },
+ "b519c113": {
+  "who": "Hermes",
+  "dur": 9.79,
+  "voice": "en-GB-RyanNeural",
+  "text": "Kronos has corrupted the gods. Ares, Athena, Poseidon — all of them. Only the blood of Zeus can reclaim their stolen sparks."
  },
  "1d4e0ed5": {
   "who": "Hermes",
@@ -145,7 +145,7 @@
  },
  "bb66ba9b": {
   "who": "Anna",
-  "dur": 3.58,
+  "dur": 3.6,
   "voice": "en-US-EmmaMultilingualNeural",
   "text": "It's mine. Yours is orange juice and a lecture."
  },
@@ -197,21 +197,21 @@
   "voice": "en-US-EmmaMultilingualNeural",
   "text": "…Sit down. You want to know? Then I'll tell you. All of it. Just once."
  },
- "e6314f09": {
-  "who": "Anna",
-  "dur": 9.17,
-  "voice": "en-US-EmmaMultilingualNeural",
-  "text": "It was the summer I turned twenty. The worst storm this town has ever seen — and I was the only fool out on the old pier, watching it come in."
- },
  "2ab4576e": {
   "who": "Anna",
   "dur": 6.6,
   "voice": "en-US-EmmaMultilingualNeural",
   "text": "He walked out of the rain like it was parting for him. He didn't run. He didn't even get wet."
  },
+ "e6314f09": {
+  "who": "Anna",
+  "dur": 9.17,
+  "voice": "en-US-EmmaMultilingualNeural",
+  "text": "It was the summer I turned twenty. The worst storm this town has ever seen — and I was the only fool out on the old pier, watching it come in."
+ },
  "0f73afb8": {
   "who": "Zeus",
-  "dur": 3.0,
+  "dur": 2.88,
   "voice": "en-GB-ThomasNeural",
   "text": "You are not afraid of the storm."
  },
@@ -223,7 +223,7 @@
  },
  "f8ecc731": {
   "who": "Zeus",
-  "dur": 2.4,
+  "dur": 2.28,
   "voice": "en-GB-ThomasNeural",
   "text": "Most mortals are."
  },
@@ -241,37 +241,37 @@
  },
  "ca46cb7b": {
   "who": "Anna",
-  "dur": 9.17,
+  "dur": 9.14,
   "voice": "en-US-EmmaMultilingualNeural",
   "text": "He left before you were born. And the night you came into the world, every light in the hospital went out — and he was there. Just for a moment."
  },
  "87bab48f": {
   "who": "Zeus",
-  "dur": 3.5,
+  "dur": 3.34,
   "voice": "en-GB-ThomasNeural",
   "text": "Ariel. My son."
  },
  "c7ea3e97": {
   "who": "Zeus",
-  "dur": 10.7,
+  "dur": 10.2,
   "voice": "en-GB-ThomasNeural",
   "text": "I give you my thunder… and a heart for war that is not mine to give. Forgive me, little one. You will need them both."
  },
  "14942ca9": {
   "who": "Zeus",
-  "dur": 9.5,
+  "dur": 9.07,
   "voice": "en-GB-ThomasNeural",
   "text": "When the storms come looking for him, I will send someone. Until then, keep him close. Keep him kind."
  },
  "9f446262": {
   "who": "Anna",
-  "dur": 1.97,
+  "dur": 1.94,
   "voice": "en-US-EmmaMultilingualNeural",
   "text": "Will we ever see you again?"
  },
  "5a5e3f1d": {
   "who": "Zeus",
-  "dur": 3.19,
+  "dur": 3.07,
   "voice": "en-GB-ThomasNeural",
   "text": "Look up, whenever it storms."
  },
@@ -307,7 +307,7 @@
  },
  "096f5b9e": {
   "who": "Ariel",
-  "dur": 1.61,
+  "dur": 1.87,
   "voice": "en-US-BrianMultilingualNeural",
   "text": "It always storms."
  },
@@ -319,7 +319,7 @@
  },
  "f8db0138": {
   "who": "Jesse",
-  "dur": 2.9,
+  "dur": 2.71,
   "voice": "en-US-AvaMultilingualNeural",
   "text": "You're late, Stormborn. Even for you."
  },
@@ -329,23 +329,17 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Family thing."
  },
- "3eeb8804": {
-  "who": "Jesse",
-  "dur": 7.32,
-  "voice": "en-US-AvaMultilingualNeural",
-  "text": "Is this about the microscopes? Because the whole school thinks you have a superpower. Mostly the power of breaking stuff."
- },
  "fe9557d0": {
   "who": "Ariel",
   "dur": 1.87,
   "voice": "en-US-BrianMultilingualNeural",
   "text": "It's a gift."
  },
- "25243170": {
+ "3eeb8804": {
   "who": "Jesse",
-  "dur": 4.06,
+  "dur": 7.25,
   "voice": "en-US-AvaMultilingualNeural",
-  "text": "Uh-huh. You okay? You look like someone just told you a ghost story."
+  "text": "Is this about the microscopes? Because the whole school thinks you have a superpower. Mostly the power of breaking stuff."
  },
  "0f3a9092": {
   "who": "Ariel",
@@ -353,11 +347,11 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Something like that."
  },
- "390a8ec4": {
+ "25243170": {
   "who": "Jesse",
-  "dur": 5.14,
+  "dur": 4.01,
   "voice": "en-US-AvaMultilingualNeural",
-  "text": "Ugh, my phone just died. Again. Every single time you stand next to me."
+  "text": "Uh-huh. You okay? You look like someone just told you a ghost story."
  },
  "2cd0e5d2": {
   "who": "Ariel",
@@ -365,17 +359,23 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Sorry. Happens a lot."
  },
- "92912975": {
+ "390a8ec4": {
   "who": "Jesse",
-  "dur": 7.58,
+  "dur": 5.71,
   "voice": "en-US-AvaMultilingualNeural",
-  "text": "Lab partners don't let lab partners brood before first period. Buy me a soda, and I'll let you copy my chem homework."
+  "text": "Ugh, my phone just died. Again. Every single time you stand next to me."
  },
  "c33f609c": {
   "who": "Ariel",
   "dur": 0.77,
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Deal."
+ },
+ "92912975": {
+  "who": "Jesse",
+  "dur": 7.56,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "Lab partners don't let lab partners brood before first period. Buy me a soda, and I'll let you copy my chem homework."
  },
  "5a6cf582": {
   "who": "Ariel",
@@ -391,7 +391,7 @@
  },
  "c2b329aa": {
   "who": "Principal",
-  "dur": 10.51,
+  "dur": 10.54,
   "voice": "en-US-EricNeural",
   "text": "STORMBORN! My office. Now. And after school, you can spend the evening in detention, thinking about school property."
  },
@@ -407,17 +407,17 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "I'll get you that soda later."
  },
- "2c83343d": {
-  "who": "Jesse",
-  "dur": 3.07,
-  "voice": "en-US-AvaMultilingualNeural",
-  "text": "You'd better. See you in chem, Stormborn."
- },
  "aa84434e": {
   "who": "Ares",
-  "dur": 6.34,
+  "dur": 6.12,
   "voice": "en-US-GuyNeural",
   "text": "Do you feel it, little brother? The war in your blood… calling home."
+ },
+ "2c83343d": {
+  "who": "Jesse",
+  "dur": 3.1,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "You'd better. See you in chem, Stormborn."
  },
  "289d24c5": {
   "who": "Ariel",
@@ -427,33 +427,33 @@
  },
  "6b4b4fe4": {
   "who": "Ares",
-  "dur": 7.13,
+  "dur": 6.91,
   "voice": "en-US-GuyNeural",
   "text": "That armour. That face. Did you never wonder why they look like mine?"
  },
- "5276c619": {
-  "who": "Ares",
-  "dur": 9.26,
-  "voice": "en-US-GuyNeural",
-  "text": "Seventeen years ago your father cut a shard from my spark — my war, my strength — and sealed it inside a mortal child. Inside you."
- },
  "66b81ab4": {
   "who": "Ares",
-  "dur": 5.3,
+  "dur": 5.14,
   "voice": "en-US-GuyNeural",
   "text": "And what is mine answers to me. Kneel to war, boy."
  },
- "09d07e18": {
-  "who": "Ariel",
-  "dur": 1.87,
-  "voice": "en-US-BrianMultilingualNeural",
-  "text": "Get… out… of… my… head!"
+ "5276c619": {
+  "who": "Ares",
+  "dur": 9.0,
+  "voice": "en-US-GuyNeural",
+  "text": "Seventeen years ago your father cut a shard from my spark — my war, my strength — and sealed it inside a mortal child. Inside you."
  },
  "3882b4b0": {
   "who": "Hermes",
   "dur": 3.24,
   "voice": "en-GB-RyanNeural",
   "text": "Hands off the boy, you overgrown war drum!"
+ },
+ "09d07e18": {
+  "who": "Ariel",
+  "dur": 1.87,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "Get… out… of… my… head!"
  },
  "efd77414": {
   "who": "Ariel",
@@ -467,17 +467,17 @@
   "voice": "en-GB-RyanNeural",
   "text": "I had hoped to have this conversation after you freed him. Or, ideally, never."
  },
- "73f7b928": {
-  "who": "Hermes",
-  "dur": 10.44,
-  "voice": "en-GB-RyanNeural",
-  "text": "When Kronos began to stir, your father knew his thunder alone would never keep a mortal child alive. So he cut a shard from Ares' spark and sealed it in you, right beside his own."
- },
  "7f587d38": {
   "who": "Hermes",
   "dur": 7.82,
   "voice": "en-GB-RyanNeural",
   "text": "I carried it to your cradle myself. Wrapped in a storm cloud, still burning. Ares was never asked."
+ },
+ "73f7b928": {
+  "who": "Hermes",
+  "dur": 10.44,
+  "voice": "en-GB-RyanNeural",
+  "text": "When Kronos began to stir, your father knew his thunder alone would never keep a mortal child alive. So he cut a shard from Ares' spark and sealed it in you, right beside his own."
  },
  "417a131d": {
   "who": "Ariel",
@@ -511,13 +511,13 @@
  },
  "0545087c": {
   "who": "Ares",
-  "dur": 4.2,
+  "dur": 4.08,
   "voice": "en-US-GuyNeural",
   "text": "Another little godling, sent to die in my arena."
  },
  "d05720a3": {
   "who": "Ares",
-  "dur": 6.22,
+  "dur": 6.02,
   "voice": "en-US-GuyNeural",
   "text": "I am ARES. I am every war that was ever fought — and every war that ever will be."
  },
@@ -529,7 +529,7 @@
  },
  "f7aa63ad": {
   "who": "Ares",
-  "dur": 7.46,
+  "dur": 7.22,
   "voice": "en-US-GuyNeural",
   "text": "And still you wear my face, little thief. Did the messenger tell you whose strength you have been borrowing?"
  },
@@ -541,43 +541,43 @@
  },
  "11182b2c": {
   "who": "Ares",
-  "dur": 7.63,
+  "dur": 7.42,
   "voice": "en-US-GuyNeural",
   "text": "Kronos showed me the truth, boy. Olympus is a corpse wearing a crown — and your father let it rot."
  },
  "74d20f05": {
   "who": "Ares",
-  "dur": 6.43,
+  "dur": 6.26,
   "voice": "en-US-GuyNeural",
   "text": "Come, son of Zeus. Show me your father's thunder — so I can tear it from your chest!"
  },
  "c68d6789": {
   "who": "Ares",
-  "dur": 5.83,
+  "dur": 5.64,
   "voice": "en-US-GuyNeural",
   "text": "The rot… it burns away. My mind is… my own again."
  },
  "f9d66a32": {
   "who": "Ares",
-  "dur": 8.64,
+  "dur": 8.4,
   "voice": "en-US-GuyNeural",
   "text": "Boy. Kronos waits on Olympus, on your father's throne. Every god you free will weaken his hold."
  },
  "bda62c2e": {
   "who": "Ares",
-  "dur": 9.98,
+  "dur": 9.65,
   "voice": "en-US-GuyNeural",
   "text": "That shard in your chest… I hated you for it before you could walk. A mortal, wearing my strength like a borrowed cloak."
  },
  "6e8e7554": {
   "who": "Ares",
-  "dur": 6.91,
+  "dur": 6.72,
   "voice": "en-US-GuyNeural",
   "text": "It was never his to give. So let it be mine. Keep it, brother."
  },
  "9a376fe1": {
   "who": "Ares",
-  "dur": 4.68,
+  "dur": 4.54,
   "voice": "en-US-GuyNeural",
   "text": "Take my spark. Wield it better than I did."
  },
@@ -589,25 +589,25 @@
  },
  "e2a0b7ad": {
   "who": "Zeus",
-  "dur": 8.21,
+  "dur": 7.85,
   "voice": "en-GB-ThomasNeural",
   "text": "One spark returns to Olympus. Eleven remain in shadow — and each will be harder won than the last."
  },
  "35fbf5b7": {
   "who": "Zeus",
-  "dur": 7.63,
+  "dur": 7.3,
   "voice": "en-GB-ThomasNeural",
   "text": "I am sorry I was not there. Rise now, Heir of Thunder. Olympus awaits."
  },
  "f0861463": {
   "who": "Ares",
-  "dur": 8.95,
+  "dur": 8.71,
   "voice": "en-US-GuyNeural",
   "text": "Hear me, brother. The mantle of war was never mine to keep. I wore it like a butcher wears his apron."
  },
  "70523bd2": {
   "who": "Ares",
-  "dur": 4.75,
+  "dur": 4.61,
   "voice": "en-US-GuyNeural",
   "text": "Take it. Be the god of war that I never was."
  },
@@ -617,29 +617,29 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "…Then I will make it mean something."
  },
- "0075ba3b": {
-  "who": "Narrator",
-  "dur": 4.22,
-  "voice": "en-US-AndrewMultilingualNeural",
-  "text": "Olympus stood again in the light, as it was in the beginning."
- },
  "64a13edb": {
   "who": "Zeus",
-  "dur": 6.98,
+  "dur": 6.67,
   "voice": "en-GB-ThomasNeural",
   "text": "Olympus stands again. And at my right hand, the God of War — my son."
  },
- "3492b366": {
-  "who": "Anna",
-  "dur": 3.62,
-  "voice": "en-US-EmmaMultilingualNeural",
-  "text": "Three days, Ariel. Three days, and not one word."
+ "0075ba3b": {
+  "who": "Narrator",
+  "dur": 4.42,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Olympus stood again in the light, as it was in the beginning."
  },
  "b4fa10bd": {
   "who": "Ariel",
   "dur": 4.32,
   "voice": "en-US-BrianMultilingualNeural",
   "text": "I met him, Mom. Dad. He said he was sorry he was not there."
+ },
+ "3492b366": {
+  "who": "Anna",
+  "dur": 3.62,
+  "voice": "en-US-EmmaMultilingualNeural",
+  "text": "Three days, Ariel. Three days, and not one word."
  },
  "20d97ea4": {
   "who": "Anna",
@@ -665,17 +665,17 @@
   "voice": "en-US-EmmaMultilingualNeural",
   "text": "Then you will do the one thing your father never could. You will be both."
  },
- "2129e699": {
-  "who": "Jesse",
-  "dur": 1.87,
-  "voice": "en-US-AvaMultilingualNeural",
-  "text": "I worked it out, you know."
- },
  "d9d1d022": {
   "who": "Jesse",
-  "dur": 3.55,
+  "dur": 3.84,
   "voice": "en-US-AvaMultilingualNeural",
   "text": "My phone, dying every single time you stood next to me."
+ },
+ "2129e699": {
+  "who": "Jesse",
+  "dur": 1.51,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "I worked it out, you know."
  },
  "97919889": {
   "who": "Jesse",
@@ -685,9 +685,15 @@
  },
  "6e55eb67": {
   "who": "Jesse",
-  "dur": 3.72,
+  "dur": 3.48,
   "voice": "en-US-AvaMultilingualNeural",
   "text": "And the lightning on the school roof, the night you disappeared."
+ },
+ "a9bff25f": {
+  "who": "Jesse",
+  "dur": 2.18,
+  "voice": "en-US-AvaMultilingualNeural",
+  "text": "That was you. All of it."
  },
  "9bc07c8f": {
   "who": "Ariel",
@@ -697,13 +703,13 @@
  },
  "784b1f8f": {
   "who": "Jesse",
-  "dur": 4.3,
+  "dur": 3.94,
   "voice": "en-US-AvaMultilingualNeural",
   "text": "Stormborn, I have believed you since the third grade. Try me."
  },
  "25f1cf32": {
   "who": "Narrator",
-  "dur": 4.7,
+  "dur": 4.22,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Anna kept that photograph on her mantel for the rest of her life."
  },
@@ -727,13 +733,13 @@
  },
  "f8aec782": {
   "who": "Zeus",
-  "dur": 6.72,
+  "dur": 6.41,
   "voice": "en-GB-ThomasNeural",
   "text": "A grandson. Olympus has not heard a child cry in a thousand years."
  },
  "56f343ef": {
   "who": "Narrator",
-  "dur": 9.82,
+  "dur": 8.98,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "And so the son of a storm became a father, and the story of the gods began again, in the halls of Olympus, in his mother's arms."
  },
@@ -743,33 +749,33 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Dad. Ares. If you can hear me — I need everything you have."
  },
- "ec78087d": {
-  "who": "Zeus",
-  "dur": 6.26,
-  "voice": "en-GB-ThomasNeural",
-  "text": "You never needed to ask, my son. The sky has always been yours."
- },
  "63e08697": {
   "who": "Ares",
-  "dur": 6.07,
+  "dur": 5.88,
   "voice": "en-US-GuyNeural",
   "text": "And the war answers with it, brother. Let them see what the two of us made."
  },
+ "ec78087d": {
+  "who": "Zeus",
+  "dur": 5.98,
+  "voice": "en-GB-ThomasNeural",
+  "text": "You never needed to ask, my son. The sky has always been yours."
+ },
  "deb72ca9": {
   "who": "Ares",
-  "dur": 9.26,
+  "dur": 9.0,
   "voice": "en-US-GuyNeural",
   "text": "You want my war, little thief? Then take it. Every drop. And see if you can hold it."
  },
  "3523fde7": {
   "who": "Zeus",
-  "dur": 2.69,
+  "dur": 2.57,
   "voice": "en-GB-ThomasNeural",
   "text": "Rise, my son."
  },
  "5cd4f00c": {
   "who": "Ares",
-  "dur": 2.66,
+  "dur": 2.59,
   "voice": "en-US-GuyNeural",
   "text": "Blood and thunder, brother!"
  },
@@ -781,7 +787,7 @@
  },
  "80aef5a8": {
   "who": "Ares",
-  "dur": 2.83,
+  "dur": 2.74,
   "voice": "en-US-GuyNeural",
   "text": "Burn for me, little thief."
  },
@@ -793,151 +799,151 @@
  },
  "867c4a48": {
   "who": "Narrator",
-  "dur": 7.25,
+  "dur": 6.53,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Before memory… before the first mortal looked up and named the stars… there was Olympus."
  },
  "b50f6c32": {
   "who": "Narrator",
-  "dur": 12.67,
+  "dur": 11.71,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Upon its summit the gods ruled sky, sea and soul. Zeus of the thunder. Poseidon of the deep. Wise Athena. And Hades, keeper of the dead."
  },
  "44451bdc": {
   "who": "Narrator",
-  "dur": 7.34,
+  "dur": 7.06,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "But far below, in the black pit of Tartarus, something old was waiting. Something patient."
  },
  "5d1a70a2": {
   "who": "Narrator",
-  "dur": 10.06,
+  "dur": 9.46,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Kronos. The Devourer of Ages. A father who once swallowed his own children — and swore one day to finish the meal."
  },
  "a00a79c6": {
   "who": "Narrator",
-  "dur": 7.7,
+  "dur": 7.03,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "When his chains broke, the rot came with him. It crept through the marble halls like a slow, cold tide."
  },
  "8f56ef3a": {
   "who": "Narrator",
-  "dur": 9.65,
+  "dur": 8.76,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "One by one, the Olympians fell. Their divine sparks were torn from their hearts, and scattered across a shattered realm."
  },
  "5e63e3fd": {
   "who": "Narrator",
-  "dur": 6.91,
+  "dur": 7.03,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "With the last of his strength, Zeus hid a single spark where Kronos would never think to look…"
  },
  "04ca151a": {
   "who": "Narrator",
-  "dur": 1.94,
+  "dur": 1.87,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "…inside a mortal child."
  },
  "720e16be": {
   "who": "Narrator",
-  "dur": 5.69,
+  "dur": 5.14,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "And the Fates, who see every thread, wove what was still to come."
  },
  "deaca9d9": {
   "who": "Narrator",
-  "dur": 6.55,
+  "dur": 6.41,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "The son of Zeus took up the mantle of war, and carried it into the dark places of the world."
  },
  "01137801": {
   "who": "Narrator",
-  "dur": 7.94,
+  "dur": 7.51,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "One by one, the stolen sparks came home — until the Titan himself was cast down into Tartarus."
  },
  "daa4013e": {
   "who": "Narrator",
-  "dur": 8.71,
+  "dur": 8.02,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "The gods walked again on Olympus: the sea-king, the grey-eyed one, the lord of the dead — and their King."
  },
  "b0ad3067": {
   "who": "Narrator",
-  "dur": 7.22,
+  "dur": 6.98,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Their fires were lit, their columns stood, and Olympus shone over the world once more."
  },
  "4e6e68b9": {
   "who": "Narrator",
-  "dur": 6.5,
+  "dur": 6.07,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "And at the right hand of Zeus stood the new God of War: Ariel, Heir of Thunder."
  },
  "1d8f8cd2": {
   "who": "Narrator",
-  "dur": 7.37,
+  "dur": 6.77,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "By day he was still Ariel Stormborn of Westbrook High, who turned his chemistry homework in late."
  },
  "9b0d27b2": {
   "who": "Narrator",
-  "dur": 7.27,
+  "dur": 6.72,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "By night the God of War kept watch over the old places of the world, and the old places were quiet."
  },
  "83ac90ae": {
   "who": "Narrator",
-  "dur": 10.22,
+  "dur": 9.6,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "He told Jesse everything: the shard, the storm, the father in the rain. She listened to the very end, and she did not run."
  },
  "fa9b2f85": {
   "who": "Narrator",
-  "dur": 6.29,
+  "dur": 6.26,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "They finished school together, under a sky that held back its thunder for one whole afternoon."
  },
  "94e09c15": {
   "who": "Narrator",
-  "dur": 13.1,
+  "dur": 12.26,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Seven summers later, on the pier where Anna once met a stranger in the rain, Ariel married Jesse. Anna gave the bride away, and Hermes, of course, was late."
  },
  "6589a168": {
   "who": "Narrator",
-  "dur": 7.97,
+  "dur": 7.2,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Zeus came as a warm summer rain. Ares came in his own fire, and for the first time it warmed instead of burned."
  },
  "dc0bdc05": {
   "who": "Narrator",
-  "dur": 12.41,
+  "dur": 11.69,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Two winters after Kratos came his brother, Deimos: dread. A red ember burned beside the blue in him, the war-god's shard come home in the blood."
  },
  "305bbbf8": {
   "who": "Narrator",
-  "dur": 9.22,
+  "dur": 8.64,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "The brothers grew up between two worlds: Saturday football in Westbrook, and Sunday sword-drill on the slopes of Olympus."
  },
  "81b6435a": {
   "who": "Narrator",
-  "dur": 12.77,
+  "dur": 11.93,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Kratos had his father's strength, and Deimos his grandfather's fury. Ariel, who had carried both, taught them the one thing no god had ever learned: when not to fight."
  },
  "fe2c3fc4": {
   "who": "Narrator",
-  "dur": 8.76,
+  "dur": 8.47,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Anna grew old in the house by the sea. And every storm that ever passed over it stopped there, for a moment, to rest."
  },
  "5940d272": {
   "who": "Narrator",
-  "dur": 4.63,
+  "dur": 4.3,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "This is how the story ends. Everything else is how it happens."
  },
@@ -977,17 +983,17 @@
   "voice": "en-GB-RyanNeural",
   "text": "He devoured his own children once. Now he devours their divinity instead. Every spark he steals makes him stronger."
  },
- "f9b3e288": {
-  "who": "Hermes",
-  "dur": 11.95,
-  "voice": "en-GB-RyanNeural",
-  "text": "Even Hades. You should have seen him at court — crowned, proud, impossible. The rot burned all of that away. What rules the underworld now only wears his name."
- },
  "8e741459": {
   "who": "Hermes",
   "dur": 7.34,
   "voice": "en-GB-RyanNeural",
   "text": "Kill shades and you collect their Ichor — the golden blood of the divine. Offer it at an Altar of Hestia to grow stronger."
+ },
+ "f9b3e288": {
+  "who": "Hermes",
+  "dur": 11.95,
+  "voice": "en-GB-RyanNeural",
+  "text": "Even Hades. You should have seen him at court — crowned, proud, impossible. The rot burned all of that away. What rules the underworld now only wears his name."
  },
  "dcc0ef9e": {
   "who": "Hermes",
@@ -1013,17 +1019,17 @@
   "voice": "en-GB-RyanNeural",
   "text": "Because a piece of him lives in you. The shard your father sealed in your cradle shaped you in its own image — armour, face and all."
  },
- "1fca9118": {
-  "who": "Hermes",
-  "dur": 9.24,
-  "voice": "en-GB-RyanNeural",
-  "text": "And while the rot holds him, it is a leash. Free him, and it becomes a gift. Until then, when the world goes red, fight him."
- },
  "bdf6ed62": {
   "who": "Hermes",
   "dur": 7.63,
   "voice": "en-GB-RyanNeural",
   "text": "Athena waits in the Library of Ash, and Poseidon has drowned an entire coast in his grief. Eleven sparks remain."
+ },
+ "1fca9118": {
+  "who": "Hermes",
+  "dur": 9.24,
+  "voice": "en-GB-RyanNeural",
+  "text": "And while the rot holds him, it is a leash. Free him, and it becomes a gift. Until then, when the world goes red, fight him."
  },
  "ac720cb7": {
   "who": "Hermes",
@@ -1049,45 +1055,45 @@
   "voice": "en-GB-RyanNeural",
   "text": "Anything else?"
  },
- "1f0a74f6": {
-  "who": "Hermes",
-  "dur": 6.62,
-  "voice": "en-GB-RyanNeural",
-  "text": "Until the next spark, cousin. Er — half-brother. It is complicated."
- },
  "c619b9dd": {
   "who": "Hermes",
   "dur": 2.98,
   "voice": "en-GB-RyanNeural",
   "text": "May your father's thunder guide your hand."
  },
+ "1f0a74f6": {
+  "who": "Hermes",
+  "dur": 6.62,
+  "voice": "en-GB-RyanNeural",
+  "text": "Until the next spark, cousin. Er — half-brother. It is complicated."
+ },
  "a9963831": {
   "who": "Ares",
-  "dur": 4.08,
+  "dur": 3.98,
   "voice": "en-US-GuyNeural",
   "text": "Enough! Burn with me, godling!"
  },
  "6fbda660": {
   "who": "Ares",
-  "dur": 2.74,
+  "dur": 2.66,
   "voice": "en-US-GuyNeural",
   "text": "Yes… let the war in."
  },
  "d1731b84": {
   "who": "Ares",
-  "dur": 2.86,
+  "dur": 2.76,
   "voice": "en-US-GuyNeural",
   "text": "Your blade is mine, brother."
  },
  "78364ff0": {
   "who": "Ares",
-  "dur": 4.46,
+  "dur": 4.34,
   "voice": "en-US-GuyNeural",
   "text": "Stop fighting me. You were made for this."
  },
  "1fef1c89": {
   "who": "Ares",
-  "dur": 4.1,
+  "dur": 3.98,
   "voice": "en-US-GuyNeural",
   "text": "Blood first. Questions never."
  },
@@ -1117,7 +1123,7 @@
  },
  "338ff584": {
   "who": "Echo",
-  "dur": 0.36,
+  "dur": 4.27,
   "voice": "en-IE-ConnorNeural",
   "text": "Hoplites ahead. Therefore, patience."
  },
@@ -1144,11 +1150,5 @@
   "dur": 5.62,
   "voice": "en-US-EricNeural",
   "text": "Fire, O fire… when he lifts his blade to the sky, run."
- },
- "a9bff25f": {
-  "who": "Jesse",
-  "dur": 2.21,
-  "voice": "en-US-AvaMultilingualNeural",
-  "text": "That was you. All of it."
  }
 }
