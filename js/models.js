@@ -272,6 +272,29 @@ const MODEL_DEFS = {
   classmateGirl: { url: 'assets/npc/girl.glb', type: 'glb', label: 'Westbrook High', static: true },
   // newborn Ariel, asleep (34 cm curled up, centred on his middle; head +Y, face +Z)
   baby: { url: 'assets/memory/baby.glb', type: 'glb', label: 'Anna', static: true },
+  // Deimos, grown: "The Redeemed Warrior" by denizuchia (CC BY 4.0). Bald, a red-and-white war-kilt, greaves.
+  // Faces -Z in the file; the landmarks were measured after turning him round (rotY). Loaded only for the ending.
+  deimos: {
+    url: 'assets/deimos/deimos.glb', type: 'glb', height: 1.98, label: 'Deimos', rotY: Math.PI, lazy: true, restPose: true, merge: true,
+    landmarks: {
+      hips: [0.0, 1.0, 0.02], spine: [0.0, 1.17, 0.02], chest: [0.0, 1.36, 0.01], neck: [0.0, 1.55, 0.01], head: [0.02, 1.64, 0.04],
+      armL: [0.27, 1.45, 0.0], elbowL: [0.36, 1.18, 0.08], handL: [0.355, 0.96, 0.16],
+      armR: [-0.27, 1.45, -0.03], elbowR: [-0.34, 1.18, -0.1], handR: [-0.37, 0.96, -0.01],
+      thighL: [0.12, 0.92, 0.03], kneeL: [0.23, 0.55, 0.11], footL: [0.29, 0.12, 0.05],
+      thighR: [-0.12, 0.92, 0.0], kneeR: [-0.235, 0.55, -0.07], footR: [-0.29, 0.12, -0.16],
+    },
+  },
+  // Heracles: "Hercules, Greek warrior gladiator" by Abrazafarolas (CC BY 4.0). Bearded, a sash and a leather kilt.
+  heracles: {
+    url: 'assets/heracles/heracles.glb', type: 'glb', height: 1.96, label: 'Heracles', lazy: true, restPose: true, merge: true,
+    landmarks: {
+      hips: [0.0, 1.0, 0.0], spine: [0.0, 1.17, -0.02], chest: [0.0, 1.36, 0.0], neck: [0.02, 1.55, -0.02], head: [0.0, 1.64, 0.0],
+      armL: [0.21, 1.45, -0.04], elbowL: [0.3, 1.18, -0.01], handL: [0.31, 0.96, 0.11],
+      armR: [-0.21, 1.45, -0.05], elbowR: [-0.27, 1.18, -0.08], handR: [-0.32, 0.96, -0.02],
+      thighL: [0.11, 0.92, -0.02], kneeL: [0.135, 0.55, -0.035], footL: [0.137, 0.12, -0.07],
+      thighR: [-0.11, 0.92, -0.02], kneeR: [-0.132, 0.55, -0.035], footR: [-0.138, 0.12, -0.07],
+    },
+  },
   kronos: {
     url: 'assets/kronos/kronos_opt.glb', type: 'glb', height: LM_H, label: 'Kronos',
     landmarks: {
@@ -292,7 +315,8 @@ const Models = {
 
   async load(progress) {
     const fbx = new Addons.FBXLoader(), glb = new Addons.GLTFLoader();
-    const keys = Object.keys(MODEL_DEFS);
+    // (the ending's own sculpts are big and seen once: they load when the ending begins, see ensure)
+    const keys = Object.keys(MODEL_DEFS).filter((k) => !MODEL_DEFS[k].lazy);
     let done = 0;
     progress('Summoning the gods…', 0.88);
     // motion-captured clips, retargeted onto the rig (see loadMotion)
@@ -313,6 +337,41 @@ const Models = {
       done++;
       progress('Summoning ' + (d.label || { arielGod: 'Ariel', arielTeen: 'Westbrook High' }[k] || k) + '…', 0.88 + (done / keys.length) * 0.06);
     }));
+  },
+
+  /**
+   * One mesh per material, transforms baked in. A sculpt exported in chunks (65k vertices each) would otherwise be
+   * weighted chunk by chunk, and the seams between chunks would open into cracks when it moves.
+   */
+  mergeMeshes(obj) {
+    obj.updateMatrixWorld(true);
+    const inv = obj.matrixWorld.clone().invert(), groups = new Map(), old = [];
+    obj.traverse((o) => {
+      if (!o.isMesh || !o.visible || o.isSkinnedMesh || Array.isArray(o.material)) return;
+      const g = o.geometry.clone().applyMatrix4(inv.clone().multiply(o.matrixWorld));
+      if (!groups.has(o.material)) groups.set(o.material, []);
+      groups.get(o.material).push(g);
+      old.push(o);
+    });
+    for (const o of old) o.parent.remove(o);
+    for (const [mat, list] of groups) {
+      const merged = list.length > 1 ? Addons.mergeGeometries(list) : list[0];
+      if (!merged) continue;
+      const m = new THREE.Mesh(merged, mat);
+      m.castShadow = m.receiveShadow = true; m.frustumCulled = false;
+      obj.add(m);
+    }
+  },
+  /** load and prepare a model left out of the start-up load (lazy); resolves to its template, or null */
+  ensure(key) {
+    if (this.loaded[key]) return Promise.resolve(this.loaded[key]);
+    const P = this._pending || (this._pending = {});
+    if (P[key]) return P[key];
+    const d = MODEL_DEFS[key];
+    if (!d) return Promise.resolve(null);
+    return (P[key] = new Addons.GLTFLoader().loadAsync(d.url)
+      .then((g) => (this.loaded[key] = this.prepare(g.scene, d)))
+      .catch((e) => { console.warn('Model failed to load:', key, e); return null; }));
   },
 
   /**
@@ -355,6 +414,11 @@ const Models = {
         const ms = Array.isArray(o.material) ? o.material : [o.material];
         ms.forEach((m) => {
           m.envMapIntensity = 0.75; m.roughness = Math.max(m.roughness, 0.3);
+          // a texture on a UV set the file no longer has (slimmed by tools/slim_glb.py) falls back to the first set
+          for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap']) {
+            const t = m[k];
+            if (t && t.channel && !o.geometry.attributes[t.channel === 1 ? 'uv1' : 'uv' + t.channel]) t.channel = 0;
+          }
           for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap']) if (m[k] && m[k].anisotropy < 8) { m[k].anisotropy = 8; m[k].needsUpdate = true; }
           if (d.twoSided && (d.twoSided.test(o.name) || d.twoSided.test(m.name))) m.side = THREE.DoubleSide;
           if (d.enhance && m.map && !cache.has(m.map)) cache.set(m.map, this.enhance(m.map, d.enhance));
@@ -366,6 +430,7 @@ const Models = {
         }
       }
     });
+    if (d.merge) this.mergeMeshes(obj);
     if (d.relief) this.relief(obj, d);
     if (d.eyes) this.shadeEyes(obj, d);
     if (d.grip) this.curlGrip(obj, d);

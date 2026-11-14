@@ -1136,6 +1136,7 @@ const LIFE_SLIDES_A = [
 ];
 const LIFE_SLIDES_B = [
   { line: 'Two winters after Kratos came his brother, Deimos. The old poets had a word for him before he was born: Dread, who rides at the War-god\'s side. A red ember burned beside the blue in him, the war-god\'s shard come home in the blood.',
+    vignette: 'dread',
     figures: [{ key: 'teen', model: 'arielTeen', size: 1.0, x: -1.3, face: 1, pose: 'look', t: 1, label: 'ΑΡΙΕΛ' },
       { key: 'jesse', model: 'jesse', size: 0.95, x: 0.2, face: -1, pose: 'cradle', t: 1, carry: true, label: 'ΤΖΕΣΣΙ' },
       { key: 'kid1', model: 'arielTeen', size: 0.56, x: 1.6, face: -1, pose: 'lookUp', t: 1, label: 'ΚΡΑΤΟΣ' }], cam: { y: 1.0, dist: 10 } },
@@ -1150,17 +1151,20 @@ const LIFE_SLIDES_B = [
   // Kratos as the myths remember him (Hesiod's Theogony; Aeschylus' Prometheus Bound): Strength, who stands by Zeus' throne
   // with his sister Bia, Force, and who held Prometheus to the Caucasus rock while Hephaestus drove the chains
   { line: 'Kratos grew into his name. Strength, the poets called him, who stands at the right hand of Zeus with his sister Bia, Force. When the Titan Prometheus stole fire for mankind, it was Kratos who held him to the Caucasus rock while Hephaestus drove the chains.',
+    vignette: 'strength',
     rock: { x: 0.5, w: 1.5, h: 1.0 },
     figures: [{ key: 'grownK', model: 'arielGod', stance: 'sword', size: 1.08, x: -2.2, face: 1, pose: 'point', t: 1, label: 'ΚΡΑΤΟΣ' },
       { key: 'prometheus', model: 'zeus', size: 1.0, x: 0.45, y: 1.02, face: 1, pose: { armL: [-155, 0, 12], elbowL: [-18, 0, 0], armR: [-155, 0, -12], elbowR: [-18, 0, 0], chest: [6, 0, 0], neck: [24, 0, 0], head: [10, 0, 0] }, label: 'ΠΡΟΜΗΘΕΥΣ', labelUp: 0.3 },
       { key: 'hephaestus', model: 'poseidon', size: 1.05, x: 2.6, face: -1, pose: 'raise', t: 1, label: 'ΗΦΑΙΣΤΟΣ' }], cam: { y: 1.7, dist: 15.5 } },
   { line: 'And it was Kratos, too, who walked beside Heracles on the day the chains were broken. His father had taught him that strength is also knowing when to let go.',
+    vignette: 'freed',
     rock: { x: 0.5, w: 1.5, h: 1.0 },
     figures: [{ key: 'grownK', model: 'arielGod', stance: 'sword', size: 1.08, x: -1.9, face: 1, pose: 'offer', t: 1, label: 'ΚΡΑΤΟΣ' },
       { key: 'prometheus', model: 'zeus', size: 1.0, x: 0.45, y: 1.02, face: -1, pose: 'raise', t: 1, label: 'ΠΡΟΜΗΘΕΥΣ', labelUp: 0.3 },
       { key: 'heracles', model: 'spartan', stance: 'hopliteSword', size: 1.06, x: 2.9, face: -1, pose: 'point', t: 1, label: 'ΗΡΑΚΛΗΣ' }], cam: { y: 1.6, dist: 15.5 } },
   // Deimos as the myths remember him (Hesiod; the Iliad): Dread, who goes into battle beside Ares with his brother Phobos, Fear
   { line: 'Deimos rode out with his uncle Ares, Dread beside the War-god as in every song since. But wherever the two of them came, the armies laid down their spears before a blow was struck.',
+    vignette: 'armies',
     figures: [{ key: 'grownD', model: 'arielTeen', size: 1.0, x: -2.6, face: 1, pose: 'offer', t: 1, label: 'ΔΕΙΜΟΣ' },
       { key: 'ares', model: 'ares', stance: 'aresCourt', size: 1.2, x: -0.9, face: 1, pose: 'point', t: 1, label: 'ΑΡΗΣ' },
       { key: 'hop1', model: 'spartan', stance: 'hopliteSword', size: 1.0, x: 1.4, face: -1, pose: 'kneelBowed', t: 1 },
@@ -1170,6 +1174,376 @@ const LIFE_SLIDES_B = [
   { line: 'This is how the story ends. Everything else is how it happens.',
     rosettes: 8, figures: [{ key: 'ariel', model: 'arielGod', stance: 'sword', size: 1.1, x: 0, face: 1, pose: 'raise', t: 1, label: 'ΑΡΙΕΛ' }], cam: { y: 1.2, dist: 12.5 } },
 ];
+
+/* ------------------------------------------------------------------ the brothers in the round
+   3D scenes cut into the KRATOS AND DEIMOS slides (see mythSlide): the Caucasus crag where the Titan was bound,
+   Kratos at his grandfather's throne, Deimos and Ares before the armies. */
+
+/** Kratos' armour: his father's god-armour, its gold gone to dark, oiled bronze (the skin is left as it is) */
+function darkBronze(m) {
+  const c = m.clone();
+  c.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
+      float kbL = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+      float kbM = smoothstep(0.3, 0.7, metalnessFactor);
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(kbL) * vec3(0.78, 0.56, 0.38) * 0.72, kbM);
+      roughnessFactor = mix(roughnessFactor, max(roughnessFactor, 0.42), kbM);`);
+  };
+  c.envMapIntensity = 0.7;
+  if (c.emissive) { c.emissive.multiplyScalar(0.12); c.emissiveIntensity = Math.min(c.emissiveIntensity ?? 1, 0.4); }
+  if (c.color && /keraunos|sword|blade|weapon/i.test(m.name || '')) c.color.multiplyScalar(0.7);
+  c.customProgramCacheKey = () => 'kratosBronze';
+  return c;
+}
+
+/** the Caucasus: a crag under an open sky, lit three ways (night storm, dawn, a blood-red dusk) */
+const Crag = {
+  built: false,
+  build() {
+    if (this.built) return this;
+    this.built = true;
+    const { s, add } = lifeStage(new THREE.FogExp2(0x1a1d26, 0.012), 0x10131a);
+    this.scene = s;
+    const rockM = World.rockMat;
+    // the sky: a gradient dome with a glow where the light is
+    this.skyU = { uTop: { value: new THREE.Color() }, uMid: { value: new THREE.Color() }, uBot: { value: new THREE.Color() }, uSun: { value: new THREE.Vector3(0, 0.2, -1) }, uGlow: { value: new THREE.Color() } };
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), new THREE.ShaderMaterial({
+      uniforms: this.skyU, side: THREE.BackSide, depthWrite: false, fog: false,
+      vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform vec3 uTop, uMid, uBot, uSun, uGlow; varying vec3 vD;
+        void main(){
+          float h = vD.y;
+          vec3 c = h > 0.0 ? mix(uMid, uTop, smoothstep(0.0, 0.6, h)) : mix(uMid, uBot, smoothstep(0.0, -0.3, h));
+          c += uGlow * pow(max(dot(vD, normalize(uSun)), 0.0), 8.0) + uGlow * 0.35 * pow(max(dot(vD, normalize(uSun)), 0.0), 2.0);
+          gl_FragColor = vec4(c, 1.0);
+        }`,
+    }));
+    sky.renderOrder = -3;
+    s.add(sky);
+    // the ground: broken scree, and the crag rising out of it
+    const lump = (sx, sy, sz, x, y, z, seed, detail = 4) => {
+      const g = weld(new THREE.IcosahedronGeometry(1, detail)), P = g.attributes.position, n = new Simplex2(seed);
+      for (let i = 0; i < P.count; i++) {
+        const vx = P.getX(i), vy = P.getY(i), vz = P.getZ(i);
+        const d = 1 + n.fbm(vx * 1.3 + vy * 0.7, vz * 1.3 - vy * 0.5, 4) * 0.28 + Math.abs(n.noise(vx * 3.4, vz * 3.4 + vy * 2)) * 0.06;
+        P.setXYZ(i, vx * d * sx, Math.max(vy * d, -0.25) * sy, vz * d * sz);
+      }
+      g.computeVertexNormals();
+      const o = add(g, rockM, x, y, z);
+      rocks.push(o);
+      return o;
+    };
+    const rocks = this.rocks = [];
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(160, 48).rotateX(-Math.PI / 2), rockM);
+    ground.receiveShadow = true; s.add(ground);
+    // the crag: a great body with a shelf at about seven metres, where the Titan is bound against a spire
+    lump(5.2, 6.2, 4.2, 0, 1.2, -6, 11);
+    lump(3.0, 9.5, 2.6, -1.2, 2.0, -8.6, 23);
+    lump(2.4, 3.0, 2.2, 3.8, 0.2, -3.8, 31, 3);
+    lump(1.4, 1.2, 1.3, -3.6, 0, -2.4, 37, 3);
+    for (let i = 0; i < 26; i++) { const a = Math.random() * Math.PI * 2, r = 6 + Math.random() * 40, k = 0.4 + Math.random() * 1.6; lump(k, k * 0.7, k, Math.cos(a) * r, -0.1, Math.sin(a) * r - 6, 50 + i, 2); }
+    // far peaks
+    for (let i = 0; i < 9; i++) { const a = -Math.PI * 0.9 + i * 0.22, r = 120 + Math.random() * 40; lump(18 + Math.random() * 14, 26 + Math.random() * 30, 16, Math.cos(a) * r, -2, Math.sin(a) * r, 80 + i, 2); }
+    s.updateMatrixWorld(true);
+    this.top = new THREE.Vector3(0, this.heightAt(0, -6.6), -6.6);   // where the Titan stands on the shelf
+    this.foot = new THREE.Vector3(1.6, 0, 2.6);  // where Kratos holds the chain, out in front of the crag
+    // light: a key (moon, low sun), the sky's fill, and a flash for the lightning
+    this.key = new THREE.DirectionalLight(0xffffff, 1);
+    this.key.castShadow = true; this.key.shadow.mapSize.set(2048, 2048);
+    const sc = this.key.shadow.camera; sc.left = -16; sc.right = 16; sc.top = 16; sc.bottom = -16; sc.near = 1; sc.far = 120;
+    this.key.shadow.bias = -0.0005; this.key.shadow.normalBias = 0.03;
+    s.add(this.key, this.key.target);
+    this.fill = new THREE.HemisphereLight(0xffffff, 0x222222, 0.5);
+    s.add(this.fill);
+    this.front = new THREE.DirectionalLight(0xffffff, 0);
+    s.add(this.front, this.front.target);
+    this.flash = new THREE.PointLight(0xc8d8ff, 0, 120, 1.4);
+    s.add(this.flash);
+    return this;
+  },
+  /** the rock's surface under a point (or the ground) */
+  heightAt(x, z) {
+    const r = this._ray || (this._ray = new THREE.Raycaster());
+    r.set(new THREE.Vector3(x, 80, z), new THREE.Vector3(0, -1, 0));
+    const hit = r.intersectObjects(this.rocks, false)[0];
+    return hit ? Math.max(0, hit.point.y) : 0;
+  },
+  /** night storm, dawn, or blood-red dusk */
+  light(mode) {
+    const U = this.skyU, f = this.scene.fog;
+    const L = {
+      storm: { top: 0x101626, mid: 0x2e3a52, bot: 0x0e1014, glow: 0x3a4c70, sun: [0.4, 0.5, -1], key: 0xa8bce8, ki: 2.6, kd: [8, 16, 14], fill: [0x6a7c9e, 0x1a1c22, 0.85], front: [0x9fb0d8, 0.35], fog: 0x252d40, fd: 0.011 },
+      dawn: { top: 0x3c5a86, mid: 0xe7a06a, bot: 0x2a2018, glow: 0xffb36a, sun: [-0.3, 0.12, -1], key: 0xffc28a, ki: 3.2, kd: [-10, 6, -30], fill: [0x8ea4c8, 0x3a2c22, 0.6], front: [0xffd0a0, 0.7], fog: 0xc89878, fd: 0.006 },
+      blood: { top: 0x1a0606, mid: 0x7a1a0c, bot: 0x140806, glow: 0xff4a1a, sun: [0.2, 0.08, -1], key: 0xff6a3a, ki: 2.4, kd: [6, 5, -30], fill: [0x6a2a22, 0x1a0c08, 0.5], fog: 0x4a1610, fd: 0.01 },
+    }[mode];
+    U.uTop.value.set(L.top); U.uMid.value.set(L.mid); U.uBot.value.set(L.bot); U.uGlow.value.set(L.glow); U.uSun.value.set(...L.sun);
+    this.key.color.set(L.key); this.key.intensity = L.ki;
+    this.key.position.set(...L.kd).add(this.top); this.key.target.position.copy(this.top).setY(2);
+    this.fill.color.set(L.fill[0]); this.fill.groundColor.set(L.fill[1]); this.fill.intensity = L.fill[2];
+    const F = L.front || [0xffffff, 0];
+    this.front.color.set(F[0]); this.front.intensity = F[1];
+    this.front.position.copy(this.top).add(new THREE.Vector3(4, 3, 22)); this.front.target.position.copy(this.top);
+    f.color.set(L.fog); f.density = L.fd;
+    this.scene.background = new THREE.Color(L.mid);
+    this.mode = mode;
+  },
+  /** a flicker of lightning in the clouds behind the crag, now and then a bolt to the far peaks */
+  storm(dt) {
+    this.flash.intensity = Math.max(0, this.flash.intensity - dt * 900);
+    if (Math.random() < dt * 1.6) {
+      const a = rand(-1.2, 1.2), from = new THREE.Vector3(Math.sin(a) * 60, 70, -60 - rand(0, 40)), to = from.clone().add(new THREE.Vector3(rand(-20, 20), -rand(40, 70), rand(-10, 10)));
+      FX.bolt(from, to, { radius: 0.35, branches: 5, life: 0.3 });
+      this.flash.position.set(from.x * 0.4, 30, -20); this.flash.intensity = 380;
+      if (Math.random() < 0.5) Sound.thunder(rand(400, 1400));
+    }
+  },
+  /** chains: links strung from one point to another, sagging a little (rebuilt for each shot) */
+  chains(S) {
+    const link = new THREE.TorusGeometry(0.055, 0.016, 6, 10);
+    link.scale(1, 1.55, 1);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x3a3836, roughness: 0.45, metalness: 0.85 });
+    const group = new THREE.Group();
+    S.add(group);
+    const lines = [];
+    const api = {
+      group,
+      /** set the strands: [[from, to, sag], ...] */
+      set(list) {
+        for (const l of lines) group.remove(l);
+        lines.length = 0;
+        for (const [a, b, sag = 0.2] of list) {
+          const L = a.distanceTo(b), n = Math.max(2, Math.floor(L / 0.13));
+          const im = new THREE.InstancedMesh(link, mat, n);
+          im.castShadow = true;
+          const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), dir = b.clone().sub(a).normalize(), up = new THREE.Vector3(0, 1, 0);
+          for (let i = 0; i < n; i++) {
+            const u = i / (n - 1), p = a.clone().lerp(b, u);
+            p.y -= Math.sin(u * Math.PI) * sag * L;
+            q.setFromUnitVectors(up, dir);
+            if (i % 2) q.multiply(new THREE.Quaternion().setFromAxisAngle(up, Math.PI / 2));
+            m4.compose(p, q, new THREE.Vector3(1, 1, 1));
+            im.setMatrixAt(i, m4);
+          }
+          group.add(im); lines.push(im);
+        }
+        group.visible = true;
+      },
+    };
+    return api;
+  },
+};
+
+/** a joint's place in the world */
+const jointAt = (a, j) => a.rig.j[j].getWorldPosition(new THREE.Vector3());
+/** a point out in front of a character's joint, by their own facing: dist ahead, side to their left, up */
+const frontOf = (a, j, dist, side = 0, up = 0) => {
+  const r = a.root.rotation.y, f = new THREE.Vector3(Math.sin(r), 0, Math.cos(r)), l = new THREE.Vector3(f.z, 0, -f.x);
+  return jointAt(a, j).addScaledVector(f, dist).addScaledVector(l, side).add(new THREE.Vector3(0, up, 0));
+};
+
+/** only these of the cast are on stage (the others step out of every scene they are not in) */
+const castOnly = (M, ...keep) => {
+  for (const a of [M.kratos, M.deimos, M.heracles, M.titan, M.ares, ...(M.hoplites || [])]) if (a) { const on = keep.includes(a); a.root.visible = on; if (a.cape) a.cape.mesh.visible = on; }
+  if (M.chains) M.chains.group.visible = false;
+};
+
+/** the scenes, called by mythSlide with the cast (this: SCRIPTS.bossDefeat) */
+const MYTH = {
+  /** Deimos grown, before the crag at a blood-red dusk: Dread, as the poets named him */
+  async dread(c, at, M) {
+    const C = M.crag, D = M.deimos, V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+    await at(0.38);
+    await this.mythCut(c, C.scene, () => {
+      C.light('blood');
+      C.scene.add(D.root);
+      castOnly(M, D); D.root.position.set(1.6, 0, 3.4); D.root.rotation.y = 0.25;
+      D.rig.stop(0.01);
+      D.root.updateMatrixWorld(true);
+      // low, in front of him: the crag and the burning sky behind
+      c.shot(frontOf(D, 'hips', 5.2, 0.8, -0.55), jointAt(D, 'chest').add(V3(0, 0.25, 0)), 36);
+      c.move(frontOf(D, 'hips', 4.0, 0.6, -0.5), jointAt(D, 'chest').add(V3(0, 0.35, 0)), 7, { ease: (t) => t });
+      this.mythRun([D], () => {
+        if (Math.random() < 0.7) { const p = D.root.position; FX.sparkle.spawn({ x: p.x + rand(-3, 3), y: p.y + rand(0, 3), z: p.z + rand(-2, 2), vx: rand(0.6, 1.8), vy: rand(0.3, 1.2), vz: rand(-0.4, 0.4), s: rand(0.008, 0.016), life: rand(1.2, 2.4), c: [3, 1.2, 0.3, 1], c2: [1.1, 0.15, 0.02, 0], g: 0.4, drag: 0.4 }); }
+      });
+    });
+    await at(0.7);
+    // close on his face; an ember's glow at his chest
+    c.shot(frontOf(D, 'head', 1.5, 0.55, -0.06), jointAt(D, 'head').add(V3(0, -0.04, 0)), 30);
+    c.move(frontOf(D, 'head', 1.2, 0.45, -0.05), jointAt(D, 'head').add(V3(0, -0.04, 0)), 5, { ease: (t) => t });
+    FX.flashLight(frontOf(D, 'chest', 0.6, 0, 0.1), 0xff4418, 2.2, 5, 1.6);
+  },
+
+  /** Kratos at the right hand of the throne; then the storm on the Caucasus, the Titan bound, and Kratos holding the chain */
+  async strength(c, at, M) {
+    const PR = Prologue, K = M.kratos, V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+    await at(0.16);
+    const top = PR.zeus.root.position.y;
+    await this.mythCut(c, PR.olympus, () => {
+      PR.olympus.add(K.root); if (K.cape) PR.olympus.add(K.cape.mesh);
+      castOnly(M, K); if (K.cape) K.cape.needsReset = true;
+      K.root.position.set(-2.7, 0, -10.6); K.root.rotation.y = 0.15;
+      K.rig.stop(0.01);
+      this.hallStage([]);
+      // only Zeus on his throne and Kratos at its right hand: the other gods are out of this one
+      this.mythHall = PR.gods.filter((g) => g.root.visible);
+      for (const g of PR.gods) { g.root.visible = false; if (g.spark) g.spark.visible = false; }
+      this.mythRun([K]);
+      c.shot(V3(0.4, 1.4, 10), V3(-1.4, top + 1.6, -12), 40);
+      c.move(V3(-0.2, 1.8, 2.5), V3(-1.8, top + 1.4, -12), 6, { ease: (t) => t * t * (3 - 2 * t) });
+    });
+    await at(0.33);
+    K.root.updateMatrixWorld(true);
+    c.shot(frontOf(K, 'head', 2.3, -1.1, -0.45), jointAt(K, 'head').add(V3(0, -0.1, 0)), 32);
+    c.move(frontOf(K, 'head', 1.8, -0.9, -0.4), jointAt(K, 'head').add(V3(0, -0.08, 0)), 4, { ease: (t) => t });
+    await at(0.48);
+    this.tickOn = false;
+    this.mythTick = false;
+    // the storm on the Caucasus: the Titan bound high on the crag, and Kratos out in front hauling the chain tight
+    const C = M.crag, T = M.titan;
+    await this.mythCut(c, C.scene, () => {
+      this.mythHallBack();
+      C.light('storm');
+      C.scene.add(K.root); if (K.cape) { C.scene.add(K.cape.mesh); K.cape.needsReset = true; }
+      castOnly(M, K, T); T.root.position.copy(C.top); T.root.rotation.y = 0.1;
+      T.rig.stop(0.01); T.rig.poseFrom({ armL: [-150, 0, 22], elbowL: [-14, 0, 0], armR: [-150, 0, -22], elbowR: [-14, 0, 0], chest: [6, 0, 0], neck: [26, 0, 0], head: [8, 0, 0] });
+      K.root.position.copy(C.foot); K.root.rotation.y = Math.atan2(C.top.x - C.foot.x, C.top.z - C.foot.z);
+      K.rig.stop(0.01);
+      K.rig.poseFrom({ armL: [-70, 0, 8], elbowL: [-40, 0, 0], armR: [-80, 0, -8], elbowR: [-30, 0, 0], chest: [-14, 0, 0], spine: [-8, 0, 0], thighL: [-30, 0, 0], kneeL: [30, 0, 0], thighR: [16, 0, 0], kneeR: [8, 0, 0], neck: [-18, 0, 0] });
+      T.root.updateMatrixWorld(true); K.root.updateMatrixWorld(true);
+      const wl = jointAt(T, 'handL'), wr = jointAt(T, 'handR'), hk = jointAt(K, 'handL').lerp(jointAt(K, 'handR'), 0.5);
+      M.chains.set([[hk, wl, 0.04], [wr, C.top.clone().add(V3(-2.4, 4.2, -2.4)), 0.12], [wl, C.top.clone().add(V3(2.2, 4.4, -2.6)), 0.12]]);
+      this.chainPin = wl;
+      this.mythRun([K], (dt) => C.storm(dt));
+      // from out on the scree: the giant against the storm, the chain running down to the one who holds it
+      const aim = C.top.clone().lerp(C.foot, 0.25).add(V3(0, 0.6, 0));
+      c.shot(V3(5.0, 1.5, 12.5), aim, 46);
+      c.move(V3(4.4, 1.45, 11.0), aim.clone().add(V3(0, -0.2, 0)), 5, { ease: (t) => t });
+    });
+    await at(0.66);
+    // Kratos, braced, the chain taut in his fists; the Titan above him
+    c.shot(frontOf(K, 'head', 2.2, 1.2, -0.7), jointAt(K, 'head').add(V3(0, 0.15, 0)), 40);
+    c.move(frontOf(K, 'head', 1.8, 1.0, -0.65), jointAt(K, 'head').add(V3(0, 0.3, 0)), 3, { ease: (t) => t });
+    await at(0.82);
+    // the shackle at the Titan's wrist, ringing under Hephaestus' hammer (seen from the side, against the sky)
+    T.root.updateMatrixWorld(true);
+    const pin = jointAt(T, 'handL'), hd = jointAt(T, 'head');
+    const below = (dx, dy, dz) => { const p = hd.clone().add(V3(dx, dy, dz)); p.y = Math.max(p.y, C.heightAt(p.x, p.z) + 1.2); return p; };
+    c.shot(below(3.4, -2.6, 4.9), hd.clone().add(V3(0.3, 0.5, 0)), 38);
+    c.move(below(3.0, -2.5, 4.4), hd.clone().add(V3(0.3, 0.6, 0)), 3, { ease: (t) => t });
+    for (let i = 0; i < 3; i++) setTimeout(() => {
+      if (!this.mythTick) return;
+      FX.sparks(pin.clone().add(V3(0.1, 0, 0.2)), V3(0.3, 0.6, 1), 34, [2.6, 1.6, 0.6, 1], 6, true);
+      FX.flashLight(pin.clone().add(V3(0, 0, 0.6)), 0xffb060, 30, 0.2, 6);
+      Sound.hit('metal', 0.9);
+    }, 250 + i * 700);
+  },
+
+  /** at dawn, the same rock: Heracles breaks the chain with his hands, Kratos beside him, and the Titan rises free */
+  async freed(c, at, M) {
+    const C = M.crag, K = M.kratos, H = M.heracles, T = M.titan, V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+    await at(0.22);
+    const hpos = V3(-0.9, 0, 2.4), kpos = V3(1.7, 0, 3.0);
+    await this.mythCut(c, C.scene, () => {
+      C.light('dawn');
+      C.scene.add(K.root); if (K.cape) { C.scene.add(K.cape.mesh); K.cape.needsReset = true; }
+      castOnly(M, K, T, H);
+      T.root.position.copy(C.top); T.rig.stop(0.01);
+      T.rig.poseFrom({ armL: [-150, 0, 22], elbowL: [-14, 0, 0], armR: [-150, 0, -22], elbowR: [-14, 0, 0], chest: [6, 0, 0], neck: [26, 0, 0], head: [8, 0, 0] });
+      H.root.position.copy(hpos); H.root.rotation.y = Math.atan2(C.top.x - hpos.x, C.top.z - hpos.z);
+      K.root.position.copy(kpos); K.root.rotation.y = Math.atan2(C.top.x - kpos.x, C.top.z - kpos.z) - 0.5;
+      K.rig.stop(0.01);
+      H.rig.stop(0.01);
+      // (his sculpted stance is the base: these are small turns on top of it) the chain gripped at his waist
+      H.rig.poseFrom({ armL: [-30, 0, 6], elbowL: [-55, 0, 0], armR: [-30, 0, -6], elbowR: [-55, 0, 0] });
+      T.root.updateMatrixWorld(true); H.root.updateMatrixWorld(true); K.root.updateMatrixWorld(true);
+      const wl = jointAt(T, 'handL');
+      M.chains.set([[jointAt(H, 'handL').lerp(jointAt(H, 'handR'), 0.5), wl, 0.04], [jointAt(T, 'handR'), C.top.clone().add(V3(-2.4, 4.2, -2.4)), 0.12]]);
+      this.chainPin = wl;
+      this.mythRun([K, H]);
+      // the sun coming up behind the crag; the two of them small at its foot
+      const aim = V3(0.3, C.top.y * 0.66, -2.0);
+      c.shot(V3(-3.8, 1.5, 12.6), aim, 48);
+      c.move(V3(-3.4, 1.45, 11.6), aim, 4, { ease: (t) => t });
+    });
+    await at(0.44);
+    // Heracles hauls on the chain; it breaks
+    c.shot(frontOf(H, 'head', 2.0, 1.1, -0.35), jointAt(H, 'head').add(V3(0, -0.2, 0)), 36);
+    H.rig.poseFrom({ armL: [-26, 0, 8], elbowL: [-66, 0, 0], armR: [-26, 0, -8], elbowR: [-66, 0, 0], spine: [-6, 0, 0], chest: [-5, 0, 0], thighL: [-12, 0, 0], kneeL: [14, 0, 0] });
+    await c.wait(0.9);
+    H.root.updateMatrixWorld(true);
+    const p = jointAt(H, 'handL').lerp(jointAt(H, 'handR'), 0.5).add(V3(0, 0.3, 0));
+    FX.sparks(p, V3(0, 1, 0), 40, [2.8, 1.8, 0.7, 1], 7, true);
+    FX.flashLight(p, 0xffc070, 12, 0.3, 5);
+    Sound.hit('metal', 1); Sound.boom(0.4);
+    M.chains.set([[jointAt(T, 'handR'), C.top.clone().add(V3(-2.4, 4.2, -2.4)), 0.12]]);
+    H.rig.stop(0.4);
+    await at(0.66);
+    // the Titan lifts his freed arm to the light; Kratos and Heracles below
+    M.chains.set([]);
+    T.rig.poseFrom({ armL: [-170, 0, 6], elbowL: [-6, 0, 0], armR: [-20, 0, -14], elbowR: [-10, 0, 0], neck: [-18, 0, 0] });
+    c.shot(V3(3.6, 1.2, 9.6), C.top.clone().add(V3(0, 0.6, 0)), 44);
+    c.move(V3(3.0, 1.2, 8.4), C.top.clone().add(V3(0, 1.0, 0)), 4, { ease: (t) => t });
+    K.rig.play('offer', { fade: 0.6 });
+    await at(0.84);
+    K.root.updateMatrixWorld(true);
+    c.shot(frontOf(K, 'head', 1.9, -0.8, -0.22), jointAt(K, 'head').add(V3(0, -0.1, 0)), 32);
+  },
+
+  /** Deimos and Ares walking out together; the line of hoplites waiting for them kneels, and their swords go down */
+  async armies(c, at, M) {
+    const D = M.deimos, V3 = (x, y, z) => new THREE.Vector3(x, y, z), PR = Prologue;
+    await at(0.2);
+    const S = G.scene, base = World.sites.colossus, ox = base.x - 42, oz = base.z + 70;  // open, level ground: no trees in any shot
+    const gy = (x, z) => World.getHeight(x, z, 50);
+    if (!M.ares) M.ares = PR.actor(S, 'ares', { stance: 'aresCourt', size: 1.24 });
+    if (!M.hoplites) M.hoplites = [0, 1, 2, 3, 4, 5].map(() => PR.actor(S, 'spartan', { stance: 'hopliteSword', size: 1.0 }));
+    const A = M.ares, Hs = M.hoplites;
+    const fwd = V3(0, 0, -1);
+    await this.mythCut(c, S, () => {
+      S.add(D.root);
+      castOnly(M, D, A, ...Hs);
+      // the temple's braziers out for this one: in daylight their light pools read as glowing squares on the columns behind them
+      if (!this.mythFires) { this.mythFires = World.fires; World.fires = World.fires.filter((f) => Math.hypot(f.pos.x - ox, f.pos.z - oz) > 95); }
+      D.root.position.set(ox - 1.1, 0, oz + 13); A.root.position.set(ox + 1.2, 0, oz + 13.4);
+      for (const a of [D, A]) { a.root.position.y = gy(a.root.position.x, a.root.position.z); a.root.rotation.y = Math.PI; a.rig.stop(0.01); a.speed = 1.15; }
+      Hs.forEach((h, i) => {
+        const x = ox - 6.5 + i * 2.6, z = oz - 2 + (i % 2) * 1.2;
+        h.root.visible = true; h.root.position.set(x, gy(x, z), z); h.root.rotation.y = 0;
+        h.rig.stop(0.01); h.rig.play('raise', { fade: 0.01 });
+      });
+      this.mythRun([D, A, ...Hs], (dt) => {
+        for (const a of [D, A]) {
+          if (a.speed <= 0) continue;
+          a.root.position.addScaledVector(fwd, a.speed * dt);
+          a.root.position.y = gy(a.root.position.x, a.root.position.z);
+        }
+        if (Math.random() < 0.3) FX.dust(D.root.position.clone().lerp(A.root.position, 0.5), 1.2, 1, [0.55, 0.48, 0.36, 0.25]);
+      });
+      // behind the line: their backs, and the two coming out of the haze toward them
+      c.shot(V3(ox, gy(ox, oz - 9.5) + 3.0, oz - 9.5), V3(ox, gy(ox, oz + 12) + 1.3, oz + 12), 40);
+      c.move(V3(ox, gy(ox, oz - 7.8) + 2.7, oz - 7.8), V3(ox, gy(ox, oz + 10) + 1.3, oz + 10), 6, { ease: (t) => t });
+    });
+    await at(0.47);
+    // in front of them, at chest height (above the grass): Dread and the War-god side by side
+    D.root.updateMatrixWorld(true);
+    const mid = D.root.position.clone().lerp(A.root.position, 0.5);
+    const eye = (dx, dz, h) => { const x = mid.x + dx, z = mid.z + dz; return V3(x, Math.max(gy(x, z) + h, mid.y + 1.2), z); };
+    c.shot(eye(1.5, -6.4, 1.7), mid.clone().add(V3(0, 1.7, 0)), 34);
+    c.move(eye(1.2, -6.4 - 4.4, 1.7), mid.clone().add(V3(0, 1.75, -4.4)), 4, { ease: (t) => t });
+    await at(0.66);
+    // and the line goes down on one knee, the blades lowered
+    D.speed = 0; A.speed = 0; D.rig.stop(0.4); A.rig.stop(0.4);
+    D.root.updateMatrixWorld(true);
+    const m2 = D.root.position.clone().lerp(A.root.position, 0.5), look = V3(ox, gy(ox, oz - 1) + 0.7, oz - 1);
+    c.shot(V3(m2.x, gy(m2.x, m2.z + 4.4) + 2.3, m2.z + 4.4), look, 40);
+    c.move(V3(m2.x, gy(m2.x, m2.z + 3.6) + 2.2, m2.z + 3.6), look, 4, { ease: (t) => t });
+    Hs.forEach((h, i) => setTimeout(() => { if (this.mythTick) { h.rig.play('kneelBowed', { fade: 0.5 }); FX.dust(h.root.position, 0.6, 3); } }, 200 + i * 260));
+    await at(0.86);
+    D.root.updateMatrixWorld(true);
+    c.shot(frontOf(D, 'head', 1.6, -0.6, -0.08), jointAt(D, 'head').add(V3(0, -0.04, 0)), 30);
+    c.move(frontOf(D, 'head', 1.3, -0.5, -0.06), jointAt(D, 'head').add(V3(0, -0.04, 0)), 3, { ease: (t) => t });
+  },
+};
 
 /* ------------------------------------------------------------------ wedding and Olympus clothes
    Three static garments (made for mannequins, not for a skeleton) fitted onto the characters for the posed
@@ -2383,7 +2757,7 @@ const SCRIPTS = {
      * Then the Fates' tapestry (painted slides: what is still to come), and Olympus with its light coming back
      */
     async ascend(c) {
-      Garments.preload();
+      Garments.preload(); Models.ensure('deimos'); Models.ensure('heracles');
       const R = World.arena, P = G.player, B = G.boss, bp = B.pos.clone();
       const toP = P.pos.clone().sub(bp).setY(0).normalize();
       B.rig.play('kneelLookUp', { fade: 0.8 });
@@ -2437,11 +2811,98 @@ const SCRIPTS = {
       for (let i = 0; i < urls.length; i++) {
         Vase.show(urls[i], 9, i);
         await c.wait(1.2);
-        await c.say('Narrator', slides[i].line);
+        if (slides[i].vignette && MYTH[slides[i].vignette]) await this.mythSlide(c, slides[i]);
+        else await c.say('Narrator', slides[i].line);
         await c.wait(0.9);
       }
       await UI.fade(1, 1.4);
       Vase.hide();
+      this.mythDone();
+    },
+    /**
+     * A slide whose line the film then shows: the painting first, then (behind a quick dip to black) the scene in
+     * the round, timed to the words, and back to the vase for the next slide. at(f): wait until that fraction of
+     * the line has been spoken.
+     */
+    async mythSlide(c, slide) {
+      const line = slide.line, clip = Voice.duration(line, 'Narrator');
+      const dur = clip ? clip + 0.45 : clamp(line.length * 0.068 + 1.3, 2.6, 9);
+      UI.subtitle('Narrator', line);
+      Voice.speak(line, 'Narrator');
+      const t0 = G.time, at = (f) => c.wait(Math.max(0, t0 + dur * f - G.time));
+      const back = G.activeScene;
+      try {
+        await MYTH[slide.vignette].call(this, c, at, await this.mythCast(c));
+      } finally {
+        this.mythTick = false;
+      }
+      await at(1);
+      UI.subtitle(null);
+      await UI.fade(1, 0.35);
+      Game.useScene(back);
+      Vase.el.style.display = 'block';
+      await UI.fade(0, 0.45);
+    },
+    /** from the vase to a scene in the round: a dip to black, the stage set, the shot, and up */
+    async mythCut(c, scene, set) {
+      await UI.fade(1, 0.35);
+      Vase.el.style.display = 'none';
+      Game.useScene(scene);
+      set();
+      await c.wait(0.05);
+      await UI.fade(0, 0.45);
+    },
+    /** keep these actors moving (their rigs, capes) while a scene runs */
+    mythRun(actors, each) {
+      this.mythTick = true;
+      FX.temp(new THREE.Object3D(), 600, (t, dt) => {
+        if (!this.mythTick) { t.age = t.life; return; }
+        for (const a of actors) if (a) a.update(dt);
+        if (each) each(dt);
+      }, false);
+    },
+    /** the cast, made once and behind black (rigging a sculpt takes a moment): Kratos, Deimos, Heracles, the Titan */
+    async mythCast(c) {
+      if (this.myth) return this.myth;
+      await UI.fade(1, 0.3);
+      await Promise.all([Models.ensure('deimos'), Models.ensure('heracles')]);
+      const PR = Prologue, M = {};
+      M.crag = Crag.build();
+      const S = M.crag.scene;
+      // Kratos: his father's god-armour, worked in dark bronze, and a general's crimson cloak
+      const K = M.kratos = PR.actor(S, 'arielGod', { stance: 'sword', size: 1.16 });
+      K.root.traverse((o) => { if (o.isMesh && o.material && !Array.isArray(o.material)) o.material = darkBronze(o.material); });
+      if (K.model) {
+        K.cape = new Cape(K.rig, { length: 1.12, cols: 11, rows: 12, material: Mat.capeRed, width: 0.52, topWidth: 0.4, top: 0.22, back: -0.22, profile: Cape.backProfile(K.rig, K.model) });
+        S.add(K.cape.mesh);
+      }
+      M.deimos = PR.actor(S, Models.loaded.deimos ? 'deimos' : 'arielTeen', { stance: 'casual', size: 1.12 });
+      M.heracles = PR.actor(S, Models.loaded.heracles ? 'heracles' : 'arielTeen', { stance: 'casual', size: 1.12 });
+      // one of the old giants, bound on the crag: seen as a shape against the storm and the dawn
+      M.titan = PR.actor(S, 'kronos', { size: 3.1 });
+      M.titan.root.traverse((o) => { if (o.isMesh && o.material && !Array.isArray(o.material)) { const m = o.material = o.material.clone(); if (m.color) m.color.multiplyScalar(0.78); if (m.emissive) m.emissive.setRGB(0, 0, 0); m.envMapIntensity = 0.5; } });
+      M.chains = Crag.chains(S);
+      for (const a of [K, M.deimos, M.heracles, M.titan]) a.root.visible = false;
+      G.renderer.compile(S, G.camera);
+      this.myth = M;
+      return M;
+    },
+    /** put the cast back where nothing sees them (the cape too) */
+    mythDone() {
+      this.mythTick = false;
+      const M = this.myth;
+      if (!M) return;
+      for (const a of [M.kratos, M.deimos, M.heracles, M.titan, M.ares, ...(M.hoplites || [])]) if (a) { a.root.visible = false; if (a.cape) a.cape.mesh.visible = false; }
+      if (M.chains) M.chains.group.visible = false;
+      this.mythHallBack();
+      if (this.mythFires) { World.fires = this.mythFires; this.mythFires = null; }
+    },
+    /** the gods hidden for the throne shot, back in the hall */
+    mythHallBack() {
+      if (!this.mythHall) return;
+      for (const g of this.mythHall) g.root.visible = true;
+      for (const g of Prologue.gods) if (g.spark && !g.sparkGone) g.spark.visible = true;
+      this.mythHall = null;
     },
     /** Olympus as it will be: the rot draining out of the hall, the sparks coming home, Ariel at his father's right hand */
     async olympus(c) {
@@ -2613,6 +3074,8 @@ const SCRIPTS = {
       await SCRIPTS.bossDefeat.wedding(c);
       // ---- years later, in the hall of the gods: Kratos is born
       await SCRIPTS.bossDefeat.firstborn(c);
+      // (the brothers' own scenes are cast now, while the screen is dark)
+      await SCRIPTS.bossDefeat.mythCast(c);
       await SCRIPTS.bossDefeat.tapestry(c, LIFE_SLIDES_B, 'KRATOS AND DEIMOS');
       this.restoreHall();
     },
