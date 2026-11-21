@@ -663,8 +663,63 @@ const Music = {
    by tools/make_voices.py). A clip's id is an FNV-1a hash of "Speaker|text",
    so any line in the code finds its recording. Lines without a clip fall
    back to the system's speech engine. */
+/* ---------------------------------------------------------------- lips
+   The mouth shapes of a spoken line, worked out from its words: each word becomes the shapes a mouth passes
+   through saying it (the fifteen "visemes" face rigs use), each pause a closed mouth, and the whole is
+   stretched over the length of the recording. Faces that have the shapes play them; faces with only a jaw
+   open it as far as each shape does. The recording's loudness then gates it, so a mouth never moves in a silence. */
+const Lips = {
+  REST: { v: null, open: 0 },
+  // how far the jaw drops for each shape
+  OPEN: { aa: 1, E: 0.62, ih: 0.45, oh: 0.78, ou: 0.5, PP: 0, FF: 0.14, TH: 0.24, DD: 0.3, kk: 0.36, CH: 0.3, SS: 0.2, nn: 0.3, RR: 0.36 },
+  PAIRS: { th: 'TH', sh: 'CH', ch: 'CH', ph: 'FF', ee: 'ih', ea: 'ih', ie: 'ih', oo: 'ou', ou: 'ou', ow: 'ou', ew: 'ou', ai: 'E', ay: 'E', ei: 'E', ey: 'E', oa: 'oh', oe: 'oh', au: 'oh', aw: 'oh', ck: 'kk', ng: 'nn', wh: 'ou', qu: 'kk' },
+  ONE: { a: 'aa', e: 'E', i: 'ih', o: 'oh', u: 'ou', y: 'ih', b: 'PP', p: 'PP', m: 'PP', f: 'FF', v: 'FF', t: 'DD', d: 'DD', k: 'kk', g: 'kk', c: 'kk', q: 'kk', x: 'kk', j: 'CH', s: 'SS', z: 'SS', n: 'nn', l: 'nn', r: 'RR', w: 'ou' },
+  VOWEL: { aa: 1, E: 1, ih: 1, oh: 1, ou: 1 },
+  /** the shapes of one word, each with its share of the word's time */
+  word(w) {
+    const out = [];
+    for (let i = 0; i < w.length; i++) {
+      const two = w.substr(i, 2), ch = w[i];
+      let v = this.PAIRS[two];
+      if (v) i++;
+      else {
+        // a silent e at the end of a word; a soft c
+        if (ch === 'e' && i === w.length - 1 && w.length > 2 && !this.VOWEL[this.ONE[w[i - 1]]]) continue;
+        v = ch === 'c' && 'eiy'.includes(w[i + 1] || ' ') ? 'SS' : this.ONE[ch];
+      }
+      if (!v) continue;
+      const last = out[out.length - 1];
+      if (last && last[0] === v) { last[1] += 0.4; continue; }
+      out.push([v, this.VOWEL[v] ? 1 : 0.55]);
+    }
+    return out;
+  },
+  timeline(text, dur) {
+    const units = [];
+    for (const tok of text.split(/\s+/)) {
+      const w = tok.toLowerCase().replace(/[^a-z]/g, '');
+      for (const u of this.word(w)) units.push(u);
+      const p = /[.!?]["')]*$/.test(tok) ? 2.6 : /…/.test(tok) ? 3.2 : /[,;:]$/.test(tok) ? 1.5 : /[—–-]$/.test(tok) || tok === '—' ? 1.9 : w ? 0.22 : 0;
+      if (p) units.push([null, p]);
+    }
+    while (units.length && !units[units.length - 1][0]) units.pop();
+    const total = units.reduce((a, u) => a + u[1], 0) || 1;
+    // a breath before the first word, and the last word done a little before the clip ends
+    const t0 = 0.07, span = Math.max(0.2, dur - t0 - 0.16);
+    const tl = [];
+    let t = t0;
+    for (const [v, n] of units) { const d = (n / total) * span; tl.push({ t0: t, t1: t + d, v }); t += d; }
+    return tl;
+  },
+  at(tl, t) {
+    // (lines are short: a walk through the list is nothing)
+    for (const s of tl) if (t >= s.t0 && t < s.t1) return s.v ? { v: s.v, open: this.OPEN[s.v] } : this.REST;
+    return this.REST;
+  },
+};
+
 const Voice = {
-  clips: new Map(), ready: false, token: 0, current: null, tts: [],
+  clips: new Map(), ready: false, token: 0, current: null, tts: [], now: null,
   ALIAS: { 'An echo of a fallen demigod': 'Echo' },
   // per-speaker treatment: reverb send, low-shelf boost (dB), lowpass, slap-back echo,
   // presence lift (dB at 2.8 kHz) and playback rate (below 1 = slower and a touch deeper, like tape)
@@ -711,13 +766,55 @@ const Voice = {
     this._preloading = true;
     (async () => { for (const [k, c] of this.clips) await this.load(k, c); })();
   },
-  speak(text, who) {
-    if (!G.settings.voice) return;
+  /**
+   * opts (all optional): vo (a voice-over: nobody on screen mouths it), actor (the character speaking, when the
+   * name alone can't find them), mood (their face while they say it), to (who they say it to)
+   */
+  speak(text, who, opts = null) {
     who = this.speaker(who);
     this.stop();
-    const k = this.key(text, who), c = this.clips.get(k);
+    const k = this.key(text, who), c = this.clips.get(k), rate = (this.FX[who] || {}).rate || 1;
+    // the line as a performance: its length, its mouth shapes, and (once the clip plays) its loudness
+    const raw = c ? c.dur : clamp(text.length * 0.062 + 0.5, 1.2, 12);
+    this.now = { who, text, t0: G.time, raw, rate, ctx0: null, env: null, lips: Lips.timeline(text, raw) };
+    if (typeof Perform !== 'undefined') Perform.say(who, text, opts || {});
+    if (!G.settings.voice) return;
     if (c) { if (Sound.ready) this.play(k, c, who); return; }
     this.speakTTS(text, who);
+  },
+  /** seconds into the line being spoken (in the recording's own time), or -1 */
+  clock() {
+    const n = this.now;
+    if (!n) return -1;
+    const t = (n.ctx0 !== null ? Sound.ctx.currentTime - n.ctx0 : G.time - n.t0) * n.rate;
+    return t > n.raw + 0.1 ? -1 : t;
+  },
+  /** how loud the voice is right now, 0..1 (from the recording; from the words themselves until it has loaded) */
+  level() {
+    const t = this.clock(), n = this.now;
+    if (t < 0) return 0;
+    if (n.env) return n.env[Math.min(n.env.length - 1, Math.max(0, (t * 50) | 0))] || 0;
+    const m = Lips.at(n.lips, t);
+    return m.v ? 0.35 + 0.65 * m.open : 0;
+  },
+  /** the mouth shape for this moment of the line: { v: viseme name or null, open: 0..1 } */
+  mouth() {
+    const t = this.clock();
+    return t < 0 ? Lips.REST : Lips.at(this.now.lips, t);
+  },
+  /** loudness of a recording, 50 values a second, 0..1 (the 95th percentile counts as full voice) */
+  envelope(buf) {
+    const d = buf.getChannelData(0), hop = Math.floor(buf.sampleRate / 50), n = Math.ceil(d.length / hop);
+    const e = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      const a = i * hop, b = Math.min(d.length, a + hop);
+      for (let j = a; j < b; j += 2) s += d[j] * d[j];
+      e[i] = Math.sqrt(s / Math.max(1, (b - a) / 2));
+    }
+    const sorted = Array.from(e).sort((x, y) => x - y), top = sorted[Math.floor(n * 0.95)] || 1e-3;
+    for (let i = 0; i < n; i++) e[i] = Math.min(1, e[i] / top);
+    return e;
   },
   async play(k, c, who) {
     const token = ++this.token;
@@ -742,11 +839,13 @@ const Voice = {
     }
     src.start();
     this.current = { src, g };
+    if (this.now && this.now.who === who) { this.now.ctx0 = ctx.currentTime; this.now.env = c.env || (c.env = this.envelope(buf)); }
     Sound.duck(true);
     src.onended = () => { if (this.current && this.current.src === src) { this.current = null; Sound.duck(false); } };
   },
   stop() {
     this.token++;
+    this.now = null;
     if (this.current) {
       const { src, g } = this.current, t = Sound.ctx.currentTime;
       try { g.gain.setTargetAtTime(0, t, 0.03); src.stop(t + 0.15); } catch (e) { /* already stopped */ }

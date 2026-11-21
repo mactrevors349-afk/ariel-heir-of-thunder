@@ -158,6 +158,8 @@ class Player {
     }
     // he runs with the motion-captured Mixamo run when it is loaded (Models.loadMotion 'run')
     this.rig.mocapRun = 'run';
+    // (when he speaks: Keraunos is in his right hand, so it is the left that talks)
+    this.rig.gesture = [0.1, 0.85];
     // pinned across the tops of the shoulders, cloth wider than the shoulders so it drapes
     const sh = Math.abs(this.rig.j.armL.position.x);
     const capeFit = this.model

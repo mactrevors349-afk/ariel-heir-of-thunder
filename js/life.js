@@ -70,11 +70,14 @@ function lifeJesse(scene, opts) {
   scene.add(phone);
   J.phone = phone;
   const hold = lifeHold(J, phone);
+  J.rig.gesture = [0.15, 0.9];   // the phone is in her right hand: her left does the talking
   J.t = { yaw: 0, pitch: 0 };
   J.look = (yaw = 0, pitch = 0) => { J.t.yaw = yaw; J.t.pitch = pitch; };
   // texting: the motion-captured clip (both thumbs on the screen, head bowed over it), the phone between her hands
   J.texting = (on) => {
     hold.both = on;
+    // (eyes on her phone, not on whoever is speaking; and neither hand free to talk with)
+    J.rig.attend = !on; J.rig.gesture = on ? [0, 0] : [0.15, 0.9];
     // (both hands on the phone, side by side: the motion capture crossed her hands through each other)
     if (on) J.rig.play('phoneGrip', { fade: 0.6 }); else J.rig.stop(0.6);
   };
@@ -361,7 +364,8 @@ const Home = {
     this.pendant = new THREE.PointLight(0xffc98f, 7, 7, 1.8);
     this.pendant.position.set(tx, H - 0.75, tz);
     this.pendant.castShadow = true;
-    this.pendant.shadow.mapSize.set(1024, 1024); this.pendant.shadow.bias = -0.002;
+    // (a finer, softer shadow: at 1024 the shadow of a nose fell across a cheek in visible steps)
+    this.pendant.shadow.mapSize.set(2048, 2048); this.pendant.shadow.bias = -0.002; this.pendant.shadow.radius = 3;
     s.add(this.pendant);
     // cool daylight through the window, and the dim bounce of a grey morning
     const sun = new THREE.DirectionalLight(0xbcc8d8, 1.5);
@@ -428,7 +432,7 @@ const Memory = {
     this.lampGlass = add(new THREE.BoxGeometry(0.26, 0.32, 0.26), new THREE.MeshBasicMaterial({ color: new THREE.Color(4.5, 3.0, 1.5) }), lx, 3.68, lz, 0, false);
     this.lamp = new THREE.PointLight(0xffb468, 18, 14, 1.7);
     this.lamp.position.set(lx, 3.45, lz);
-    this.lamp.castShadow = true; this.lamp.shadow.mapSize.set(1024, 1024); this.lamp.shadow.bias = -0.002;
+    this.lamp.castShadow = true; this.lamp.shadow.mapSize.set(2048, 2048); this.lamp.shadow.bias = -0.002; this.lamp.shadow.radius = 3;
     s.add(this.lamp);
     this.lampAt = LV(lx, 0, lz);
     // the sea: dark, heaving, catching the lamp and the lightning
@@ -902,7 +906,8 @@ const Campus = {
     s.add(dome);
     const sun = new THREE.DirectionalLight(0xe4e0d8, 2.3);
     sun.position.set(14, 22, 18); sun.target.position.set(0, 0, -2);
-    sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02;
+    // (4096 over the yard: at 2048 a texel was 1.6 cm, and shadows on a face or an arm showed as squares in close-up)
+    sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02; sun.shadow.radius = 2.5;
     Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 12, bottom: -10, near: 1, far: 70 });
     s.add(sun, sun.target);
     s.add(new THREE.HemisphereLight(0xb8c0cc, 0x50463c, 1.5));

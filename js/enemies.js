@@ -605,7 +605,9 @@ class Hermes {
     if (!this.root.visible) return;
     const P = G.player;
     const d = P ? this.pos.distanceTo(P.pos) : 99;
-    if (d < 10 && G.state === 'playing') {
+    // (a cutscene can turn him toward a point of its own: Ariel while they talk, the Colosseum while he points the way)
+    if (this.face) this.heading = dampAngle(this.heading, Math.atan2(this.face.x - this.pos.x, this.face.z - this.pos.z), 2.5, dt);
+    else if (d < 10 && G.state === 'playing') {
       const want = Math.atan2(P.pos.x - this.pos.x, P.pos.z - this.pos.z);
       this.heading = dampAngle(this.heading, want, 2.5, dt);
     }

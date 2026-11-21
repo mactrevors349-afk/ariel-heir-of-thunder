@@ -712,6 +712,8 @@ const Game = {
 
   update(dt, raw) {
     const P = G.player, st = G.state;
+    // whoever is speaking moves with their voice, and the others turn to listen (before the bodies are posed)
+    if (st !== 'paused') Perform.update(dt);
     if (st === 'title') {
       this.titleT += raw;
       const t = this.titleT * 0.035, S = World.sites.start;

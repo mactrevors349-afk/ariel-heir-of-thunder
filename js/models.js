@@ -55,11 +55,16 @@ const WOMAN_SHEET = {
   // which showed on top of the shoulders in a different tone
   // (slimmer than a man's at the shoulder too: the cap is drawn in, so no deltoid bulges out of the armhole)
   arms: { url: 'assets/arms/body.glb', hide: /^body_2$/, collar: 0, slim: [0.7, 0.85], root: 0.8, depth: -0.012,
+    // the donor's skin, toned to hers: matched against her neck and face under the game's lights (untoned, the
+    // arms rendered a clear shade paler and brighter than the rest of her)
+    tint: [0.7, 0.585, 0.525],
     // a short cap sleeve in the top's own fabric over each arm's root: the join of arm and armhole stays hidden
     sleeve: { mat: /^dress2_1$|Cotton_Oxford/, len: 0.07, gap: 0.005 },
     // the body's own shoulder caps (where its old arms joined) stood out through the top's armholes as a
     // crescent of skin: they are all under the T-shirt, so they go (sheet units: past this x, in this band of y)
-    trimShoulders: { mesh: /^body_1$/, x: 0.126, y0: 1.29, y1: 1.6 } },
+    // (and what is left of the shoulders under the top, past `under`, is painted in the top's cloth: seen through
+    // the armhole behind the shoulder it was a patch of bare skin)
+    trimShoulders: { mesh: /^body_1$/, x: 0.126, y0: 1.29, y1: 1.6, under: 0.1 } },
   // the top, seen from both sides: where its armhole stands off the body you see the inside of the fabric, not a dark slit
   twoSided: /^dress2_1$|Cotton_Oxford/,
 };
@@ -92,8 +97,9 @@ const MODEL_DEFS = {
     url: 'assets/ariel/ariel.fbx', type: 'fbx', height: 1.78,
     bones: { hips: 'Hips', spine: 'Spine', chest: 'Spine2', neck: 'Neck', head: 'Head', ...MIXAMO_LIMBS },
     tips: { handL: 'LeftHandMiddle1', handR: 'RightHandMiddle1', footL: 'LeftToeBase', footR: 'RightToeBase' },
+    material: teenFace,
   },
-  zeus: { url: 'assets/zeus/zeus.fbx', type: 'fbx', height: 2.0, label: 'Zeus', bones: JO_BONES, tips: JO_TIPS },
+  zeus: { url: 'assets/zeus/zeus.fbx', type: 'fbx', height: 2.0, label: 'Zeus', bones: JO_BONES, tips: JO_TIPS, material: stormEyes },
   hades: { url: 'assets/hades/hades.fbx', type: 'fbx', height: 2.1, label: 'Hades', bones: JO_BONES, tips: JO_TIPS },
   // Ares: the same armour gone dark and blood-red, smouldering at the edges (and 2.5x Ariel's size in the arena)
   ares: { ...ARMOUR_SCULPT, height: 1.84, label: 'Ares', material: aresCrimson },
@@ -140,31 +146,8 @@ const MODEL_DEFS = {
   // (a small game model, ~5,000 triangles and 256-pixel paint: smoothed twice and its textures redrawn
   // sharper at load, so her face is round and modelled by the light instead of faceted and flat)
   athena: {
-    url: 'assets/athena/athena.glb', type: 'glb', height: LM_H, rotY: Math.PI, label: 'Athena', smooth: 2, enhance: 4,
-    // her face, sculpted deeper than the game model carved it (bumps and hollows in metres on the
-    // landmark sheet, x mirrored): set-in eyes under a brow, a bridged nose, cheekbones, lips, chin
-    relief: {
-      mesh: /^head/, box: { x: 0.08, y0: 1.585, y1: 1.725, z: 0.06 },
-      shape: [
-        [0.031, 1.690, 0.017, 0.011, -0.0065], [0.015, 1.686, 0.006, 0.008, -0.003],   // eye sockets, inner corners
-        [0.031, 1.697, 0.012, 0.0025, -0.0012],                                        // upper eyelid crease
-        [0.028, 1.705, 0.020, 0.006, 0.0035], [0.058, 1.700, 0.010, 0.015, -0.002],     // brow ridge, temples
-        [0, 1.680, 0.007, 0.016, 0.0028], [0, 1.662, 0.010, 0.008, 0.003],              // nose bridge and tip
-        [0.012, 1.655, 0.006, 0.005, 0.002], [0, 1.650, 0.010, 0.003, -0.0022],         // nostril wings, under the nose
-        [0.046, 1.665, 0.015, 0.010, 0.0045], [0.045, 1.635, 0.013, 0.012, -0.003],     // cheekbones, and the hollow below
-        [0.021, 1.641, 0.004, 0.010, -0.0018], [0, 1.643, 0.003, 0.004, -0.0008],       // smile lines, philtrum
-        [0, 1.634, 0.015, 0.0035, 0.002], [0, 1.622, 0.013, 0.004, 0.0028], [0, 1.628, 0.017, 0.0014, -0.0016], // lips
-        [0, 1.604, 0.013, 0.009, 0.0035], [0.05, 1.612, 0.010, 0.014, 0.0015],          // chin, jawline
-      ],
-      // shading worked into the skin where light doesn't reach (a multiplier taken off: x, y, spread, strength)
-      shade: [
-        [0.031, 1.690, 0.015, 0.011, 0.32], [0.016, 1.687, 0.006, 0.008, 0.28],          // eye sockets, inner corners
-        [0.012, 1.655, 0.005, 0.005, 0.3], [0, 1.649, 0.011, 0.004, 0.25],                // beside the nostrils, under the nose
-        [0.017, 1.628, 0.004, 0.004, 0.3], [0, 1.628, 0.016, 0.0016, 0.3],                // mouth corners, the line of the lips
-        [0, 1.616, 0.012, 0.003, 0.2], [0.021, 1.641, 0.004, 0.010, 0.15],                // under the lower lip, smile lines
-        [0, 1.593, 0.03, 0.008, 0.25], [0.045, 1.636, 0.013, 0.010, 0.12],                // under the chin, cheek hollows
-      ],
-    },
+    url: 'assets/athena/athena.glb', type: 'glb', height: LM_H, rotY: Math.PI, label: 'Athena', smooth: 2,
+    // (her face is left as the model has it: sharpening its texture and carving it deeper both made it worse)
     landmarks: mirrorLM({
       hips: [0, 0.97, 0], spine: [0, 1.13, 0], chest: [0, 1.32, 0], neck: [0, 1.56, 0.01], head: [0, 1.63, 0.03],
       armL: [0.13, 1.48, -0.02], elbowL: [0.42, 1.27, -0.03], handL: [0.6, 1.03, 0.02],
@@ -183,6 +166,8 @@ const MODEL_DEFS = {
     },
     // the orb of water rides in his right hand
     rigid: [{ bone: 'handR', test: (x, y, z) => (x + 0.36) ** 2 + (y - 1.44) ** 2 + (z - 0.42) ** 2 < 0.04 }],
+    // the sea-light in the lines on his skin: a faint glow (at full strength they read as white-hot cracks in his face)
+    material: (m) => { if (m.emissiveMap) m.emissiveIntensity = 0.26; return m; },
     torso: { x: 0.24, y0: 0.2, y1: 1.35, z: 0.22 },
   },
   // Hermes (God of War III): tunic, winged helm and sandals, two sash streamers. T-pose, turned to face +Z
@@ -240,9 +225,10 @@ const MODEL_DEFS = {
       ],
     },
     eyes: /^eye_[LR]$/,
+    hair: /^hair_Shape$/, jaw: { below: 0.029 },
   },
   // Jesse: the same figure in her own clothes, wearing her own (sculpted) head
-  jesse: { url: 'assets/jesse/jesse.glb', type: 'glb', height: 1.64, label: 'Jesse', ...WOMAN_SHEET },
+  jesse: { url: 'assets/jesse/jesse.glb', type: 'glb', height: 1.64, label: 'Jesse', ...WOMAN_SHEET, hair: /^hair$/, jaw: { below: 0.02 } },
   // a classmate with his own skeleton (Ready Player Me naming is Mixamo's)
   classmateBoy: {
     url: 'assets/npc/boy.glb', type: 'glb', height: 1.8, label: 'Westbrook High',
@@ -267,6 +253,8 @@ const MODEL_DEFS = {
     url: 'assets/npc/principal.glb', type: 'glb', height: 1.82, label: 'Westbrook High',
     bones: { hips: 'Hips', spine: 'Spine', chest: 'Spine2', neck: 'Neck', head: 'Head', ...MIXAMO_LIMBS },
     tips: { handL: 'LeftHandMiddle1', handR: 'RightHandMiddle1', footL: 'LeftToeBase', footR: 'RightToeBase' },
+    // his white shirt, a shade down: in daylight its sleeves burned out to a glowing white
+    material: (m) => { if (/look/i.test(m.name)) m.color.multiplyScalar(0.7); return m; },
   },
   // a posed figure, placed as she is (no rig): a classmate by the vending machine
   classmateGirl: { url: 'assets/npc/girl.glb', type: 'glb', label: 'Westbrook High', static: true },
@@ -362,6 +350,87 @@ const Models = {
       obj.add(m);
     }
   },
+  /**
+   * Sculpted hair (one solid, smooth mass) shaded as hair: fine strands running down from the crown, each a
+   * little lighter or darker than its neighbours, and catching the light across their grain, so a highlight
+   * stretches into a band round the head instead of sitting on it like a spot on clay. The strands are
+   * worked out from where each point lies round the head (no new geometry, no texture), and fade out with
+   * distance, where they would only shimmer.
+   */
+  strandHair(obj, d) {
+    obj.updateMatrixWorld(true);
+    obj.traverse((o) => {
+      if (!o.isMesh || !d.hair.test(o.name) || o.material._hair) return;
+      const g = o.geometry;
+      if (!g.boundingBox) g.computeBoundingBox();
+      const b = g.boundingBox, m = o.material;
+      // (kept on the material itself, not in userData, which three.js copies through JSON when a material is cloned)
+      const U = m._hair = {
+        c: { value: new THREE.Vector3((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2) },
+        s: { value: 2 / Math.max(1e-6, b.max.x - b.min.x) },
+      };
+      const prev = m.onBeforeCompile, key = m.customProgramCacheKey ? m.customProgramCacheKey() : '';
+      m.onBeforeCompile = (sh, r) => {
+        if (prev) prev.call(m, sh, r);
+        sh.uniforms.uHairC = U.c; sh.uniforms.uHairS = U.s;
+        sh.vertexShader = 'varying vec3 vHairP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vHairP = position;');
+        sh.fragmentShader = `uniform vec3 uHairC; uniform float uHairS; varying vec3 vHairP;
+          float hHash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+          float hNoise(float x) { float i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(hHash(i), hHash(i + 1.0), f); }
+          ` + sh.fragmentShader
+          .replace('#include <map_fragment>', `#include <map_fragment>
+          vec3 hp = (vHairP - uHairC) * uHairS;
+          // round the head, and down the strand (which wanders a little as it falls)
+          float hTh = atan(hp.x, hp.z) * 70.0 + hNoise(hp.y * 2.5 + 3.0) * 2.2;
+          float hLock = hNoise(hTh * 0.22 + 7.0);                                   // locks: broad, slow
+          float hFine = hNoise(hTh) * 0.55 + hNoise(hTh * 2.9 + 11.0) * 0.45;       // strands: fine
+          float hK = 1.0 - smoothstep(0.35, 1.4, fwidth(hTh));                     // gone where finer than a pixel
+          diffuseColor.rgb *= mix(1.0, 0.8 + 0.3 * hLock + 0.22 * (hFine - 0.5), 0.35 + 0.65 * hK);`)
+          .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+          roughnessFactor = clamp(roughnessFactor - 0.16 + 0.1 * hFine, 0.3, 1.0);`)
+          .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+          {
+            // the strands as relief: the surface tilts across their grain (the slope of hFine over the surface)
+            vec3 hsx = dFdx(vViewPosition), hsy = dFdy(vViewPosition);
+            vec3 hR1 = cross(hsy, normal), hR2 = cross(normal, hsx);
+            float hDet = dot(hsx, hR1);
+            if (abs(hDet) > 1e-12) {
+              vec3 hGrad = (dFdx(hFine) * hR1 + dFdy(hFine) * hR2) / hDet;
+              normal = normalize(normal - hGrad * 0.00045 * hK);
+            }
+          }`);
+      };
+      m.customProgramCacheKey = () => key + 'hair';
+      m.needsUpdate = true;
+    });
+  },
+  /**
+   * The skin of the grafted arms: the donor's texture toned to hers. Where the sleeve covers the arm (aCap, set
+   * per vertex when the arm is fitted) it is painted in the top's own fabric instead of skin: the armhole of the
+   * top and the sleeve never meet perfectly once the arm moves, and through any gap between them you now see
+   * cloth, not a slit of bare shoulder.
+   */
+  armSkin(d) {
+    const tint = d.arms.tint ? new THREE.Color(...d.arms.tint) : d._graft.tint;
+    const m = new THREE.MeshStandardMaterial({ map: d._graft.map, color: tint, roughness: 0.6, envMapIntensity: 0.75 });
+    m._cap = { value: new THREE.Color(1, 1, 1) };
+    m._capOn = { value: 0 };
+    return this.capCloth(m, m._cap, m._capOn);
+  },
+  /** paint the vertices marked aCap in a cloth colour (skin that lies under a garment) */
+  capCloth(m, cap, on) {
+    const prev = m.onBeforeCompile, key = m.customProgramCacheKey ? m.customProgramCacheKey() : '';
+    m.onBeforeCompile = (sh, r) => {
+      if (prev) prev.call(m, sh, r);
+      sh.uniforms.uCapCol = cap; sh.uniforms.uCapOn = on;
+      sh.vertexShader = 'attribute float aCap;\nvarying float vCap;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vCap = aCap;');
+      sh.fragmentShader = 'uniform vec3 uCapCol;\nuniform float uCapOn;\nvarying float vCap;\n' + sh.fragmentShader
+        .replace('#include <map_fragment>', '#include <map_fragment>\n  if (vCap * uCapOn > 0.5) diffuseColor.rgb = uCapCol;')
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  if (vCap * uCapOn > 0.5) roughnessFactor = 0.85;');
+    };
+    m.customProgramCacheKey = () => key + 'cap';
+    return m;
+  },
   /** load and prepare a model left out of the start-up load (lazy); resolves to its template, or null */
   ensure(key) {
     if (this.loaded[key]) return Promise.resolve(this.loaded[key]);
@@ -407,7 +476,7 @@ const Models = {
       o.castShadow = true; o.receiveShadow = true;
       o.frustumCulled = false;
       if (d.type === 'fbx') {
-        const conv = (m) => { if (!cache.has(m)) cache.set(m, this.toStandard(m)); return cache.get(m); };
+        const conv = (m) => { if (!cache.has(m)) { const n = this.toStandard(m); cache.set(m, d.material ? d.material(n) : n); } return cache.get(m); };
         o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
       } else {
         if (d.smooth) o.geometry = this.subdivide(o.geometry, d.smooth);
@@ -433,6 +502,7 @@ const Models = {
     if (d.merge) this.mergeMeshes(obj);
     if (d.relief) this.relief(obj, d);
     if (d.eyes) this.shadeEyes(obj, d);
+    if (d.hair) this.strandHair(obj, d);
     if (d.grip) this.curlGrip(obj, d);
     if (d.arms && this.donor && !d._graft) this.graftArms(obj, d);
     if (d.arms && d._graft) this.trimArms(obj, d);
@@ -728,11 +798,16 @@ const Models = {
     m.onBeforeCompile = (sh, r) => {
       if (prev) prev(sh, r);
       sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', `
-        float rimF = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+        #ifdef FLAT_SHADED
+          vec3 rimN = normal;
+        #else
+          vec3 rimN = normalize(mix(normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0), normal, 0.2));
+        #endif
+        float rimF = 1.0 - clamp(dot(rimN, normalize(vViewPosition)), 0.0, 1.0);
         outgoingLight += vec3(${color.map((c) => c.toFixed(3)).join(', ')}) * pow(rimF, ${power.toFixed(2)}) * ${strength.toFixed(2)};
         #include <opaque_fragment>`);
     };
-    m.customProgramCacheKey = () => 'rim' + color.join(',') + power + strength;
+    m.customProgramCacheKey = () => 'rim2' + color.join(',') + power + strength;
     m.needsUpdate = true;
     return m;
   },
@@ -808,6 +883,10 @@ const Models = {
       m.boundingSphere.radius *= 1.6;
       m.frustumCulled = true;
     });
+    // its face (if it has one that moves), and its place on the cast list
+    binding.rig = rig;
+    binding.face = Face.make(binding);
+    Perform.register(binding);
     binding.update();
     return binding;
   },
@@ -975,16 +1054,29 @@ const Models = {
     if (d._graft) {
       rig.root.updateMatrixWorld(true);
       const toHolder = holder.matrixWorld.clone().invert(), nm = new THREE.Matrix3().getNormalMatrix(toHolder), v = new THREE.Vector3();
-      const mat = d._graft.mat || (d._graft.mat = new THREE.MeshStandardMaterial({ map: d._graft.map, color: d._graft.tint, roughness: 0.6, envMapIntensity: 0.75 }));
+      const mat = d._graft.mat || (d._graft.mat = this.armSkin(d));
+      // how far down each upper arm the sleeve reaches (its hem), measured along the arm from the shoulder joint
+      const k1 = toRig([0, 1, 0]).distanceTo(toRig([0, 0, 0])), axis = {}, hem = {};
       for (const S of ['L', 'R']) {
-        const A = d._graft[S], pos = new Float32Array(A.pos.length), nor = new Float32Array(A.nor.length);
+        const sh = rig.j['arm' + S].getWorldPosition(new THREE.Vector3()), el = rig.j['elbow' + S].getWorldPosition(new THREE.Vector3());
+        axis[S] = { o: sh, d: el.sub(sh).normalize() };
+        hem[S] = -Infinity;
+        const SL = d._graft[S].sleeve;
+        if (SL) for (let i = 0; i < SL.pos.length; i += 3) hem[S] = Math.max(hem[S], toRig([SL.pos[i], SL.pos[i + 1], SL.pos[i + 2]]).sub(axis[S].o).dot(axis[S].d));
+      }
+      for (const S of ['L', 'R']) {
+        const A = d._graft[S], pos = new Float32Array(A.pos.length), nor = new Float32Array(A.nor.length), cap = new Float32Array(A.pos.length / 3);
         for (let i = 0; i < A.pos.length; i += 3) {
-          v.copy(toRig([A.pos[i], A.pos[i + 1], A.pos[i + 2]])).applyMatrix4(toHolder); pos.set([v.x, v.y, v.z], i);
+          v.copy(toRig([A.pos[i], A.pos[i + 1], A.pos[i + 2]]));
+          // under the sleeve (a finger's width short of its hem): this part of the arm is cloth, not skin
+          cap[i / 3] = v.clone().sub(axis[S].o).dot(axis[S].d) < hem[S] - 0.012 * k1 ? 1 : 0;
+          v.applyMatrix4(toHolder); pos.set([v.x, v.y, v.z], i);
           v.set(A.nor[i], A.nor[i + 1], A.nor[i + 2]).applyMatrix3(nm).normalize(); nor.set([v.x, v.y, v.z], i);
         }
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
         g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+        g.setAttribute('aCap', new THREE.BufferAttribute(cap, 1));
         g.setAttribute('uv', new THREE.BufferAttribute(A.uv, 2));
         g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(A.si, 4));
         g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(A.sw, 4));
@@ -1004,6 +1096,15 @@ const Models = {
           sm.map = null; sm.normalMap = null; sm.side = THREE.DoubleSide;
           if (c) sm.color = new THREE.Color(c.r, c.g, c.b).multiply(src.color || new THREE.Color(1, 1, 1));
           d._graft.sleeveMat = sm;
+          // (the arm under the sleeve is painted the same cloth: see armSkin)
+          mat._cap.value.copy(sm.color); mat._capOn.value = 1;
+        }
+        // and the shoulders under the top
+        for (const m of skinnedMeshes) {
+          if (!m.geometry.attributes.aCap || m.material === mat || m.material._cap) continue;
+          m.material._cap = mat._cap;
+          this.capCloth(m.material, mat._cap, mat._capOn);
+          m.material.needsUpdate = true;
         }
         for (const S of ['L', 'R']) {
           const A = d._graft[S].sleeve, pos = new Float32Array(A.pos.length), nor = new Float32Array(A.nor.length);
@@ -1199,12 +1300,14 @@ const Models = {
     const T = d.arms.trimShoulders;
     if (T) obj.traverse((o) => {
       if (!o.isMesh || !T.mesh.test(o.name) || o.userData.shoulderTrim) return;
-      const g = o.geometry, P = g.attributes.position, v = new THREE.Vector3(), cut = new Uint8Array(P.count);
+      const g = o.geometry, P = g.attributes.position, v = new THREE.Vector3(), cut = new Uint8Array(P.count), under = T.under ? new Float32Array(P.count) : null;
       for (let i = 0; i < P.count; i++) {
         v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld);
         const x = Math.abs((v.x - cx) / s), y = (v.y - box.min.y) / s;
         cut[i] = x > T.x && y > T.y0 && y < T.y1 ? 1 : 0;
+        if (under) under[i] = x > T.under && y > T.y0 && y < T.y1 ? 1 : 0;
       }
+      if (under) g.setAttribute('aCap', new THREE.BufferAttribute(under, 1));
       const idx = g.index ? g.index.array : Array.from({ length: P.count }, (_, i) => i), keep = [];
       for (let t = 0; t < idx.length; t += 3) if (!(cut[idx[t]] && cut[idx[t + 1]] && cut[idx[t + 2]])) keep.push(idx[t], idx[t + 1], idx[t + 2]);
       g.setIndex(keep);
@@ -1693,20 +1796,341 @@ function hollowSkin(m) {
   c.customProgramCacheKey = () => 'hollowSkin';
   return c;
 }
+// Zeus' eyes are painted as storm cloud, with no iris: a little light of their own makes them a god's eyes, not blind ones
+function stormEyes(m) {
+  if (!/eyes/i.test(m.name)) return m;
+  const c = m.clone();
+  c.emissive = new THREE.Color(0x8fb8ff); c.emissiveMap = c.map; c.emissiveIntensity = 0.7; c.roughness = 0.2;
+  return c;
+}
+// Teenage Ariel's avatar. His photographed iris is on the cornea layer, which the file makes nearly transparent:
+// that left the grey eyeball under it showing (pale, staring eyes). And his teeth sit in the dark of his mouth,
+// where they went gunmetal grey; they carry a little of their own light so they stay the colour of teeth.
+function teenFace(m) {
+  if (/Cornea/i.test(m.name)) { const c = m.clone(); c.transparent = false; c.opacity = 1; c.depthWrite = true; c.roughness = 0.08; return c; }
+  if (/Teeth/i.test(m.name)) { const c = m.clone(); c.emissive = new THREE.Color(0xffffff); c.emissiveMap = c.map; c.emissiveIntensity = 0.3; c.normalMap = null; return c; }
+  return m;
+}
 // Ares: the same armour gone dark, blood-red and smouldering
 function aresCrimson(m) {
   const c = m.clone();
   c.onBeforeCompile = (sh) => {
     sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       float crL = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(crL) * vec3(1.15, 0.2, 0.14), 0.85) * 0.46;`);
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(crL) * vec3(1.15, 0.2, 0.14), 0.85) * 0.46;`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+      roughnessFactor = max(roughnessFactor, 0.44);`);
   };
   c.metalness = Math.max(c.metalness || 0, 0.55);
   c.roughness = Math.max(c.roughness, 0.42);
   c.envMapIntensity = 0.5;
-  c.customProgramCacheKey = () => 'aresCrimson';
+  c.customProgramCacheKey = () => 'aresCrimson2';
   return Models.rim(c, [1.3, 0.22, 0.03], 3.6, 0.35);
 }
+
+/* ------------------------------------------------------------------ faces
+   What a model can do with its face. A character whose head carries mouth shapes (teenage Ariel: the fifteen
+   visemes, blinks, brows, the lot) speaks with them; one with a single open-mouth shape, or a jaw bone, opens
+   and closes it with the words; eyes that can turn find whoever they are talking to; eyelids blink. A sculpt
+   with none of these keeps a still face (its head and hands still move with the voice: see Rig). */
+const VISEMES = ['aa', 'E', 'ih', 'oh', 'ou', 'PP', 'FF', 'TH', 'DD', 'kk', 'CH', 'SS', 'nn', 'RR'];
+// faces for a line: weights of the expression shapes (the ARKit names)
+const MOODS = {
+  calm: {},
+  warm: { mouthSmileLeft: 0.32, mouthSmileRight: 0.32, cheekSquintLeft: 0.2, cheekSquintRight: 0.2 },
+  wry: { mouthSmileLeft: 0.38, mouthSmileRight: 0.1, browOuterUpLeft: 0.35, mouthDimpleLeft: 0.3 },
+  ask: { browInnerUp: 0.3, browOuterUpLeft: 0.4, browOuterUpRight: 0.4, eyeWideLeft: 0.12, eyeWideRight: 0.12 },
+  angry: { browDownLeft: 0.75, browDownRight: 0.75, noseSneerLeft: 0.3, noseSneerRight: 0.3, mouthFrownLeft: 0.25, mouthFrownRight: 0.25, eyeSquintLeft: 0.3, eyeSquintRight: 0.3 },
+  hurt: { browInnerUp: 0.75, browDownLeft: 0.2, browDownRight: 0.2, mouthFrownLeft: 0.4, mouthFrownRight: 0.4, eyeSquintLeft: 0.15, eyeSquintRight: 0.15 },
+  shock: { eyeWideLeft: 0.8, eyeWideRight: 0.8, browInnerUp: 0.6, browOuterUpLeft: 0.6, browOuterUpRight: 0.6, jawOpen: 0.12 },
+  grim: { browDownLeft: 0.45, browDownRight: 0.45, mouthPressLeft: 0.4, mouthPressRight: 0.4, eyeSquintLeft: 0.2, eyeSquintRight: 0.2 },
+  flat: { browDownLeft: 0.2, browDownRight: 0.2, eyeBlinkLeft: 0.12, eyeBlinkRight: 0.12, mouthPressLeft: 0.15, mouthPressRight: 0.15 },
+};
+class Face {
+  static make(b) { const f = new Face(b); return f.kind || f.eyes.length || f.lids ? f : null; }
+  constructor(b) {
+    this.b = b;
+    this.meshes = [];
+    const names = new Set();
+    b.model.traverse((o) => {
+      if (o.isMesh && o.morphTargetDictionary && o.morphTargetInfluences) { this.meshes.push(o); for (const n in o.morphTargetDictionary) names.add(n); }
+    });
+    this.names = names;
+    this.lids = names.has('eyeBlinkLeft');
+    this.kind = names.has('aa') && names.has('PP') ? 'visemes' : names.has('mouthOpen') ? 'open' : null;
+    this.cur = {};          // the weight each shape has now
+    this.eyes = [];
+    this.jaw = null;
+    const bones = {};
+    b.model.traverse((o) => { if (o.isBone && !bones[o.name]) bones[o.name] = o; });
+    for (const n of ['LeftEye', 'RightEye']) if (bones[n]) this.eyes.push({ bone: bones[n], rest: bones[n].quaternion.clone() });
+    const jaw = Object.values(bones).find((o) => /jaw/i.test(o.name) && !/end$/i.test(o.name));
+    if (!this.kind && jaw) this.findJaw(jaw);
+    if (!this.kind && MODEL_DEFS[b.key] && MODEL_DEFS[b.key].jaw) this.sculptJaw();
+    this.speech = null; this.gaze = null; this.mood = null;
+    this.t = G.time; this.blinkT = rand(0.5, 3); this.blink = 0; this.jawA = 0;
+    this.sac = new THREE.Vector2(); this.sacT = 0; this.eyeYaw = 0; this.eyePitch = 0;
+    this._q = new THREE.Quaternion(); this._h = new THREE.Quaternion(); this._p = new THREE.Quaternion(); this._w = new THREE.Quaternion();
+    this._v = new THREE.Vector3(); this._e = new THREE.Euler(0, 0, 0, 'YXZ');
+  }
+  /** a jaw bone: find which way it swings open (whichever turn drops the chin furthest) */
+  findJaw(jaw) {
+    let tip = null, far = 0;
+    const o = jaw.getWorldPosition(new THREE.Vector3());
+    jaw.traverse((c) => { if (c === jaw) return; const d = c.getWorldPosition(new THREE.Vector3()).distanceTo(o); if (d > far) { far = d; tip = c; } });
+    if (!tip) return;
+    const rest = jaw.quaternion.clone(), q = new THREE.Quaternion();
+    let best = null, low = Infinity;
+    for (const ax of [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)]) for (const sg of [1, -1]) {
+      jaw.quaternion.copy(rest).multiply(q.setFromAxisAngle(ax, 0.25 * sg));
+      jaw.updateMatrixWorld(true);
+      const y = tip.getWorldPosition(new THREE.Vector3()).y;
+      if (y < low) { low = y; best = ax.clone().multiplyScalar(sg); }
+    }
+    jaw.quaternion.copy(rest); jaw.updateMatrixWorld(true);
+    this.jaw = { bone: jaw, rest, axis: best };
+    this.kind = 'jaw';
+  }
+  /**
+   * A sculpt with a closed, carved mouth and no jaw to move: the mouth is found on the face itself (the crease
+   * between the lips, on the profile below the tip of the nose), and the skin below it is swung down about a
+   * hinge by the ears when she speaks. It is done where the face is drawn (in its shader), so nothing is rebuilt;
+   * the skin that stretches between the parted lips is darkened into the inside of a mouth.
+   */
+  sculptJaw() {
+    const b = this.b, root = b.rig.root;
+    root.updateMatrixWorld(true);
+    const toRoot = root.matrixWorld.clone().invert(), v = new THREE.Vector3();
+    const hp = b.rig.j.head.getWorldPosition(new THREE.Vector3()).applyMatrix4(toRoot);
+    // the profile of the face: for each 2 mm of height, how far forward the skin on the midline reaches
+    const prof = new Map();
+    b.holder.traverse((m) => {
+      if (!m.isSkinnedMesh || !m.visible) return;
+      const P = m.geometry.attributes.position, M = toRoot.clone().multiply(m.matrixWorld);
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i).applyMatrix4(M).sub(hp);
+        if (Math.abs(v.x) > 0.005 || v.y < -0.07 || v.y > 0.05 || v.z < 0.03) continue;
+        const k = Math.round(v.y / 0.002), e = prof.get(k);
+        if (!e || v.z > e.z) prof.set(k, { z: v.z, m });
+      }
+    });
+    const ks = [...prof.keys()].sort((p, q) => q - p);
+    if (ks.length < 20) return;
+    // the tip of the nose: the furthest forward
+    let tip = ks[0];
+    for (const k of ks) if (k >= 0 && prof.get(k).z > prof.get(tip).z) tip = k;
+    // the crease of the lips: the first hollow 2 to 4.2 cm below it that the profile climbs out of again
+    const z = (k) => { const e = prof.get(k); return e ? e.z : null; };
+    let lip = null;
+    // (or where the model says it is, measured below the tip of the nose: a mouth carved shut with barely a
+    // crease, like Jesse's, is not found by its hollow: the fold under her lower lip is deeper)
+    const J = MODEL_DEFS[b.key].jaw;
+    if (J && J.below) { const want = tip - Math.round(J.below / 0.002); for (let o = 0; o <= 2 && lip === null; o++) for (const k of [want - o, want + o]) if (lip === null && z(k) !== null) lip = k; }
+    for (let k = tip - 10; k >= tip - 21 && lip === null; k--) {
+      const c = z(k); if (c === null) continue;
+      let lo = true, rise = 0;
+      for (let j = 1; j <= 4; j++) { const a = z(k + j), d = z(k - j); if (a !== null && a < c - 1e-5) lo = false; if (d !== null) { if (d < c - 1e-5 && j <= 2) lo = false; rise = Math.max(rise, d - c); } }
+      if (lo && rise > 0.0008) lip = k;
+    }
+    if (lip === null) return;
+    const mesh = prof.get(lip).m, mat = mesh.material;
+    if (!mat._jaw) {
+      const M = toRoot.clone().multiply(mesh.matrixWorld), inv = M.clone().invert();
+      const S = new THREE.Vector3(0, hp.y + lip * 0.002, hp.z + z(lip)).setX(hp.x).applyMatrix4(inv);
+      const dir = (x, y, zz) => new THREE.Vector3(x, y, zz).transformDirection(inv);
+      const U = mat._jaw = {
+        s: { value: S }, down: { value: dir(0, -1, 0) }, fwd: { value: dir(0, 0, 1) },
+        k: { value: 1 / new THREE.Vector3().setFromMatrixColumn(M, 1).length() }, open: { value: 0 }, owner: null,
+      };
+      const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey ? mat.customProgramCacheKey() : '';
+      mat.onBeforeCompile = (sh, r) => {
+        if (prev) prev.call(mat, sh, r);
+        sh.uniforms.uJawS = U.s; sh.uniforms.uJawDown = U.down; sh.uniforms.uJawFwd = U.fwd; sh.uniforms.uJawK = U.k; sh.uniforms.uJawOpen = U.open;
+        sh.vertexShader = 'uniform vec3 uJawS, uJawDown, uJawFwd; uniform float uJawK, uJawOpen; varying float vJaw, vMouth;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+          {
+            vec3 jr = (transformed - uJawS) / uJawK;                       // metres from the middle of the lips
+            float jd = dot(jr, uJawDown), jf = dot(jr, uJawFwd);
+            float jx = length(jr - uJawDown * jd - uJawFwd * jf);           // out toward the cheek
+            // below the lips, 1; above, 0: a clean parting between the lips, a soft one out past their corners
+            float edge = 0.0011 + max(0.0, jx - 0.017) * 0.55;
+            float w = smoothstep(-edge, edge, jd);
+            w *= smoothstep(-0.075, -0.022, jf) * (1.0 - smoothstep(0.042, 0.07, jd)) * (1.0 - smoothstep(0.034, 0.066, jx));
+            vJaw = w;
+            vMouth = (1.0 - smoothstep(0.016, 0.026, jx)) * (1.0 - smoothstep(0.005, 0.011, abs(jd)));
+            // swung about a hinge up and back by the ear
+            vec3 hinge = uJawS - (uJawFwd * 0.075 + uJawDown * 0.035) * uJawK, ax = normalize(cross(uJawFwd, uJawDown));
+            float ang = uJawOpen * w, cs = cos(ang), sn = sin(ang);
+            vec3 rel = transformed - hinge;
+            transformed = hinge + rel * cs + cross(ax, rel) * sn + ax * dot(ax, rel) * (1.0 - cs);
+          }`);
+        sh.fragmentShader = 'uniform float uJawOpen; varying float vJaw, vMouth;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+          {
+            // the skin stretched between the parted lips: the dark of the mouth
+            float gap = smoothstep(0.12, 0.38, vJaw) * (1.0 - smoothstep(0.62, 0.88, vJaw)) * vMouth * clamp(uJawOpen * 22.0, 0.0, 1.0);
+            diffuseColor.rgb *= 1.0 - 0.93 * gap;
+          }`);
+      };
+      mat.customProgramCacheKey = () => key + 'jaw';
+      mat.needsUpdate = true;
+    }
+    this.sculpt = mat._jaw;
+    this.kind = 'sculpt';
+  }
+  set(name, v) {
+    if (this.cur[name] === v) return;
+    this.cur[name] = v;
+    for (const m of this.meshes) { const i = m.morphTargetDictionary[name]; if (i !== undefined) m.morphTargetInfluences[i] = v; }
+  }
+  ease(name, to, rate, dt) { const c = this.cur[name] || 0; if (c !== to) this.set(name, Math.abs(c - to) < 0.002 ? to : damp(c, to, rate, dt)); }
+  update() {
+    const dt = Math.min(0.1, G.time - this.t);
+    this.t = G.time;
+    if (dt <= 0) return;
+    const sp = this.speech, lvl = sp ? sp.level : 0;
+    // the words open the mouth only while there is voice in the recording
+    const gate = sp ? smooth(0.02, 0.2, lvl) * (0.6 + 0.4 * lvl) : 0;
+    if (this.kind === 'visemes') {
+      for (const n of VISEMES) { const on = sp && sp.v === n; this.ease(n, on ? gate * 0.9 : 0, on ? 24 : 16, dt); }
+    } else if (this.kind === 'open') this.ease('mouthOpen', sp ? sp.open * gate * 0.75 : 0, 20, dt);
+    else if (this.kind === 'jaw') {
+      this.jawA = damp(this.jawA, sp ? sp.open * gate * 0.2 : 0, 20, dt);
+      this.jaw.bone.quaternion.copy(this.jaw.rest).multiply(this._q.setFromAxisAngle(this.jaw.axis, this.jawA));
+    } else if (this.kind === 'sculpt') {
+      // (every copy of her shares one face material: the one who is speaking drives it, and closes it after)
+      const U = this.sculpt;
+      if (sp) U.owner = this;
+      if (U.owner === this) { this.jawA = damp(this.jawA, sp ? sp.open * gate * 0.13 : 0, 20, dt); U.open.value = this.jawA; }
+    }
+    // the expression of the line (the brows also lift a little on a stressed word), and the blink
+    if (this.lids) {
+      const M = MOODS[this.mood] || MOODS.calm;
+      this.blinkT -= dt;
+      if (this.blinkT <= 0) this.blinkT = rand(2.2, 5.5) * (sp ? 0.7 : 1);
+      this.blink = this.blinkT < 0.13 ? 1 : 0;
+      for (const n of Face.EXPR) {
+        if (!this.names.has(n)) continue;
+        let w = M[n] || 0;
+        const lid = n === 'eyeBlinkLeft' || n === 'eyeBlinkRight';
+        if (n === 'browInnerUp') w += lvl * 0.14;
+        if (lid) w = Math.max(w, this.blink);
+        this.ease(n, Math.min(1, w), lid ? 40 : 5, dt);
+      }
+    }
+    // the eyes: on whoever he is talking to, with the small darts eyes make; back to centre when alone
+    if (this.eyes.length) {
+      const head = this.b.rig.j.head;
+      head.getWorldQuaternion(this._h);
+      let yaw = 0, pitch = 0;
+      if (this.gaze) {
+        const d = this._v.copy(this.gaze).sub(head.getWorldPosition(new THREE.Vector3())).applyQuaternion(this._p.copy(this._h).invert());
+        yaw = Math.atan2(d.x, d.z); pitch = Math.atan2(d.y - 0.06, Math.hypot(d.x, d.z));
+        if (Math.abs(yaw) > 1.2) yaw = pitch = 0;
+      }
+      this.sacT -= dt;
+      if (this.sacT <= 0) { this.sacT = rand(0.5, 2.2); this.sac.set(rand(-0.035, 0.035), rand(-0.02, 0.02)); }
+      this.eyeYaw = damp(this.eyeYaw, clamp(yaw, -0.5, 0.5) + this.sac.x, 22, dt);
+      this.eyePitch = damp(this.eyePitch, clamp(pitch, -0.3, 0.3) + this.sac.y, 22, dt);
+      // the turn, about the head's own up and across axes, laid over each eye's resting direction
+      const turn = this._q.setFromEuler(this._e.set(-this.eyePitch, this.eyeYaw, 0));
+      const world = this._w.copy(this._h).multiply(turn).multiply(this._p.copy(this._h).invert());
+      for (const e of this.eyes) {
+        e.bone.parent.getWorldQuaternion(this._p);
+        e.bone.quaternion.copy(this._p).invert().multiply(world).multiply(this._p).multiply(e.rest);
+      }
+    }
+  }
+}
+Face.EXPR = [...new Set(Object.values(MOODS).flatMap((m) => Object.keys(m)).concat(['eyeBlinkLeft', 'eyeBlinkRight', 'browInnerUp']))];
+
+/* ------------------------------------------------------------------ performance
+   Who is speaking, and to whom. Every character with a model is on the cast list under its story name.
+   When a line is spoken (Voice.speak), the character on stage with that name performs it: mouth, head and
+   hands with the voice (Rig, Face), eyes on whoever they are talking to. Everyone else on stage turns to
+   listen. A voice-over (opts.vo) moves nobody. */
+const CAST_NAMES = { arielTeen: 'Ariel', arielGod: 'Ariel', anna: 'Anna', zeus: 'Zeus', jesse: 'Jesse', classmateBoy: 'Marcus', principal: 'Principal', hermes: 'Hermes', ares: 'Ares', hades: 'Hades' };
+const Perform = {
+  cast: [], speaker: null, prev: null, to: null, mood: null, quiet: 0,
+  register(binding) { if (CAST_NAMES[binding.key]) { binding.castName = CAST_NAMES[binding.key]; this.cast.push(binding); } },
+  onStage(b) {
+    let p = b.rig.root;
+    for (; p.parent; p = p.parent) if (!p.visible) return false;
+    return p === G.activeScene && p.visible;
+  },
+  /** the character on stage who answers to this name (the nearest to the lens, if there are two) */
+  find(who) {
+    let best = null, bd = Infinity;
+    for (const b of this.cast) {
+      if (b.castName !== who || !this.onStage(b)) continue;
+      const d = b.rig.root.getWorldPosition(this._v || (this._v = new THREE.Vector3())).distanceToSquared(G.camera.position);
+      if (d < bd) { bd = d; best = b; }
+    }
+    return best;
+  },
+  say(who, text, o) {
+    const b = o.vo || who === 'Narrator' ? null : (o.actor && o.actor.model) || this.find(who);
+    if (this.speaker && this.speaker !== b) this.prev = this.speaker;
+    this.speaker = b;
+    this.to = o.to || null;
+    this.mood = o.mood || this.moodOf(text);
+  },
+  /** a face for a line nobody chose one for: a question lifts the brows, a shout sets them, a trailing-off softens */
+  moodOf(text) {
+    const caps = (text.match(/\b[A-Z]{3,}\b/g) || []).length;
+    if (caps || /!\s*$/.test(text)) return caps ? 'angry' : 'grim';
+    if (/\?\s*$/.test(text)) return 'ask';
+    if (/^…|…\s*$/.test(text)) return 'hurt';
+    return 'calm';
+  },
+  headOf(b) { return b.rig.j.head.getWorldPosition(new THREE.Vector3()); },
+  update(dt) {
+    if (dt <= 0) return;
+    const live = Voice.clock() >= 0, lvl = live ? Voice.level() : 0, mouth = live ? Voice.mouth() : Lips.REST;
+    const sp = live ? this.speaker : null;
+    this.quiet = sp ? 0 : this.quiet + dt;
+    for (const b of this.cast) {
+      const rig = b.rig;
+      if (!this.onStage(b)) { rig.talkW = rig.voice = rig.lookYaw = rig.lookPitch = 0; b._att = null; continue; }
+      const speaking = b === sp;
+      rig.voice = damp(rig.voice, speaking ? lvl : 0, speaking && lvl > rig.voice ? 28 : 10, dt);
+      rig.talkW = damp(rig.talkW, speaking ? 1 : 0, speaking ? 6 : 3, dt);
+      // who this one is looking at: the one who has the floor; when speaking, whoever they are speaking to
+      let tgt = b._att || null;
+      if (speaking) {
+        tgt = (this.to && this.find(this.to)) || (this.prev && this.prev !== b && this.onStage(this.prev) ? this.prev : this.nearest(b));
+      } else if (sp) tgt = sp;
+      else if (this.quiet > 5) tgt = null;
+      if (tgt && !this.onStage(tgt)) tgt = null;
+      b._att = tgt;
+      let yaw = 0, pitch = 0, gaze = null;
+      if (tgt && rig.attend !== false) {
+        gaze = this.headOf(tgt);
+        const h = this.headOf(b), dx = gaze.x - h.x, dz = gaze.z - h.z, dist = Math.hypot(dx, dz);
+        const rel = wrapAngle(Math.atan2(dx, dz) - rig.root.rotation.y);
+        // (someone behind him is not turned to: that is the script's job)
+        if (Math.abs(rel) < 1.9 && dist < 14 && dist > 0.25) { yaw = clamp(rel, -0.75, 0.75) * 0.7; pitch = clamp(-Math.atan2(gaze.y - h.y, dist), -0.3, 0.3) * 0.6; }
+        else gaze = null;
+      }
+      rig.lookYaw = damp(rig.lookYaw, yaw, 3.2, dt);
+      rig.lookPitch = damp(rig.lookPitch, pitch, 3.2, dt);
+      const f = b.face;
+      if (f) {
+        f.speech = speaking ? { v: mouth.v, open: mouth.open, level: lvl } : null;
+        f.gaze = gaze;
+        f.mood = speaking ? this.mood : (b.mood || null);
+      }
+    }
+  },
+  nearest(b) {
+    let best = null, bd = 36;
+    const p = b.rig.root.getWorldPosition(new THREE.Vector3()), q = new THREE.Vector3();
+    for (const o of this.cast) {
+      if (o === b || !this.onStage(o)) continue;
+      const d = o.rig.root.getWorldPosition(q).distanceToSquared(p);
+      if (d < bd) { bd = d; best = o; }
+    }
+    return best;
+  },
+};
 
 class ModelBinding {
   constructor(rig, map, hipsBone) {
@@ -1715,7 +2139,7 @@ class ModelBinding {
   }
   /** copy the rig's current pose onto the model's bones */
   update() {
-    if (!this.map.length) return;
+    if (!this.map.length) { if (this.face) this.face.update(); return; }
     this.rig.root.updateMatrixWorld(true);
     const q = this._q, pq = this._p;
     for (const m of this.map) {
@@ -1727,7 +2151,7 @@ class ModelBinding {
       this.rig.j.hips.getWorldPosition(this._v);
       this.hipsBone.parent.worldToLocal(this._v);
       this.hipsBone.position.copy(this._v);
-    }
+    }    if (this.face) this.face.update();
   }
   materials() {
     const out = new Set();

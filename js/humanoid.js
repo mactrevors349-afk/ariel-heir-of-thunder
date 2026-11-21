@@ -554,6 +554,10 @@ class Rig {
     this.act = null; this.prev = null;
     this.flinch = 0; this.headYaw = 0; this.headPitch = 0;
     this.onStep = null; this._lastS = 0;
+    // speaking and listening (set by Perform): the voice's loudness, how much he is speaking, where he looks,
+    // and how freely each hand talks ([right, left]; a hand holding something is given 0)
+    this.voice = 0; this.talkW = 0; this.phrase = 0; this.lookYaw = 0; this.lookPitch = 0;
+    this.gesture = opts.stance === 'throne' ? [0.25, 0.2] : [1, 0.55]; this.gestK = 1; this.seed = Math.random() * 60;
   }
   setStance(name) { this.stanceName = name; this.stance = compilePose(STANCES[name]); }
   clip(name) {
@@ -743,6 +747,36 @@ class Rig {
     if (this.legYaw) { P[JI.hips + 1] += this.legYaw; P[JI.spine + 1] -= this.legYaw * 0.55; P[JI.chest + 1] -= this.legYaw * 0.45; }
     P[JI.neck + 1] += this.headYaw * 0.6; P[JI.head + 1] += this.headYaw * 0.4;
     P[JI.neck] += this.headPitch * 0.6; P[JI.head] += this.headPitch * 0.4;
+    // ---- speaking: the head moves with the voice (a nod on each stressed syllable over a slow, wandering tilt),
+    // the chest comes forward a little, and the free hands talk too: they rise through a phrase, beat on its
+    // stresses and settle in its pauses. An action that poses the arms itself (a point, a shrug) keeps them.
+    const tw = this.talkW;
+    if (tw > 0.002) {
+      const t = this.breath + this.seed, v = this.voice;
+      this.phrase = damp(this.phrase, v, v > this.phrase ? 5 : 1.5, dt);
+      const ph = this.phrase;
+      P[JI.neck] += (v * 3.0 + Math.sin(t * 2.3) * 1.1) * tw * DEG;
+      P[JI.head] += (v * 2.4 - 1.6) * tw * DEG;
+      P[JI.neck + 1] += Math.sin(t * 0.83) * 2.8 * tw * DEG;
+      P[JI.head + 2] += Math.sin(t * 0.61 + 1.3) * 2.2 * tw * DEG;
+      P[JI.chest] += (1.0 + ph * 1.5) * tw * DEG;
+      this.gestK = damp(this.gestK, this.act || this.prev || g > 0.2 ? 0 : 1, 5, dt);
+      const gk = tw * this.gestK, gR = this.gesture[0] * gk, gL = this.gesture[1] * gk;
+      if (gR > 0.01) {
+        const lift = ph * 17 + v * 5;
+        P[JI.armR] -= lift * 0.45 * gR * DEG; P[JI.elbowR] -= (lift + 4) * gR * DEG; P[JI.armR + 2] -= ph * 5 * gR * DEG;
+        P[JI.handR] -= (ph * 8 + Math.sin(t * 1.7) * 4) * gR * DEG;
+      }
+      if (gL > 0.01) {
+        const lift = ph * 13 + v * 4 * Math.max(0, Math.sin(t * 0.37 + 2));
+        P[JI.armL] -= lift * 0.4 * gL * DEG; P[JI.elbowL] -= (lift + 3) * gL * DEG; P[JI.armL + 2] += ph * 4 * gL * DEG;
+      }
+    } else this.phrase = 0;
+    // ---- attention: the head (and a little of the shoulders) turned toward whoever has the floor
+    if (this.lookYaw || this.lookPitch) {
+      P[JI.neck + 1] += this.lookYaw * 0.5; P[JI.head + 1] += this.lookYaw * 0.4; P[JI.chest + 1] += this.lookYaw * 0.14;
+      P[JI.neck] += this.lookPitch * 0.5; P[JI.head] += this.lookPitch * 0.5;
+    }
     this.apply(P);
   }
   /**
@@ -1644,6 +1678,7 @@ function buildAres() {
   J.handR.add(parts.weapon);
   finalize(root);
   const rig = new Rig(root, J, { stance: 'ares', armSwing: [0.6, 0.3], size: 2.5, stepLen: 1.0 });
+  rig.gesture = [0.1, 0.8];   // the greatsword is in his right hand
   root.scale.setScalar(2.5);
   return { root, J, rig, parts };
 }
@@ -1676,6 +1711,7 @@ function buildHermes() {
   J.handL.add(parts.staff);
   finalize(root);
   const rig = new Rig(root, J, { stance: 'hermes', armSwing: [0.1, 1] });
+  rig.gesture = [1, 0.05];    // the caduceus is in his left hand: the right does the talking
   // the God of War Hermes wears the rig; the code-built body above is only the stand-in if it can't load
   const model = Models.attach(rig, 'hermes', { keep: [parts.staff] });
   // the model's left hand is closed round the caduceus: the staff stands in that fist, upright, with the wrist straight

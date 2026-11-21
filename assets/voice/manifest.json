@@ -191,12 +191,6 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Because the answer is always \"he had to go.\" Seventeen years, Mom. Who just goes?"
  },
- "67b040c8": {
-  "who": "Anna",
-  "dur": 6.46,
-  "voice": "en-US-EmmaMultilingualNeural",
-  "text": "…Sit down. You want to know? Then I'll tell you. All of it. Just once."
- },
  "e6314f09": {
   "who": "Anna",
   "dur": 9.17,
@@ -725,6 +719,12 @@
   "voice": "en-US-AvaMultilingualNeural",
   "text": "He has your eyes. And your father's weather."
  },
+ "a5b42300": {
+  "who": "Ariel",
+  "dur": 4.75,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "Kratos. His name is Kratos. In the old tongue it means strength."
+ },
  "f8aec782": {
   "who": "Zeus",
   "dur": 6.41,
@@ -911,11 +911,11 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Zeus came as a warm summer rain. Ares came in his own fire, and for the first time it warmed instead of burned."
  },
- "a5b42300": {
-  "who": "Ariel",
-  "dur": 4.75,
-  "voice": "en-US-BrianMultilingualNeural",
-  "text": "Kratos. His name is Kratos. In the old tongue it means strength."
+ "3a125724": {
+  "who": "Narrator",
+  "dur": 17.09,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Two winters after Kratos came his brother, Deimos. The old poets had a word for him before he was born: Dread, who rides at the War-god's side. A red ember burned beside the blue in him, the war-god's shard come home in the blood."
  },
  "305bbbf8": {
   "who": "Narrator",
@@ -929,12 +929,6 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Kratos had his father's strength, and Deimos the War-god's fury. Ariel, who had carried both, taught them the one thing no god had ever learned: when not to fight."
  },
- "3a125724": {
-  "who": "Narrator",
-  "dur": 17.09,
-  "voice": "en-US-AndrewMultilingualNeural",
-  "text": "Two winters after Kratos came his brother, Deimos. The old poets had a word for him before he was born: Dread, who rides at the War-god's side. A red ember burned beside the blue in him, the war-god's shard come home in the blood."
- },
  "0254fad0": {
   "who": "Narrator",
   "dur": 19.06,
@@ -946,6 +940,12 @@
   "dur": 11.33,
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "And it was Kratos, too, who walked beside Heracles on the day the chains were broken. His father had taught him that strength is also knowing when to let go."
+ },
+ "0ed12fd0": {
+  "who": "Narrator",
+  "dur": 12.77,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Deimos rode out with his uncle Ares, Dread beside the War-god as in every song since. But wherever the two of them came, the armies laid down their spears before a blow was struck."
  },
  "fe2c3fc4": {
   "who": "Narrator",
@@ -1163,10 +1163,10 @@
   "voice": "en-US-EricNeural",
   "text": "Fire, O fire… when he lifts his blade to the sky, run."
  },
- "0ed12fd0": {
-  "who": "Narrator",
-  "dur": 12.77,
-  "voice": "en-US-AndrewMultilingualNeural",
-  "text": "Deimos rode out with his uncle Ares, Dread beside the War-god as in every song since. But wherever the two of them came, the armies laid down their spears before a blow was struck."
+ "92822c9d": {
+  "who": "Anna",
+  "dur": 6.29,
+  "voice": "en-US-EmmaMultilingualNeural",
+  "text": "…All right. You want to know? Then I'll tell you. All of it. Just once."
  }
 }

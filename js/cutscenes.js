@@ -61,7 +61,13 @@ const Cutscene = {
       cam.position.lerpVectors(T.p0, T.p1, k);
       T.look.lerpVectors(T.l0, T.l1, k);
       if (T.f1) { cam.fov = lerp(T.f0, T.f1, k); cam.updateProjectionMatrix(); }
-      if (T.t >= 1) { this.tween = null; this.lastLook = T.look.clone(); }
+      if (T.t >= 1) { this.tween = null; this.lastLook = T.look.clone(); this.creep = { p: cam.position.clone(), t: 0 }; }
+    } else if (this.creep && this.lastLook) {
+      // a locked-off shot is never quite still: it creeps in on its subject, as a camera on a dolly would
+      // (most in a close shot, hardly at all in a wide one; it eases off after a few seconds)
+      const C = this.creep, d = C.p.distanceTo(this.lastLook);
+      C.t += dt;
+      cam.position.copy(C.p).lerp(this.lastLook, (1 - Math.exp(-C.t * 0.16)) * 0.085 * smooth(45, 5, d));
     }
     const look = T ? T.look : this.lastLook;
     if (look) {
@@ -85,7 +91,7 @@ const Cutscene = {
       // how hard each stage is lit: the golden hall takes the full rig; daylight, the kitchen and the
       // night scenes only a touch, or the key would look like a lamp on a film set
       scene.userData.filmK = scene === Prologue.olympus || scene === Prologue.tartarus ? 1 : scene === Campus.scene ? 0.4
-        : scene === Memory.scene ? 0.35 : scene === Home.scene || scene === School.scene ? 0.6 : 0.85;
+        : scene === Memory.scene ? 0.35 : scene === Home.scene ? 0.6 : scene === School.scene ? 1 : 0.85;
       // (no rim under an open overcast sky: it would only flare in the school's glass)
       scene.userData.filmRim = scene === Campus.scene ? 0 : 1;
       const key = new THREE.SpotLight(0xfff1e0, 0, 6.5, 0.42, 0.85, 2), rim = new THREE.SpotLight(0xdce6ff, 0, 6.5, 0.42, 0.85, 2);
@@ -125,10 +131,11 @@ const Cutscene = {
       this.timers.push({ t: sec, res, rej, until });
     });
   },
-  async say(who, text, dur) {
+  /** opts: { vo: a voice-over nobody on screen mouths, mood: the speaker's face, to: who it is said to, actor } */
+  async say(who, text, dur, opts) {
     this.check();
     UI.subtitle(who, text);
-    Voice.speak(text, who);
+    Voice.speak(text, who, opts);
     this.active.advance = false;
     // recorded lines hold the subtitle for the clip's length; otherwise estimate from the text
     const clip = Voice.duration(text, who);
@@ -143,8 +150,67 @@ const Cutscene = {
     this.lastLook = look.clone();
     G.camera.lookAt(look);
     if (fov) { G.camera.fov = fov; G.camera.updateProjectionMatrix(); }
+    this.creep = { p: pos.clone(), t: 0 };
+  },
+  /** the middle of an actor's face, in the world (the rig's head joint sits at the jaw) */
+  faceOf(a) { a.root.updateMatrixWorld(true); return a.rig.j.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.075 * (a.rig.size || 1), 0)); },
+  /**
+   * Two people talking, covered as films cover them. over(a, b): past a's shoulder onto b's face, a long lens
+   * well behind a, so a is a soft edge of the frame and b fills it. single(a, b): a alone, from beside b.
+   * side: +1 / -1, which shoulder; tight: 0..1, how close the lens comes in (for the lines that matter).
+   */
+  over(a, b, { side = 1, tight = 0, up = 0.05, back = 0.95, out = null, edge = 0.8 } = {}) {
+    const ha = this.faceOf(a), hb = this.faceOf(b), gap = hb.clone().sub(ha).setY(0).length(), d = hb.clone().sub(ha).setY(0).normalize(), r = new THREE.Vector3(d.z, 0, -d.x);
+    // two people standing well apart (Hermes across a roof or a meadow): stand further back and use a longer lens, so
+    // the far one is still seen from the waist up and the near head doesn't swell to fill the frame
+    const far = Math.max(1, gap / 2.2), back0 = back;
+    back = Math.min(back * far, 2.6);
+    // and never back into a column or a wall behind the near one: stop a little short of it
+    { const to = d.clone().multiplyScalar(-back).addScaledVector(r, back * 0.3 * side).add(new THREE.Vector3(0, up, 0));
+      const hit = this.solidAlong(ha, to.clone().normalize(), to.length() + 0.35, [a.root, b.root]);
+      if (hit != null) back = Math.max(0.8, Math.min(back, (hit - 0.35) * back / to.length())); }
+    const fov = lerp(30, 23, tight) * clamp((2.2 + back0) / (gap + back), 0.5, 1);
+    // how far out to the side of the near head the lens sits: just enough to put that head at the edge of the frame
+    // (`edge` of the way out from the centre). A fixed offset lost the near shoulder altogether on a long lens,
+    // or on a narrower screen, and the shot became a plain single
+    if (out == null) { const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(fov / 2)) * (G.camera.aspect || 16 / 9)); out = back * Math.tan(half * edge); }
+    this.shot(ha.clone().addScaledVector(d, -back).addScaledVector(r, out * side).add(new THREE.Vector3(0, up, 0)), hb.clone().add(new THREE.Vector3(0, -0.04, 0)), fov);
+  },
+  /** distance along a ray to the first solid, visible thing in the scene (not people, particles or glass), or null */
+  solidAlong(from, dir, far, skip = []) {
+    const rc = this._rc || (this._rc = new THREE.Raycaster());
+    rc.set(from, dir); rc.near = 0.05; rc.far = far;
+    const list = [];
+    const walk = (o) => {
+      if (!o.visible || skip.includes(o) || o.isSkinnedMesh || o.isPoints || o.isLine || o.isSprite) return;
+      // (the open world's ground is one mesh of hundreds of thousands of triangles, far too slow to ray-test at a cut: it is
+      // checked against its height map below instead)
+      const tris = o.geometry && (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3;
+      if (o.isMesh && !(tris > 150000 && !o.isInstancedMesh)) { const m = Array.isArray(o.material) ? o.material[0] : o.material; if (m && !(m.transparent && (m.opacity < 0.9 || !m.depthWrite)) && m.visible !== false) list.push(o); }
+      for (const c of o.children) walk(c);
+    };
+    walk(G.activeScene || G.scene);
+    const h = rc.intersectObjects(list, false)[0];
+    let best = h ? h.distance : null;
+    if ((G.activeScene || G.scene) === G.scene && typeof World !== 'undefined' && World.getHeight) {
+      const p = new THREE.Vector3();
+      for (let t = 0.25; t <= far && (best == null || t < best); t += 0.25) { p.copy(from).addScaledVector(dir, t); if (p.y < World.getHeight(p.x, p.z) + 0.15) { best = t; break; } }
+    }
+    return best;
+  },
+  /** over god-form Ariel's shoulder: further back and a little higher, and further out to the side, since his helm and
+   * the great plates on his shoulders are far wider than a boy's head (nearer in, they filled half the frame) */
+  overAriel(P, b, o = {}) { this.over(P, b, { back: 1.5, up: 0.2, edge: 1.25, ...o }); },
+  single(a, b, { side = 1, tight = 0, up = 0, dist = 0, low = 0 } = {}) {
+    const ha = this.faceOf(a), hb = this.faceOf(b), gap = Math.hypot(hb.x - ha.x, hb.z - ha.z);
+    const d = hb.clone().sub(ha).setY(0).normalize(), r = new THREE.Vector3(d.z, 0, -d.x);
+    // (two people at arm's length: the lens goes beside the listener's shoulder, not between their faces)
+    const near = gap < 1.8;
+    const far = dist || (near ? Math.max(0.9, gap - 0.12) : lerp(1.35, 1.0, tight));
+    this.shot(ha.clone().addScaledVector(d, far).addScaledVector(r, (near && !dist ? 0.5 : 0.32) * side).add(new THREE.Vector3(0, up, 0)), ha.clone().add(new THREE.Vector3(0, -0.05 - low, 0)), lerp(32, 26, tight));
   },
   move(pos, look, dur, { fov, ease = easeInOutCubic } = {}) {
+    this.creep = null;
     const cam = G.camera;
     const l0 = (this.tween ? this.tween.look : this.lastLook || look).clone();
     this.tween = { p0: cam.position.clone(), p1: pos.clone(), l0, l1: look.clone(), look: l0.clone(), t: 0, dur, ease, f0: cam.fov, f1: fov };
@@ -306,9 +372,15 @@ const School = {
     const h = buildHermes();
     this.hermes = h; s.add(h.root);
     h.root.visible = false;
-    const halo = new THREE.PointLight(0xffd690, 6, 7, 2);
+    // (soft enough that the folds of his white tunic still show: brighter, it burned out flat)
+    const halo = new THREE.PointLight(0xffd690, 4, 7, 2);
     halo.position.set(0, 1.4, 0.9);
     h.root.add(halo);
+    // and his light thrown ahead of him, across the roof to Ariel (a second lamp well out in front: one bright
+    // enough at his own side to reach that far burned Hermes himself out to a white blaze)
+    const reach = new THREE.PointLight(0xffd9a0, 11, 16, 1.6);
+    reach.position.set(0, 2.3, 3.0);
+    h.root.add(reach);
     h.rig.play('talk', { fade: 0.01 });
     this.camera = G.camera;
   },
@@ -1841,7 +1913,7 @@ const SCRIPTS = {
       await c.say('Ariel', 'My father walked out before I was born.');
       c.shot(V(0.9, 1.75, -8), V(-1.8, 1.75, -5.8), 34);
       await c.say('Hermes', 'Your father is Zeus, King of Olympus. And right now, Olympus is dying.');
-      c.shot(V(4.2, 1.8, -3.6), V(0, 1.2, -8), 44);
+      c.over(A, H, { tight: 0.7, side: -1 });
       await c.say('Hermes', 'Kronos has corrupted the gods. Ares, Athena, Poseidon — all of them. Only the blood of Zeus can reclaim their stolen sparks.');
       c.shot(V(-0.6, 1.75, -8.2), V(1.5, 1.42, -9.6), 36);
       await c.say('Ariel', 'I have a chemistry test on Monday.');
@@ -1897,26 +1969,37 @@ const SCRIPTS = {
       // Hermes lands
       const Hm = G.hermes;
       Hm.root.visible = true;
+      // he lands facing the boy he came for (his heading from placeWorld is the way he will point later)
+      Hm.heading = Math.atan2(P.pos.x - Hm.pos.x, P.pos.z - Hm.pos.z); Hm.face = P.pos;
+      Hm.update(0);
       FX.sparks(Hm.pos.clone().add(V(0, 1, 0)), null, 60, [2.6, 2.0, 0.8, 1], 6);
       Sound.bell();
-      c.shot(V(P.pos.x + 1.6, P.pos.y + 1.7, P.pos.z - 1.2), V(Hm.pos.x, Hm.pos.y + 1.6, Hm.pos.z), 40);
+      P.root.updateMatrixWorld(true); Hm.root.updateMatrixWorld(true);
+      c.overAriel(P, Hm, { tight: 1 });
       await c.say('Hermes', 'Welcome to Elysia — the Shattered Realm, where the broken pieces of Olympus come to rest.');
+      c.single(Hm, P, { dist: 2.5, low: 0.2 });
       await c.say('Hermes', 'That blade is Keraunos, forged from your father\'s first thunderbolt. It answers only to his blood.');
-      c.shot(V(Hm.pos.x - 1.4, Hm.pos.y + 1.7, Hm.pos.z + 1.4), V(P.pos.x, P.pos.y + 1.55, P.pos.z), 40);
+      c.single(P, Hm, { dist: 2.3, low: 0.12, side: -1 });
       await c.say('Ariel', 'Cool. Cool cool cool. And the mountain with the storm sitting on top of it?');
       c.shot(V(S.x - 6, S.fy + 4, S.z - 30), V(-420, 700, -2800), 42);
       await c.say('Hermes', 'Olympus. Kronos sits upon your father\'s throne. But you are not ready for him — not yet.');
       const R = World.sites.arena;
-      c.shot(V(P.pos.x + 1.2, P.pos.y + 2.2, P.pos.z + 3.5), V(R.x, R.y + 30, R.z), 50);
+      // (out in front of him, looking the way Hermes points: from behind him the temple's columns stood in the way)
+      { const n = V(R.x - P.pos.x, 0, R.z - P.pos.z).normalize();
+        c.shot(P.pos.clone().addScaledVector(n, 3.2).add(V(0, 2.4, 0)), V(R.x, R.y + 30, R.z), 46);
+        c.move(P.pos.clone().addScaledVector(n, 5.5).add(V(0, 3.0, 0)), V(R.x, R.y + 24, R.z), 7, { ease: (t) => t }); }
+      Hm.face = V(R.x, 0, R.z);
       Hm.rig.play('point', { fade: 0.3 });
       await c.say('Hermes', 'North, past the Agora, stands the Colosseum of Ares. The God of War has fallen to the rot. Free him, and reclaim the Spark of War.');
       Hm.rig.play('talk', { fade: 0.4 });
-      c.shot(V(P.pos.x + 1.6, P.pos.y + 1.7, P.pos.z - 1.2), V(Hm.pos.x, Hm.pos.y + 1.6, Hm.pos.z), 40);
+      Hm.face = P.pos;
+      c.single(Hm, P, { dist: 2.5, low: 0.2 });
       await c.say('Hermes', 'When you are hurt, rest at the Altars of Hestia. Her flame mends flesh… though it also wakes the shades you have slain.');
-      c.shot(V(Hm.pos.x - 1.4, Hm.pos.y + 1.7, Hm.pos.z + 1.4), V(P.pos.x, P.pos.y + 1.55, P.pos.z), 40);
+      c.single(P, Hm, { dist: 2.3, low: 0.12, side: -1 });
       await c.say('Ariel', 'Shades. Ghost soldiers. Great. Love that for me.');
-      c.shot(V(P.pos.x + 1.6, P.pos.y + 1.7, P.pos.z - 1.2), V(Hm.pos.x, Hm.pos.y + 1.6, Hm.pos.z), 40);
+      c.overAriel(P, Hm, { tight: 1 });
       await c.say('Hermes', 'Go, Heir of Thunder. I will be watching. Probably from somewhere very safe.');
+      Hm.face = null;
     },
     /** the fall of Olympus, told by the narrator over the two prologue stages */
     async prologue(c, N) {
@@ -1964,7 +2047,8 @@ const SCRIPTS = {
       await b.until(b.word('Poseidon'));
       portrait(PR.poseidon);
       await b.until(b.word('Wise Athena'));
-      portrait(PR.athena, 2.4, -0.7);
+      // (from further back and lower than the others: her model's face does not hold a close-up)
+      portrait(PR.athena, 4.6, -1.5, 30, -0.75);
       await b.until(b.word('Hades'));
       portrait(PR.hades, 3.0, 0.9, 34);
       await b.end(0.2);
@@ -2116,7 +2200,8 @@ const SCRIPTS = {
       await c.wait(3.6);
       UI.chapter(null);
       await c.say('Anna', 'Ariel! You have eight minutes, and I have watched you lose a fight with a sock for longer than that.');
-      A.route([[-3.0, -0.05], [-1.5, 0.35], [-0.35, 0.55]], 1.3);
+      // (he comes right in to her: across a room they were two figures; at arm's length they are a mother and a son)
+      A.route([[-3.0, -0.05], [-1.6, 0.1], [-0.95, -0.62]], 1.3);
       // from inside the kitchen, onto the hall doorway he comes through
       c.shot(V(0.2, 1.6, 2.2), V(-3.4, 1.3, -0.1), 44);
       c.move(V(-0.6, 1.58, 2.3), V(-1.0, 1.25, 0.2), 4.5);
@@ -2125,34 +2210,35 @@ const SCRIPTS = {
       await c.wait(3, () => A.arrived());
       A.faceTo(M.root.position.x, M.root.position.z);
       M.faceTo(A.root.position.x, A.root.position.z);
+      await c.wait(0.5);
       // over his shoulder, onto her
-      c.shot(A.root.position.clone().add(V(0.55, 1.62, 0.75)), head(M, 1.5), 40);
-      await c.say('Anna', 'It\'s mine. Yours is orange juice and a lecture.');
-      c.shot(M.root.position.clone().add(V(-0.45, 1.55, 0.35)), head(A, 1.55), 40);
-      await c.say('Ariel', 'Can I skip to the juice?');
-      c.shot(A.root.position.clone().add(V(0.55, 1.62, 0.75)), head(M, 1.5), 38);
+      c.over(A, M);
+      await c.say('Anna', 'It\'s mine. Yours is orange juice and a lecture.', 0, { mood: 'wry' });
+      c.single(A, M);
+      await c.say('Ariel', 'Can I skip to the juice?', 0, { mood: 'wry' });
+      c.over(A, M);
       await c.say('Anna', 'Mrs. Patterson called. Every microscope in the science lab fried at once. While you were standing next to them.');
       A.rig.play('shrug', { fade: 0.2 });
-      c.shot(M.root.position.clone().add(V(-0.45, 1.55, 0.35)), head(A, 1.55), 38);
-      await c.say('Ariel', 'That\'s a coincidence. Electronics hate me. It\'s a known thing.');
-      c.shot(A.root.position.clone().add(V(0.4, 1.6, 0.6)), head(M, 1.52), 34);
+      c.single(A, M);
+      await c.say('Ariel', 'That\'s a coincidence. Electronics hate me. It\'s a known thing.', 0, { mood: 'wry' });
+      c.over(A, M, { tight: 0.7 });
       await c.say('Anna', 'Electronics hated your father, too.');
-      await c.wait(0.6);
-      c.shot(V(0.9, 1.35, 1.9), V(-0.6, 1.4, -0.6), 40);
-      await c.say('Ariel', 'You never talk about him.');
+      await c.wait(0.9);
+      // the two of them, and the silence between them
+      { const m = c.faceOf(A).lerp(c.faceOf(M), 0.5), d = c.faceOf(M).sub(c.faceOf(A)).setY(0).normalize(), r = V(d.z, 0, -d.x);
+        c.shot(m.clone().addScaledVector(r, 2.3).add(V(0, -0.1, 0)), m.clone().add(V(0, -0.15, 0)), 34); }
+      await c.say('Ariel', 'You never talk about him.', 0, { mood: 'hurt' });
       await c.say('Anna', 'You never ask.');
-      c.shot(M.root.position.clone().add(V(-0.35, 1.5, 0.3)), head(A, 1.55), 34);
-      c.move(M.root.position.clone().add(V(-0.3, 1.52, 0.55)), head(A, 1.56), 6, { ease: (t) => t });
+      c.single(A, M, { tight: 0.6 });
       // his temper reaches the wiring before it reaches his voice
       Hm.stutter(1.6);
       const t = Hm.toaster.position.clone().add(V(0, 0.12, 0));
       setTimeout(() => { FX.sparks(t, V(0, 1, 0.3), 26, [1.4, 1.9, 3.4, 1], 4); Sound.zap(); }, 900);
-      await c.say('Ariel', 'Because the answer is always "he had to go." Seventeen years, Mom. Who just goes?');
+      await c.say('Ariel', 'Because the answer is always "he had to go." Seventeen years, Mom. Who just goes?', 0, { mood: 'angry' });
       c.shot(V(0.3, 2.0, 1.3), V(0.75, 2.0, 0.75), 46);
       await c.wait(1.4);
-      c.shot(A.root.position.clone().add(V(0.4, 1.58, 0.6)), head(M, 1.52), 32);
-      c.move(A.root.position.clone().add(V(0.3, 1.56, 0.4)), head(M, 1.52), 8, { ease: (t) => t });
-      await c.say('Anna', '…Sit down. You want to know? Then I\'ll tell you. All of it. Just once.');
+      c.over(A, M, { tight: 1 });
+      await c.say('Anna', '…All right. You want to know? Then I\'ll tell you. All of it. Just once.');
       await c.say('Anna', 'It was the summer I turned twenty. The worst storm this town has ever seen — and I was the only fool out on the old pier, watching it come in.');
       await UI.fade(1, 1.4);
 
@@ -2172,7 +2258,7 @@ const SCRIPTS = {
       Me.strike(true);
       Z.root.visible = true;
       Z.route([[0.2, 2.0], [0.15, L.z - 1.1]], 1.15);
-      await c.say('Anna', 'He walked out of the rain like it was parting for him. He didn\'t run. He didn\'t even get wet.');
+      await c.say('Anna', 'He walked out of the rain like it was parting for him. He didn\'t run. He didn\'t even get wet.', 0, { vo: true });
       // over her shoulder, down the pier at him coming out of the rain (in front of her, she hid him)
       c.shot(V(L.x - 1.5, 1.65, L.z + 1.3), V(0.2, 1.7, L.z - 3.5), 44);
       c.move(V(L.x - 1.35, 1.62, L.z + 1.0), V(0.2, 1.7, L.z - 1.8), 5.5, { ease: (t) => t });
@@ -2198,7 +2284,7 @@ const SCRIPTS = {
       c.shot(V(-2.4, 2.4, L.z - 1.5), V(0.4, 1.5, L.z + 0.2), 40);
       c.move(V(-2.0, 2.6, L.z - 3.5), V(0.4, 1.6, L.z + 0.4), 8, { ease: (t) => t });
       Me.strike(false);
-      await c.say('Anna', 'He stayed the whole summer. I never asked where he came from. I think part of me already knew.');
+      await c.say('Anna', 'He stayed the whole summer. I never asked where he came from. I think part of me already knew.', 0, { vo: true });
       await UI.fade(1, 1.2);
       // ---- the night Ariel was born: the same lamp, a worse storm, a newborn in her arms
       Z.root.visible = false;
@@ -2208,7 +2294,7 @@ const SCRIPTS = {
       c.shot(V(1.6, 1.6, L.z + 2.4), YA.root.position.clone().add(V(0, 1.25, 0)), 38);
       c.move(V(1.3, 1.5, L.z + 1.8), YA.root.position.clone().add(V(0, 1.2, 0)), 9, { ease: (t) => t });
       UI.fade(0, 1.6);
-      await c.say('Anna', 'He left before you were born. And the night you came into the world, every light in the hospital went out — and he was there. Just for a moment.');
+      await c.say('Anna', 'He left before you were born. And the night you came into the world, every light in the hospital went out — and he was there. Just for a moment.', 0, { vo: true });
       // he is simply there, in the flash
       Z.root.position.set(L.x + 0.35, 0, L.z - 0.5); Z.root.rotation.y = Math.atan2(YA.root.position.x - Z.root.position.x, YA.root.position.z - Z.root.position.z);
       Z.rig.stop(0.01);
@@ -2271,12 +2357,12 @@ const SCRIPTS = {
       c.move(V(0.6, 1.4, 1.5), V(-0.7, 1.45, -0.8), 9, { ease: (t) => t });
       UI.fade(0, 1.6);
       await c.say('Anna', 'Look up whenever it storms. That\'s all he left me. That, and you.');
-      c.shot(M.root.position.clone().add(V(-0.45, 1.55, 0.35)), head(A, 1.55), 38);
-      await c.say('Ariel', 'Mom. You\'re telling me Dad was some kind of… weather guy.');
-      c.shot(A.root.position.clone().add(V(0.55, 1.62, 0.75)), head(M, 1.5), 36);
+      c.single(A, M, { tight: 0.5 });
+      await c.say('Ariel', 'Mom. You\'re telling me Dad was some kind of… weather guy.', 0, { mood: 'ask' });
+      c.over(A, M, { tight: 0.5 });
       await c.say('Anna', 'I didn\'t say what he was.');
-      c.shot(M.root.position.clone().add(V(-0.45, 1.55, 0.35)), head(A, 1.55), 36);
-      await c.say('Ariel', 'You kind of did.');
+      c.single(A, M, { tight: 0.5 });
+      await c.say('Ariel', 'You kind of did.', 0, { mood: 'wry' });
       // (her coffee goes back on the counter on the cut)
       Hm.holdMug(false);
       M.rig.play('offer', { fade: 0.4 });
@@ -2284,9 +2370,9 @@ const SCRIPTS = {
       await c.say('Anna', 'Take the umbrella. It\'s going to storm.');
       await c.say('Ariel', 'It always storms.');
       M.rig.stop(0.5);
-      c.shot(A.root.position.clone().add(V(0.4, 1.6, 0.6)), head(M, 1.52), 34);
-      await c.say('Anna', 'Around you, it does. Now go, you\'ll be late. And Ariel? Be kind today.');
-      A.route([[-1.5, 0.35], [-3.0, -0.05], [-5.0, -0.05]], 1.3);
+      c.over(A, M, { tight: 0.8 });
+      await c.say('Anna', 'Around you, it does. Now go, you\'ll be late. And Ariel? Be kind today.', 0, { mood: 'warm' });
+      A.route([[-1.6, 0.1], [-3.0, -0.05], [-5.0, -0.05]], 1.3);
       c.shot(V(2.6, 1.6, 2.2), V(-2.4, 1.1, -0.2), 46);
       await c.wait(2.6);
       await UI.fade(1, 1.2);
@@ -2319,8 +2405,8 @@ const SCRIPTS = {
       A.faceTo(jp.x, jp.z);
       // the two of them, face to face; and over each one's shoulder onto the other
       const aj = () => J.root.position.clone().sub(A.root.position).setY(0).normalize(), sideOf = (d) => V(d.z, 0, -d.x);
-      const overHim = () => { const d = aj(); c.shot(A.root.position.clone().addScaledVector(d, -0.75).addScaledVector(sideOf(d), 0.42).add(V(0, 1.6, 0)), jH(), 36); };
-      const onHim = () => { const d = aj(); c.shot(J.root.position.clone().addScaledVector(d, 0.7).addScaledVector(sideOf(d), -0.4).add(V(0, 1.5, 0)), A.root.position.clone().add(V(0, 1.58, 0)), 36); };
+      const overHim = () => c.over(A, J, { side: 1 });
+      const onHim = () => c.single(A, J, { side: -1 });
       const twoShot = () => { const d = aj(), m = A.root.position.clone().lerp(J.root.position, 0.5); c.shot(m.clone().addScaledVector(sideOf(d), 2.4).add(V(0, 1.45, 0)), m.clone().add(V(0, 1.3, 0)), 40); };
       twoShot();
       await c.say('Jesse', 'You\'re late, Stormborn. Even for you.');
@@ -2388,6 +2474,8 @@ const SCRIPTS = {
       A.faceTo(Pr.root.position.x, Pr.root.position.z);
       await c.wait(0.4);
       Pr.rig.play('point', { fade: 0.3 });
+      // (the arm comes down again after the shout: held out for the whole speech it was a signpost)
+      setTimeout(() => Pr.rig.stop(0.9), 1700);
       c.shot(V(-0.6, S.landingY + 1.25, D.z + 3.9), V(0.15, S.landingY + 1.6, D.z + 1.3), 36);
       await c.say('Principal', 'STORMBORN! My office. Now. And after school, you can spend the evening in detention, thinking about school property.');
       Pr.rig.stop(0.6);
@@ -2416,6 +2504,7 @@ const SCRIPTS = {
       G.hermes.root.visible = false;
     },
     async finish() {
+      if (G.hermes) G.hermes.face = null;
       if (G.activeScene !== G.scene) { Game.useScene(G.scene); }
       Sound.stopRain();
       Sound.startWind(); Sound.setWind(1);
@@ -2517,8 +2606,10 @@ const SCRIPTS = {
       P.rig.play('kneel', { fade: 0.15 });
       Hm.rig.play('talk', { fade: 0.4 });
       // over the shoulder, both ways
-      const onHermes = () => c.shot(P.pos.clone().addScaledVector(d, 1.3).addScaledVector(side, 0.85).add(V(0, 1.75, 0)), hp.clone().add(V(0, 1.5, 0)), 36);
-      const onAriel = (y = 1.2) => c.shot(hp.clone().addScaledVector(d, -1.1).addScaledVector(side, -0.75).add(V(0, 1.7, 0)), P.pos.clone().add(V(0, y, 0)), 36);
+      // (alternating: past his shoulder onto Hermes, then Hermes alone from the waist up, so no line is a repeat of the last)
+      let hk = 0;
+      const onHermes = () => { P.root.updateMatrixWorld(true); Hm.root.updateMatrixWorld(true); if (hk++ % 2) c.single(Hm, P, { dist: 2.5, low: 0.2 }); else c.overAriel(P, Hm, { tight: 1 }); };
+      const onAriel = () => { P.root.updateMatrixWorld(true); Hm.root.updateMatrixWorld(true); c.single(P, Hm, { dist: 2.3, low: 0.12, side: -1 }); };
       onAriel(1.0);
       await c.wait(0.8);
       await c.say('Ariel', 'He was in my head. He moved my arm. Hermes — what is he talking about?');
@@ -2673,9 +2764,16 @@ const SCRIPTS = {
       c.shot(bp.clone().add(toP.clone().multiplyScalar(4.6)).add(V(-1.3, 1.5, 0)), bp.clone().add(V(0, 2.2, 0)).addScaledVector(toP, 0.8), 38);
       await c.wait(1.6);
       await c.say('Ares', 'The rot… it burns away. My mind is… my own again.');
+      // (Ariel, hearing it: from the kneeling god's own eye line, looking up at the boy who beat him; low, so he stands
+      // against the colonnade and the sky rather than the bare edge of the arena floor)
+      { const sd = V(toP.z, 0, -toP.x); P.root.updateMatrixWorld(true);
+        c.shot(P.pos.clone().addScaledVector(toP, -2.3).addScaledVector(sd, 0.7).add(V(0, 1.0, 0)), P.pos.clone().add(V(0, 1.56, 0)), 32); }
       await c.say('Ares', 'Boy. Kronos waits on Olympus, on your father\'s throne. Every god you free will weaken his hold.');
       // the shard: what Zeus took from him is now his to give
+      c.shot(bp.clone().add(toP.clone().multiplyScalar(4.6)).add(V(-1.3, 1.5, 0)), bp.clone().add(V(0, 2.2, 0)).addScaledVector(toP, 0.8), 38);
       await c.say('Ares', 'That shard in your chest… I hated you for it before you could walk. A mortal, wearing my strength like a borrowed cloak.');
+      // closer (the same place, a longer lens) for the line that ends it
+      c.shot(bp.clone().add(toP.clone().multiplyScalar(4.6)).add(V(-1.3, 1.5, 0)), bp.clone().add(V(0, 2.3, 0)).addScaledVector(toP, 0.8), 27);
       await c.say('Ares', 'It was never his to give. So let it be mine. Keep it, brother.');
       // the Spark of War
       const orb = FX.plasma(0.42, [6, 1.6, 0.45]);
@@ -3024,7 +3122,7 @@ const SCRIPTS = {
       c.shot(ph.clone().add(V(0.32, 0.16, 0.42)), ph.clone().add(V(0, -0.02, 0)), 34);
       c.move(ph.clone().add(V(0.26, 0.13, 0.34)), ph.clone().add(V(0, -0.02, 0)), 4, { ease: (t) => t });
       after(1.1, () => { J.phoneDies(); Sound.zap(); });
-      await c.say('Jesse', 'My phone, dying every single time you stood next to me.');
+      await c.say('Jesse', 'My phone, dying every single time you stood next to me.', 0, { vo: true });
       J.texting(false);
       // the vending machine
       const vf = Ca.vendFront;
@@ -3035,7 +3133,7 @@ const SCRIPTS = {
       c.shot(vf.clone().add(V(1.1, 1.55, 0.9)), vf.clone().add(V(-0.1, 1.15, -0.7)), 42);
       after(0.5, () => B2.rig.play('thump', { fade: 0.08 }));
       after(0.85, () => { Ca.fry(); G.cam.shake(0.6); });
-      await c.say('Jesse', 'The vending machine. Marcus still tells that story.');
+      await c.say('Jesse', 'The vending machine. Marcus still tells that story.', 0, { vo: true });
       B2.rig.stop(0.2);
       // the night on the school roof
       memory(School.scene);
@@ -3051,7 +3149,7 @@ const SCRIPTS = {
         Sound.thunder(0);
         G.cam.shake(1.0);
       });
-      await c.say('Jesse', 'And the lightning on the school roof, the night you disappeared.');
+      await c.say('Jesse', 'And the lightning on the school roof, the night you disappeared.', 0, { vo: true });
       Sound.setRain(0);
       // back on the steps
       B2.root.position.copy(keepB.pos); B2.root.rotation.y = keepB.rot; B2.rig.stop(0.01);
@@ -3101,6 +3199,8 @@ const SCRIPTS = {
         const n = (o.name + ' ' + o.material.name).toLowerCase();
         const cloth = /dress2|cotton|denim|sleeve|outfit_top|outfit_bottom/.test(n), shoe = /shoe|heel/.test(n);
         if (!cloth && !shoe && style !== 'heavenly') return;
+        // (her face, hair and arms keep their own materials: a copy would lose the mouth, the strands and the cloth under her sleeves)
+        if (!cloth && !shoe && (o.material._jaw || o.material._hair || o.material._cap)) return;
         const m = o.material.clone();
         if (style === 'bride-extras' || style === 'heavenly-extras') return;
         if (style === 'mother' && cloth) { m.map = null; m.color.set(/denim|dress2 /.test(n) ? 0x2b3346 : 0x3a4762); m.roughness = 0.6; }
@@ -3117,6 +3217,10 @@ const SCRIPTS = {
         k.push({ o, m: o.material });
         o.material = m;
       });
+      // the cloth painted under her sleeves and over her shoulders (Models.capCloth) takes the colour of what she wears now
+      { let capU = null, top = null;
+        a.root.traverse((o) => { if (!o.isMesh || !o.material) return; if (o.material._cap) capU = o.material._cap; if (/^sleeve/.test(o.name) && o.material.color) top = o.material.color; });
+        if (capU && top) { (this.capWas || (this.capWas = [])).push([capU, capU.value.clone()]); capU.value.copy(top); } }
       // what they wear on top of it
       const head = a.rig.j.head;
       if (style === 'bride' || style === 'bride-extras' || style === 'heavenly' || style === 'heavenly-extras') {
@@ -3150,6 +3254,8 @@ const SCRIPTS = {
     giveBack() {
       for (const d of this.dressed || []) d.o.material = d.m;
       this.dressed = [];
+      for (const [u, c] of this.capWas || []) u.value.copy(c);
+      this.capWas = [];
       for (const e of this.extras || []) if (e.parent) e.parent.remove(e);
       this.extras = [];
       for (const k of this.borrowed || []) {
