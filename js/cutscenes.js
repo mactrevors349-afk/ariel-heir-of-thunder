@@ -2047,8 +2047,7 @@ const SCRIPTS = {
       await b.until(b.word('Poseidon'));
       portrait(PR.poseidon);
       await b.until(b.word('Wise Athena'));
-      // (from further back and lower than the others: her model's face does not hold a close-up)
-      portrait(PR.athena, 4.6, -1.5, 30, -0.75);
+      portrait(PR.athena);
       await b.until(b.word('Hades'));
       portrait(PR.hades, 3.0, 0.9, 34);
       await b.end(0.2);

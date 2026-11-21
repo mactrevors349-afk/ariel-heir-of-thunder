@@ -143,17 +143,31 @@ const MODEL_DEFS = {
     material: (m) => Models.rim(m, [1.0, 0.3, 0.08], 4, 0.4),
   },
   // the gods of the prologue
-  // (a small game model, ~5,000 triangles and 256-pixel paint: smoothed twice and its textures redrawn
-  // sharper at load, so her face is round and modelled by the light instead of faceted and flat)
+  // Athena: "Athena god" by lucasllopes.143 (Sketchfab, CC BY 4.0). A sculpt of about 600,000 triangles standing in a
+  // pose of her own: right fist low and forward, left forearm raised before her, right foot ahead. The pose is kept
+  // (restPose) and her six mesh pieces are joined before skinning, so the seams between them never open.
+  // Slimmed with tools/slim_glb.py: one UV set (the file's five were copies), no tangents, and JPEG textures.
   athena: {
-    url: 'assets/athena/athena.glb', type: 'glb', height: LM_H, rotY: Math.PI, label: 'Athena', smooth: 2,
-    // (her face is left as the model has it: sharpening its texture and carving it deeper both made it worse)
-    landmarks: mirrorLM({
-      hips: [0, 0.97, 0], spine: [0, 1.13, 0], chest: [0, 1.32, 0], neck: [0, 1.56, 0.01], head: [0, 1.63, 0.03],
-      armL: [0.13, 1.48, -0.02], elbowL: [0.42, 1.27, -0.03], handL: [0.6, 1.03, 0.02],
-      thighL: [0.09, 0.9, 0], kneeL: [0.11, 0.53, -0.03], footL: [0.16, 0.09, 0],
-    }),
-    torso: { x: 0.2, y0: 0.45, y1: 1.4, z: 0.2 },
+    url: 'assets/athena/athena_god.glb', type: 'glb', height: LM_H, label: 'Athena', restPose: true, merge: true,
+    landmarks: {
+      hips: [0, 0.95, -0.01], spine: [0, 1.12, -0.02], chest: [0, 1.3, -0.02], neck: [0, 1.51, -0.03], head: [0, 1.58, -0.02],
+      armL: [0.17, 1.42, -0.05], elbowL: [0.3, 1.2, -0.17], handL: [0.35, 1.18, 0.19],
+      armR: [-0.17, 1.42, -0.03], elbowR: [-0.31, 1.15, 0.0], handR: [-0.36, 0.89, 0.24],
+      thighL: [0.09, 0.9, -0.03], kneeL: [0.1, 0.5, -0.08], footL: [0.08, 0.1, -0.08],
+      thighR: [-0.09, 0.9, 0.0], kneeR: [-0.13, 0.5, 0.1], footR: [-0.16, 0.1, 0.11],
+    },
+    rigid: [
+      // her whole head moves as one: from the chin up, the skin of her neck down to the collar, and the hair at its back.
+      // (The face is several loose pieces, and the lower one had gone to the neck bone, so every nod or glance split her
+      // jaw and cheeks from the rest of her face.)
+      { bone: 'head', test: (x, y, z) => Math.abs(x) < 0.17 && (y > 1.555 || (y > 1.5 && Math.abs(x) < 0.075 && z > -0.09 && z < 0.065) || (y > 1.49 && z < -0.07 && Math.abs(x) < 0.14)) },
+      // the long end of her sash hangs down her back to the calves: it sways with her hips, not her legs
+      { bone: 'hips', test: (x, y, z) => z < -0.19 && y < 1.05 && y > 0.25 },
+    ],
+    // the sculpt holds her head cocked about 9° toward her left shoulder and turned 10° to her left, which made her face
+    // look lopsided (one eye well below the other): the head is set straight on the neck
+    headTurn: [0, -10, 9],
+    torso: { x: 0.2, y0: 0.45, y1: 1.4, z: 0.22 },
   },
   poseidon: {
     url: 'assets/poseidon/poseidon_opt.glb', type: 'glb', height: LM_H, label: 'Poseidon',
@@ -1049,6 +1063,14 @@ const Models = {
         if (pi) weapon = skinned; else skinnedMeshes.push(skinned);
       });
       src.parent.remove(src);
+    }
+    // a sculpt whose head is cocked or turned on its neck is set straight: the head's resting turn (yaw, then tilt, in
+    // degrees), laid under every animation like the rest of the sculpted pose (see Rig.apply)
+    if (d.headTurn) {
+      const [hx, hy, hz] = d.headTurn.map((a) => a * Math.PI / 180), hi = JOINTS.indexOf('head');
+      const C = new THREE.Quaternion().setFromEuler(new THREE.Euler(hx, hy, hz, 'YZX'));
+      rig.rest = rig.rest || JOINTS.map(() => null);
+      rig.rest[hi] = rig.rest[hi] ? rig.rest[hi].clone().multiply(C) : C;
     }
     // the grafted arms (see graftArms), from the sheet into this rig, on the same skeleton
     if (d._graft) {

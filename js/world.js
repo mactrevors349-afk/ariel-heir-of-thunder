@@ -110,6 +110,33 @@ function bakeSkinned(mesh) {
   return out;
 }
 
+/** fewer triangles for a dense, untextured mesh: vertices in the same grid cell (side `cell`) become one, at their
+ * average; triangles that collapse are dropped and the normals are worked out again (position + normal only) */
+function clusterSimplify(g, cell) {
+  const P = g.attributes.position, idx = g.index.array, n = P.count;
+  const map = new Int32Array(n), cells = new Map(), sum = [];
+  for (let i = 0; i < n; i++) {
+    const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    const key = (Math.round(x / cell) + 4096) + (Math.round(y / cell) + 4096) * 8192 + (Math.round(z / cell) + 4096) * 67108864;
+    let c = cells.get(key);
+    if (c === undefined) { c = cells.size; cells.set(key, c); sum.push(0, 0, 0, 0); }
+    sum[c * 4] += x; sum[c * 4 + 1] += y; sum[c * 4 + 2] += z; sum[c * 4 + 3]++;
+    map[i] = c;
+  }
+  const pos = new Float32Array(cells.size * 3);
+  for (let c = 0; c < cells.size; c++) for (let k = 0; k < 3; k++) pos[c * 3 + k] = sum[c * 4 + k] / sum[c * 4 + 3];
+  const tri = [];
+  for (let t = 0; t < idx.length; t += 3) {
+    const a = map[idx[t]], b = map[idx[t + 1]], c = map[idx[t + 2]];
+    if (a !== b && b !== c && a !== c) tri.push(a, b, c);
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setIndex(new THREE.Uint32BufferAttribute(tri, 1));
+  out.computeVertexNormals();
+  return out;
+}
+
 /** drop every triangle that reaches above height y */
 function cutAbove(g, y) {
   const pos = g.attributes.position;
@@ -1277,6 +1304,9 @@ const World = {
       const cut = (kind === 'athena' || kind === 'poseidon') ? neckY * H : (neckY - bb.min.y) * k;
       g = cutAbove(g, cut);
     }
+    // a sculpt of hundreds of thousands of triangles (Athena's) is far finer than marble seen across the Agora needs:
+    // its vertices are merged on a 7 mm grid
+    if (g.index && g.index.count / 3 > 200000) g = clusterSimplify(g, 0.007);
     if (!g.attributes.normal) g.computeVertexNormals();
     g.computeBoundingSphere();
     return g;
