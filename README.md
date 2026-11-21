@@ -189,6 +189,21 @@ Each of the six gifts on keys **1–6** has its own cooldown (shown on its slot)
 - every cut carries lightning and fire with it
 - Ariel's armour burns at the edges
 
+## How the fighting feels
+Every blow is built to be felt, not just counted.
+- **Weight on every hit.** When Keraunos connects, the game freezes for a split second (longer for the third cut and the slam, longer still for a big foe), and the camera is knocked along the blow and springs back. Light cuts give a small knock, the slam a heavy thud. The shake keeps going through the freeze, and the "Camera shake" setting turns all of it off.
+- **The last foe.** Killing the last enemy nearby (or any giant) slows time for a moment, so you see him go down.
+- **Cuts that land where the blade is.** The two opening cuts were rebuilt so the sword really sweeps through the enemy at chest height, and the hit counts at that moment, not during the wind-up. Each cut turns into its target over the wind-up and steps in just far enough to reach it, no further.
+- **Enemies react to where they were hit.** A cut from the left twists them right, a blow from behind throws them forward. Light enemies flinch out of their own wind-up if you hit them first, so a combo isn't traded blow for blow. They can't be held forever, though: after a few flinches they swing back through it.
+- **They fall the way the blow drove them**: thrown onto their back from the front (arms flung, a stagger, a slam into the ground), onto their face from behind, sliding a little with it. Before, a slain hoplite stood frozen until it faded.
+- **You can see an attack coming.** A glint flashes on an enemy's weapon just before it swings and follows the blade as it draws back: white for a normal blow, red for one that will knock you down.
+- **Nothing you press is lost.** A press made during a swing, a roll or a stagger is remembered for half a second and happens at the first moment it can: the next cut, a roll out of a swing, a cut straight out of a roll. Moving cuts the end of a swing or roll short.
+- **Perfect dodge.** Roll at the last instant before a blow lands and time slows, stamina comes back, and your next cut is a counter: it dashes to the enemy that missed, hits harder and breaks its guard.
+- **Getting hit.** Ariel is thrown back from a blow in front and stumbles forward from one behind, and the camera jolts with it.
+- **The camera keeps the fight in view.** In a fight, when you leave the mouse alone, it turns a little so the nearest enemy stands to Ariel's right instead of hidden behind his back, keeps up with an enemy circling him, and leans toward a giant so its head stays in the picture. Move the mouse and it's yours again.
+- **Effects that don't blind you.** Sword trails ride the outer part of the blade and fade even during the freeze, and the thunder slam's flash no longer whites out the screen.
+- **The cape behaves like cloth.** It can't stretch into a board during a roll, doesn't flip over his head when a swing stops, and settles after a shove instead of floating.
+
 ## Movement and collisions
 - Bodies are solid. Ariel can't walk, roll or lunge into enemies, enemies don't overlap each other, and nobody gets pushed inside columns, rocks, walls or trees.
 - Running animations match the real speed, so nobody runs on the spot against a wall. Enemies step around obstacles, and their legs turn toward where they're actually going.

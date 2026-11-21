@@ -186,11 +186,32 @@ const THRONE = {
 const CLIPS = {
   /* ---------------------------------------------------------- shared */
   hit: { dur: 0.42, keys: [[0, {}], [0.15, { hp: [0, -0.05, -0.08], spine: [-14, 0, 6], chest: [-16, 0, 8], neck: [18, 0, 0], armL: [-30, 0, 40], elbowL: [-50, 0, 0], armR: [-40, 0, -40], elbowR: [-60, 0, 0] }], [1, {}]] },
+  // struck from behind: thrown forward over the hips, the head snapping back, arms flung out to catch the fall
+  hitBack: { dur: 0.42, keys: [[0, {}], [0.15, { hp: [0, -0.06, 0.1], spine: [16, 0, -4], chest: [14, 0, -6], neck: [-16, 0, 0], armL: [-38, 0, 30], elbowL: [-30, 0, 0], armR: [-30, 0, -26], elbowR: [-40, 0, 0], thighL: [-14, 0, 4], kneeL: [16, 0, 0], thighR: [8, 0, -4], kneeR: [14, 0, 0] }], [1, {}]] },
+  // a broken guard from behind: pitched forward, a stumbling step to catch himself, then upright again
+  staggerFwd: {
+    dur: 1.1, keys: [[0, {}],
+      [0.15, { hp: [0, -0.14, 0.16], spine: [26, 0, -6], chest: [16, 0, -6], neck: [-20, 0, 0], armL: [-55, 0, 34], elbowL: [-30, 0, 0], armR: [-45, 0, -30], elbowR: [-35, 0, 0], thighL: [-42, 0, 4], kneeL: [52, 0, 0], thighR: [16, 0, -4], kneeR: [30, 0, 0] }],
+      [0.6, { hp: [0, -0.2, 0.06], spine: [22, 0, 0], chest: [8, 0, 0], neck: [-6, 0, 0], armL: [-20, 0, 18], armR: [-16, 0, -16], elbowR: [-20, 0, 0], thighL: [-26, 0, 0], kneeL: [46, 0, 0], thighR: [-8, 0, 0], kneeR: [36, 0, 0] }],
+      [1, {}]],
+  },
   stagger: {
     dur: 1.1, keys: [[0, {}],
       [0.15, { hp: [0, -0.15, -0.12], spine: [-20, 0, 10], chest: [-15, 0, 10], neck: [20, 0, 0], armL: [-20, 0, 50], elbowL: [-20, 0, 0], armR: [-10, 0, -50], elbowR: [-20, 0, 0], thighL: [10, 0, 0], kneeL: [30, 0, 0], thighR: [-30, 0, 0], kneeR: [45, 0, 0] }],
       [0.6, { hp: [0, -0.25, 0], spine: [30, 0, 0], chest: [10, 0, 0], neck: [-10, 0, 0], armL: [0, 0, 10], armR: [0, 0, -10], elbowR: [-20, 0, 0], thighL: [-30, 0, 0], kneeL: [50, 0, 0], thighR: [-10, 0, 0], kneeR: [40, 0, 0] }],
       [1, {}]],
+  },
+  // cut down from in front, in the fight: the blow throws him back at once (arms flung, a leg lifting), he
+  // staggers a step on buckling knees and slams onto his back, the head bouncing once ('death' is the slower
+  // fall the cutscenes pose from)
+  deathBack: {
+    dur: 1.5, hold: true, keys: [[0, {}],
+      [0.06, { hp: [0, -0.04, -0.12], spine: [-24, 0, 4], chest: [-14, 0, 4], neck: [12, 0, 0], armL: [-55, 0, 55], elbowL: [-30, 0, 0], armR: [-50, 0, -55], elbowR: [-35, 0, 0], thighL: [-26, 0, 0], kneeL: [24, 0, 0] }, 'out'],
+      [0.2, { hp: [0, -0.24, -0.42], spine: [-28, 0, 2], chest: [-10, 0, 0], neck: [16, 0, 0], armL: [-72, 0, 68], elbowL: [-22, 0, 0], armR: [-66, 0, -70], elbowR: [-24, 0, 0], thighL: [-40, 0, 0], kneeL: [56, 0, 0], thighR: [8, 0, 0], kneeR: [38, 0, 0] }],
+      [0.42, { hips: [-85, 0, 0], hp: [0, -0.84, -0.55], spine: [-5, 0, 0], chest: [0, 0, 0], neck: [15, 0, 0], armL: [-10, 0, 70], elbowL: [-20, 0, 0], armR: [-10, 0, -70], elbowR: [-20, 0, 0], thighL: [-20, 0, 0], kneeL: [30, 0, 0], thighR: [-5, 0, 0], kneeR: [10, 0, 0] }, 'in'],
+      [0.52, { hips: [-92, 0, 0], hp: [0, -0.87, -0.57], neck: [4, 0, 0], armL: [-6, 0, 78], elbowL: [-12, 0, 0], armR: [-6, 0, -78], elbowR: [-12, 0, 0], thighL: [-14, 0, 0], kneeL: [18, 0, 0], kneeR: [6, 0, 0] }],
+      [0.7, { hips: [-90, 0, 0], hp: [0, -0.88, -0.57], neck: [12, 0, 0], armL: [-10, 0, 75], elbowL: [-15, 0, 0], armR: [-10, 0, -75], elbowR: [-15, 0, 0], thighL: [-15, 0, 0], kneeL: [20, 0, 0], kneeR: [8, 0, 0] }],
+      [1, { hips: [-90, 0, 0], hp: [0, -0.88, -0.57], neck: [12, 0, 0], armL: [-10, 0, 75], elbowL: [-15, 0, 0], armR: [-10, 0, -75], elbowR: [-15, 0, 0], thighL: [-15, 0, 0], kneeL: [20, 0, 0], kneeR: [8, 0, 0] }]],
   },
   death: {
     dur: 1.8, hold: true, keys: [[0, {}],
@@ -258,18 +279,26 @@ const CLIPS = {
   },
 
   /* ---------------------------------------------------------- Ariel */
+  // forehand: Keraunos cocked high over the right shoulder (a beat of coil), cut down through chest height
+  // and carried on low to the left. (Solved on the model: the tip crosses the front at t 0.38, 1.4 m up.)
   light1: {
     dur: 0.72, keys: [[0, {}],
-      [0.26, { hp: [0, -0.06, 0], spine: [8, -12, 0], chest: [4, -25, 0], neck: [-4, 30, 0], armR: [-15, 10, -80], elbowR: [-30, 0, 0], handR: [-20, 0, 0], armL: [-20, 0, 30], elbowL: [-40, 0, 0], thighL: [-18, 0, 4], kneeL: [20, 0, 0], thighR: [10, 0, -4], kneeR: [12, 0, 0] }],
-      [0.44, { hp: [0, -0.1, 0.05], spine: [14, 15, 0], chest: [8, 30, 0], neck: [-6, -36, 0], armR: [-10, 90, -82], elbowR: [-12, 0, 0], handR: [-15, 0, 0], armL: [10, 0, 18], elbowL: [-30, 0, 0], thighL: [-30, 0, 4], kneeL: [34, 0, 0], thighR: [18, 0, -4], kneeR: [16, 0, 0] }, 'in'],
-      [0.62, { hp: [0, -0.08, 0.03], spine: [12, 12, 0], chest: [6, 24, 0], neck: [-6, -28, 0], armR: [-15, 80, -75], elbowR: [-25, 0, 0], handR: [-25, 0, 0], thighL: [-26, 0, 4], kneeL: [30, 0, 0], thighR: [16, 0, -4], kneeR: [14, 0, 0] }],
+      [0.22, { hp: [0, -0.05, -0.02], spine: [6, -14, 0], chest: [2, -28, 0], neck: [-4, 30, 0], armR: [-63, -14, -104], elbowR: [-28, 0, 0], handR: [4, 0, 0], armL: [-20, 0, 30], elbowL: [-40, 0, 0], thighL: [-16, 0, 4], kneeL: [20, 0, 0], thighR: [10, 0, -4], kneeR: [14, 0, 0] }],
+      [0.29, { hp: [0, -0.07, -0.03], spine: [8, -16, 0], chest: [4, -32, 0], neck: [-4, 34, 0], armR: [-66, -18, -106], elbowR: [-32, 0, 0], handR: [6, 0, 0], armL: [-24, 0, 32], elbowL: [-44, 0, 0], thighL: [-20, 0, 4], kneeL: [24, 0, 0], thighR: [12, 0, -4], kneeR: [16, 0, 0] }],
+      [0.39, { hp: [0, -0.1, 0.06], spine: [12, 2, 0], chest: [6, 4, 0], neck: [-6, -6, 0], armR: [-39, 49, -93], elbowR: [-24, 0, 0], handR: [-6, 1, 0], armL: [0, 0, 22], elbowL: [-34, 0, 0], thighL: [-28, 0, 4], kneeL: [32, 0, 0], thighR: [17, 0, -4], kneeR: [15, 0, 0] }, 'in'],
+      [0.5, { hp: [0, -0.11, 0.06], spine: [14, 15, 0], chest: [8, 30, 0], neck: [-6, -36, 0], armR: [-17, 75, -85], elbowR: [-38, 0, 0], handR: [-3, 0, 0], armL: [10, 0, 18], elbowL: [-30, 0, 0], thighL: [-30, 0, 4], kneeL: [34, 0, 0], thighR: [18, 0, -4], kneeR: [16, 0, 0] }],
+      [0.68, { hp: [0, -0.08, 0.03], spine: [12, 12, 0], chest: [6, 24, 0], neck: [-6, -28, 0], armR: [-20, 62, -80], elbowR: [-36, 0, 0], handR: [-10, 0, 0], thighL: [-26, 0, 4], kneeL: [30, 0, 0], thighR: [16, 0, -4], kneeR: [14, 0, 0] }],
       [1, {}]],
   },
+  // backhand: the blade gathered across the body on the left, then whipped back out to the right, rising
+  // (tip crosses the front at t 0.37, 1.25 m up)
   light2: {
     dur: 0.7, keys: [[0, {}],
-      [0.24, { hp: [0, -0.06, 0], chest: [6, 35, 0], spine: [10, 15, 0], neck: [-4, -40, 0], armR: [-20, 100, -70], elbowR: [-70, 0, 0], handR: [-20, 0, 0], armL: [-10, 0, 20], thighL: [-14, 0, 4], kneeL: [18, 0, 0] }],
-      [0.44, { hp: [0, -0.1, 0.05], chest: [6, -35, 0], spine: [12, -15, 0], neck: [-6, 40, 0], armR: [-10, 40, -85], elbowR: [-10, 0, 0], handR: [-10, 0, 0], armL: [-20, 0, 35], elbowL: [-40, 0, 0], thighL: [10, 0, 4], kneeL: [16, 0, 0], thighR: [-28, 0, -4], kneeR: [32, 0, 0] }, 'in'],
-      [0.62, { hp: [0, -0.08, 0.03], chest: [6, -28, 0], spine: [12, -12, 0], neck: [-6, 32, 0], armR: [-12, 45, -80], elbowR: [-22, 0, 0], handR: [-18, 0, 0], thighR: [-24, 0, -4], kneeR: [28, 0, 0] }],
+      [0.2, { hp: [0, -0.05, 0], spine: [10, 15, 0], chest: [6, 35, 0], neck: [-4, -40, 0], armR: [-33, 61, -71], elbowR: [-60, 0, 0], handR: [-9, -1, -10], armL: [-10, 0, 20], thighL: [-14, 0, 4], kneeL: [18, 0, 0] }],
+      [0.27, { hp: [0, -0.06, 0], spine: [10, 18, 0], chest: [6, 40, 0], neck: [-4, -44, 0], armR: [-34, 64, -69], elbowR: [-64, 0, 0], handR: [-10, -1, -12], armL: [-10, 0, 22], thighL: [-16, 0, 4], kneeL: [20, 0, 0] }],
+      [0.38, { hp: [0, -0.09, 0.05], spine: [12, -2, 0], chest: [6, -4, 0], neck: [-6, 4, 0], armR: [-51, 45, -78], elbowR: [-29, 0, 0], handR: [9, 0, -7], armL: [-16, 0, 30], elbowL: [-36, 0, 0], thighL: [4, 0, 4], kneeL: [16, 0, 0], thighR: [-24, 0, -4], kneeR: [28, 0, 0] }, 'in'],
+      [0.49, { hp: [0, -0.1, 0.05], spine: [12, -15, 0], chest: [6, -35, 0], neck: [-6, 40, 0], armR: [-31, -19, -37], elbowR: [-66, 0, 0], handR: [11, -2, -28], armL: [-20, 0, 35], elbowL: [-40, 0, 0], thighL: [10, 0, 4], kneeL: [16, 0, 0], thighR: [-28, 0, -4], kneeR: [32, 0, 0] }],
+      [0.66, { hp: [0, -0.08, 0.03], spine: [12, -12, 0], chest: [6, -28, 0], neck: [-6, 32, 0], armR: [-28, -5, -50], elbowR: [-56, 0, 0], handR: [6, -1, -20], thighR: [-24, 0, -4], kneeR: [28, 0, 0] }],
       [1, {}]],
   },
   light3: {
@@ -391,6 +420,14 @@ const CLIPS = {
   },
 
   /* ---------------------------------------------------------- hoplite */
+  // the sword hoplites' flat cut (Ariel's old first light attack, kept for them)
+  hopSlash: {
+    dur: 0.72, keys: [[0, {}],
+      [0.26, { hp: [0, -0.06, 0], spine: [8, -12, 0], chest: [4, -25, 0], neck: [-4, 30, 0], armR: [-15, 10, -80], elbowR: [-30, 0, 0], handR: [-20, 0, 0], armL: [-20, 0, 30], elbowL: [-40, 0, 0], thighL: [-18, 0, 4], kneeL: [20, 0, 0], thighR: [10, 0, -4], kneeR: [12, 0, 0] }],
+      [0.44, { hp: [0, -0.1, 0.05], spine: [14, 15, 0], chest: [8, 30, 0], neck: [-6, -36, 0], armR: [-10, 90, -82], elbowR: [-12, 0, 0], handR: [-15, 0, 0], armL: [10, 0, 18], elbowL: [-30, 0, 0], thighL: [-30, 0, 4], kneeL: [34, 0, 0], thighR: [18, 0, -4], kneeR: [16, 0, 0] }, 'in'],
+      [0.62, { hp: [0, -0.08, 0.03], spine: [12, 12, 0], chest: [6, 24, 0], neck: [-6, -28, 0], armR: [-15, 80, -75], elbowR: [-25, 0, 0], handR: [-25, 0, 0], thighL: [-26, 0, 4], kneeL: [30, 0, 0], thighR: [16, 0, -4], kneeR: [14, 0, 0] }],
+      [1, {}]],
+  },
   thrust: {
     dur: 1.2, keys: [[0, {}],
       // overhand: the fist drawn up and back, then the spear driven forward and down over the shield
@@ -553,6 +590,8 @@ class Rig {
     this.phase = 0; this.gait = 0; this.breath = Math.random() * 10;
     this.act = null; this.prev = null;
     this.flinch = 0; this.headYaw = 0; this.headPitch = 0;
+    // the give of a blow (see hit): torso pitch, roll and twist on a spring, with their velocities
+    this.react = { p: 0, r: 0, y: 0, vp: 0, vr: 0, vy: 0 };
     this.onStep = null; this._lastS = 0;
     // speaking and listening (set by Perform): the voice's loudness, how much he is speaking, where he looks,
     // and how freely each hand talks ([right, left]; a hand holding something is given 0)
@@ -600,6 +639,18 @@ class Rig {
     if (!this.act) return;
     this.prev = { c: this.act.c, t: this.act.t, w: this.act.w, fade, mask: this.act.mask };
     this.act = null;
+  }
+  /**
+   * A blow lands and the body gives along it. (px, pz): the way it drives him, in his own frame (+x his left,
+   * +z ahead, about unit length). twist: + turns the chest to his left (a cut travelling that way). s: how hard.
+   * A sprung layer over everything else: the torso is knocked over, rebounds once and settles, the head lags
+   * the chest, the hips are shoved along and the arms fly out. The first frame already shows the blow, so a
+   * hit-stop freezes on the impact rather than before it.
+   */
+  hit(px, pz, twist = 0, s = 1) {
+    const R = this.react;
+    R.vp += pz * s * 11; R.vr -= px * s * 9; R.vy += twist * s * 8;
+    R.p += pz * s * 0.07; R.r -= px * s * 0.06; R.y += twist * s * 0.05;
   }
   playing(name) { return this.act && this.act.name === name; }
   progress(name) { return this.act && this.act.name === name ? this.act.t : 1; }
@@ -740,6 +791,24 @@ class Rig {
       this.blend(this.tmp, ac.w, ac.mask);
     }
     // ---- additive layers
+    const R = this.react;
+    if (R.p || R.r || R.y || R.vp || R.vr || R.vy) {
+      // about 2.6 Hz, damping ratio 0.43: one visible rebound, settled in under half a second
+      for (let left = Math.min(dt, 0.05); left > 1e-6; left -= 1 / 120) {
+        const h = Math.min(left, 1 / 120);
+        R.vp += (-260 * R.p - 14 * R.vp) * h; R.vr += (-260 * R.r - 14 * R.vr) * h; R.vy += (-260 * R.y - 14 * R.vy) * h;
+        R.p += R.vp * h; R.r += R.vr * h; R.y += R.vy * h;
+      }
+      R.p = clamp(R.p, -0.7, 0.7); R.r = clamp(R.r, -0.6, 0.6); R.y = clamp(R.y, -0.6, 0.6);
+      if (Math.abs(R.p) + Math.abs(R.r) + Math.abs(R.y) + (Math.abs(R.vp) + Math.abs(R.vr) + Math.abs(R.vy)) * 0.05 < 2e-4) R.p = R.r = R.y = R.vp = R.vr = R.vy = 0;
+      P[JI.spine] += R.p * 0.55; P[JI.chest] += R.p * 0.45; P[JI.neck] -= R.p * 0.5; P[JI.head] -= R.p * 0.2;
+      P[JI.spine + 2] += R.r * 0.5; P[JI.chest + 2] += R.r * 0.4; P[JI.neck + 2] -= R.r * 0.45;
+      P[JI.spine + 1] += R.y * 0.45; P[JI.chest + 1] += R.y * 0.55; P[JI.neck + 1] -= R.y * 0.4;
+      const m = Math.min(1, Math.abs(R.p) + Math.abs(R.r));
+      P[HP + 2] += R.p * 0.14; P[HP] -= R.r * 0.1; P[HP + 1] -= m * 0.05;
+      P[JI.armL + 2] += m * 0.35; P[JI.armR + 2] -= m * 0.35;
+      P[JI.kneeL] += m * 0.2; P[JI.kneeR] += m * 0.2;
+    }
     if (this.flinch > 0) {
       this.flinch = Math.max(0, this.flinch - dt * 4);
       P[JI.spine] -= this.flinch * 14 * DEG; P[JI.chest] -= this.flinch * 10 * DEG; P[JI.neck] += this.flinch * 12 * DEG;
@@ -844,6 +913,7 @@ class Cape {
       const u = c / (this.cols - 1), e = 2 * u - 1;
       this.anchor.push(new THREE.Vector3((0.5 - u) * topW, (o.top ?? 0.24) + e * e * 0.02, anchorBack * (1 - e * e * 0.6) - Math.sin(u * Math.PI) * 0.02));
     }
+    this.topY = o.top ?? 0.24;
     this.dx = this.w / (this.cols - 1);
     this.dy = this.len / (this.rows - 1);
     const geo = new THREE.BufferGeometry();
@@ -949,6 +1019,14 @@ class Cape {
     // pin top row; teleport guard
     this.v.copy(this.anchor[0]).applyMatrix4(M);
     if (Math.abs(this.v.x - P[0]) + Math.abs(this.v.z - P[2]) > 3 * this.rig.size) { this.reset(); return; }
+    // a burst far faster than a sprint (a roll, a lunge, a dash) carries the cloth partly with it, so it does
+    // not trail out behind him stiff and straight as a board; walking and running are left alone
+    const mx = this.v.x - P[0], my = this.v.y - P[1], mz = this.v.z - P[2];
+    const carry = clamp((Math.hypot(mx, mz) / dt - 10) / 10, 0, 0.65);
+    if (carry > 0) for (let i = cols * 3; i < P.length; i += 3) {
+      P[i] += mx * carry; P[i + 1] += my * carry; P[i + 2] += mz * carry;
+      Q[i] += mx * carry; Q[i + 1] += my * carry; Q[i + 2] += mz * carry;
+    }
     for (let c = 0; c < cols; c++) {
       this.v.copy(this.anchor[c]).applyMatrix4(M);
       const i = c * 3;
@@ -958,8 +1036,13 @@ class Cape {
     // integrate
     const grav = -9.8 * dt * dt, t = G.time;
     const wx = (Math.sin(t * 1.3) * 0.5 + 0.6) * dt * dt * 1.6, wz = Math.cos(t * 0.9) * 0.4 * dt * dt * 1.6;
+    // (and a heavy cloak's own drag on its swing about the body: a shove or a sudden stop swings it out once and it
+    // settles, instead of flying up and hanging out level for a while; hanging still or flowing out behind a run
+    // is untouched, since nothing moves relative to him there)
+    const rk = 1 - Math.exp(-3 * dt);
     for (let i = cols * 3; i < P.length; i += 3) {
-      const vx = (P[i] - Q[i]) * 0.982, vy = (P[i + 1] - Q[i + 1]) * 0.982, vz = (P[i + 2] - Q[i + 2]) * 0.982;
+      let vx = P[i] - Q[i], vy = P[i + 1] - Q[i + 1], vz = P[i + 2] - Q[i + 2];
+      vx = (vx - (vx - mx) * rk) * 0.982; vy = (vy - (vy - my) * rk) * 0.982; vz = (vz - (vz - mz) * rk) * 0.982;
       Q[i] = P[i]; Q[i + 1] = P[i + 1]; Q[i + 2] = P[i + 2];
       P[i] += vx + wx; P[i + 1] += vy + grav; P[i + 2] += vz + wz;
     }
@@ -970,7 +1053,7 @@ class Cape {
     const ax = M.elements[0] / rl, ay = M.elements[1] / rl, az = M.elements[2] / rl;
     const ux = M.elements[4] / rl, uy = M.elements[5] / rl, uz = M.elements[6] / rl;
     const back = this.back, cx = this.c.x, cy = this.c.y, cz = this.c.z, fx = this.f.x, fy = this.f.y, fz = this.f.z;
-    const curve = 1.6 / this.rig.size, prof = this.profile;
+    const curve = 1.6 / this.rig.size, prof = this.profile, topY = this.topY - 0.03, upright = clamp((uy - 0.45) / 0.35, 0, 1);
     const dx = this.dx, dy = this.dy;
     this.updateLegs();
     for (let it = 0; it < 5; it++) {
@@ -989,8 +1072,33 @@ class Cape {
         const lim = base + curve * lat * lat;
         const d = ox * fx + oy * fy + oz * fz;
         if (d > lim) { const k = d - lim; P[i] -= fx * k; P[i + 1] -= fy * k; P[i + 2] -= fz * k; }
+        // a heavy cloak never flips up over the shoulders and head: below the pins it stays below them
+        // (a fast swing that stops dead used to throw it over his head)
+        // (only while he is upright: tumbling through a roll, "below the shoulders" points at the sky, and
+        // holding the cloth there against gravity stretched it out into a rigid plank)
+        if (i >= cols * 6 && upright > 0) {
+          const up = (ox * ux + oy * uy + oz * uz) - topY * rl;
+          if (up > 0) { const k = up * upright; P[i] -= ux * k; P[i + 1] -= uy * k; P[i + 2] -= uz * k; }
+        }
       }
       if (it >= 2) this.collideLegs();
+    }
+    // no stretching past a tenth over length, whatever the body does: top-down, each point is drawn back to the
+    // one above it (and across, to its neighbour). A tumbling roll moves the shoulders a third of a metre a frame,
+    // more than the passes above can carry down fourteen rows, and the cloth used to pull out to several times
+    // its length, a flat board sticking out of his back
+    const maxV = dy * 1.1, maxH = dx * 1.15;
+    for (let r = 1; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const i = (r * cols + c) * 3, j = i - cols * 3;
+        const x = P[i] - P[j], y = P[i + 1] - P[j + 1], z = P[i + 2] - P[j + 2], d = Math.sqrt(x * x + y * y + z * z);
+        if (d > maxV) { const k = maxV / d; P[i] = P[j] + x * k; P[i + 1] = P[j + 1] + y * k; P[i + 2] = P[j + 2] + z * k; }
+      }
+      for (let c = 1; c < cols; c++) {
+        const i = (r * cols + c) * 3, j = i - 3;
+        const x = P[i] - P[j], y = P[i + 1] - P[j + 1], z = P[i + 2] - P[j + 2], d = Math.sqrt(x * x + y * y + z * z);
+        if (d > maxH) { const h = (1 - maxH / d) * 0.5; P[i] -= x * h; P[i + 1] -= y * h; P[i + 2] -= z * h; P[j] += x * h; P[j + 1] += y * h; P[j + 2] += z * h; }
+      }
     }
     const geo = this.mesh.geometry;
     geo.attributes.position.needsUpdate = true;

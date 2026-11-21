@@ -666,13 +666,7 @@ const Game = {
     let raw = (now - this.last) / 1000;
     this.last = now;
     raw = Math.min(raw, 0.05);
-    let dt = raw;
-    if (G.hitStop > 0) { G.hitStop -= raw; dt = raw * 0.08; }
-    dt *= G.slowMo;
-    G.dt = dt;
-    G.time += dt;
-    G.uniforms.time.value = G.time;
-    this.update(dt, raw);
+    this.advance(raw);
     this.render(raw);
     Input.endFrame();
     this.autoQuality(raw);
@@ -680,6 +674,33 @@ const Game = {
       this.fpsAcc = (this.fpsAcc || 0) * 0.95 + raw * 0.05;
       if ((this.fpsT = (this.fpsT || 0) + raw) > 0.5) { this.fpsT = 0; const e = document.getElementById('fps'); e.classList.remove('hidden'); e.textContent = Math.round(1 / this.fpsAcc) + ' fps'; }
     }
+  },
+
+  /**
+   * One frame of game time. When a blow lands, hit-stop all but freezes the world for a few hundredths of a
+   * second (the camera keeps shaking through it, on real time). A slow-motion beat (a killing blow, a dodge
+   * timed to the last instant) holds, then eases back to full speed.
+   */
+  advance(raw) {
+    let dt = raw;
+    // (only in play: a cutscene that starts on a killing blow runs at its own speed)
+    if (G.state !== 'playing' && G.state !== 'dead') G.hitStop = G.slowT = 0;
+    if (G.hitStop > 0) { G.hitStop -= raw; dt = raw * 0.04; }
+    else if (G.slowT > 0) {
+      G.slowT -= raw;
+      const u = clamp(G.slowT / G.slowDur, 0, 1);
+      dt = raw * lerp(1, G.slowK, smooth(0, 0.55, u));
+    }
+    dt *= G.slowMo;
+    G.dt = dt; G.rawDt = raw;
+    G.time += dt;
+    G.uniforms.time.value = G.time;
+    this.update(dt, raw);
+  },
+  /** slow the fight to k of its speed for dur real seconds (a slower beat already running wins) */
+  slow(k, dur) {
+    if (G.slowT > 0 && G.slowK <= k) return;
+    G.slowK = k; G.slowT = G.slowDur = dur;
   },
 
   /**
@@ -801,7 +822,7 @@ const Game = {
     if (!G.freezeFoes) for (const e of G.enemies) e.update(dt);
     G.hermes.update(dt);
     if (G.state === 'playing') G.echo.update(dt);
-    if (cameraFollow) G.cam.update(Math.min(0.05, dt / Math.max(0.05, G.slowMo)), P);
+    if (cameraFollow) G.cam.update(Math.min(0.05, dt / Math.max(0.05, G.slowMo)), P, false, G.rawDt || dt);
     World.update(dt, G.camera, P.pos);
     // golden apple shimmer
     for (const k in this.appleMeshes) {

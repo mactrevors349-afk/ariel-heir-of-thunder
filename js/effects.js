@@ -533,6 +533,21 @@ const FX = {
     }
     if (puff) this.glow.spawn({ x: pos.x, y: pos.y, z: pos.z, life: 0.07, s: 0.35, s2: 0.7, c: [hot[0], hot[1], hot[2], 0.8], c2: [hot[0], hot[1], hot[2], 0] });
   },
+  /**
+   * The glint on a weapon as it tops its wind-up: the tell to dodge. A hard pin of light that swells and is
+   * gone in a fifth of a second, with four short rays across the screen. Warm white, or red for a blow
+   * that knocks down.
+   */
+  glint(pos, red = false) {
+    const col = red ? [4.2, 0.9, 0.35] : [3.4, 2.9, 2.1];
+    this.glow.spawn({ x: pos.x, y: pos.y, z: pos.z, life: 0.22, s: 0.08, s2: 0.4, c: [col[0], col[1], col[2], 1], c2: [col[0], col[1], col[2], 0] });
+    const m = G.camera.matrixWorld.elements, rx = m[0], ry = m[1], rz = m[2], ux = m[4], uy = m[5], uz = m[6];
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2 + Math.PI / 4, c = Math.cos(a) * 2.6, s = Math.sin(a) * 2.6;
+      this.sparkle.spawn({ x: pos.x, y: pos.y, z: pos.z, vx: rx * c + ux * s, vy: ry * c + uy * s, vz: rz * c + uz * s, s: 0.012, life: 0.17,
+        c: [col[0], col[1], col[2], 1], c2: [col[0] * 0.5, col[1] * 0.5, col[2] * 0.5, 0], g: 0, drag: 7 });
+    }
+  },
   ash(pos, n = 14, col = [0.12, 0.1, 0.09, 0.6]) {
     for (let i = 0; i < n; i++) {
       this.smoke.spawn({ x: pos.x + rand(-0.2, 0.2), y: pos.y + rand(-0.2, 0.2), z: pos.z + rand(-0.2, 0.2), vx: rand(-1.5, 1.5), vy: rand(-0.2, 1.5), vz: rand(-1.5, 1.5), life: rand(0.5, 1.1), s: rand(0.2, 0.4), s2: rand(0.6, 1), c: col, c2: [col[0], col[1], col[2], 0], drag: 2.5 });

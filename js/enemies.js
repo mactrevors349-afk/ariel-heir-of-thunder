@@ -25,7 +25,7 @@ const ENEMY_DEFS = {
         { clip: 'bash', range: 1.9, dmg: 44, hits: [[0.4, 0.52]], hitRange: 2.1, arc: 100, move: [[0.3, 0.5, 1.0]], track: 0.36, weight: 1, cool: 1.3 },
       ],
       sword: [
-        { clip: 'light1', speed: 0.72, range: 2.5, dmg: 55, hits: [[0.28, 0.46]], hitRange: 2.6, arc: 160, move: [[0.16, 0.45, 1.2]], track: 0.3, weight: 3, cool: 0.9, trail: true },
+        { clip: 'hopSlash', speed: 0.72, range: 2.5, dmg: 55, hits: [[0.34, 0.48]], hitRange: 2.6, arc: 160, move: [[0.16, 0.45, 1.2]], track: 0.3, weight: 3, cool: 0.9, trail: true },
         { clip: 'light3', speed: 0.7, range: 2.6, dmg: 70, hits: [[0.4, 0.55]], hitRange: 2.8, arc: 90, move: [[0.25, 0.52, 1.5]], track: 0.36, weight: 2, cool: 1.3, trail: true },
         { clip: 'bash', range: 1.9, dmg: 44, hits: [[0.4, 0.52]], hitRange: 2.1, arc: 100, move: [[0.3, 0.5, 1.0]], track: 0.36, weight: 1, cool: 1.3 },
       ],
@@ -165,6 +165,7 @@ class Enemy {
     this.root.visible = true;
     if (this.cape) this.cape.mesh.visible = camD < 60;
     this.cool -= dt;
+    if (this.hurtT > 0) this.hurtT -= dt;
     let moveSpeed = 0, moveDir = 1, strafe = 0;
     const x0 = this.pos.x, z0 = this.pos.z;
     switch (this.state) {
@@ -204,6 +205,7 @@ class Enemy {
         this.updateAttack(dt, dist);
         break;
       case 'stagger':
+      case 'hurt':
         this.timer -= dt;
         if (this.timer <= 0) this.state = 'chase';
         break;
@@ -234,8 +236,9 @@ class Enemy {
     this.loco = damp(this.loco, Math.min(moved, this.def.run * 1.2), 10, dt);
     // legs turn toward the real direction of travel when side-stepping or walking around something
     const legWant = strafe ? strafe * 1.15 : this.detourT > 0 ? clamp(this.detour, -1.15, 1.15) : 0;
-    this.rig.legYaw = damp(this.rig.legYaw || 0, this.state === 'attack' || this.state === 'stagger' ? 0 : legWant, 8, dt);
-    this.rig.update(dt, this.state === 'attack' || this.state === 'stagger' ? 0 : this.loco, moveDir);
+    const acting = this.state === 'attack' || this.state === 'stagger' || this.state === 'hurt';
+    this.rig.legYaw = damp(this.rig.legYaw || 0, acting ? 0 : legWant, 8, dt);
+    this.rig.update(dt, acting ? 0 : this.loco, moveDir);
     if (this.model) this.model.update();
     // a Hollow hoplite is shade inside its bronze: it smokes faintly as it moves
     if (this.type === 'hoplite' && camD < 35 && Math.random() < 0.3) {
@@ -331,13 +334,36 @@ class Enemy {
   }
 
   startAttack(a) {
-    this.state = 'attack'; this.act = a; this.prevT = 0; this.hitWins = new Set(); this.fired = {};
+    this.state = 'attack'; this.act = a; this.prevT = 0; this.hitWins = new Set(); this.fired = {}; this.glintT = 0;
     this.rig.play(a.clip, { speed: (a.speed || 1) * (this.animSpeed || 1), fade: 0.12 });
+    // the tell: the moment just before the weapon tops its wind-up (the key before the clip's first strike)
+    if (a.glint === undefined) {
+      const K = CLIPS[a.clip] && CLIPS[a.clip].keys, i = K ? K.findIndex((k) => k[2] === 'in') : -1;
+      a.glint = i > 0 ? Math.max(0.02, K[i - 1][0] - 0.1) : null;
+    }
     if (this.onAttackStart) this.onAttackStart(a);
+  }
+  /** the glint at the weapon's tip (or the striking hand), and a thin ring of steel, as an attack is about to come */
+  tell(a) {
+    const w = this.parts.weapon && this.parts.weapon.userData.tip;
+    const p = w ? w.getWorldPosition(this._t) : this.rig.j.handR.getWorldPosition(this._t);
+    const v = Sound.at(this.pos, 30);
+    if (v < 0.05) return;
+    FX.glint(p, !!a.knock);
+    this.glintT = 0.2; this.glintRed = !!a.knock;
+    Sound.tone({ type: 'sine', f: a.knock ? 1700 : 2600, f2: a.knock ? 1500 : 3000, dur: 0.16, gain: 0.035 * v, rev: 0.4 });
   }
 
   updateAttack(dt, dist) {
     const a = this.act, P = G.player, t = this.rig.progress(a.clip), pt = this.prevT;
+    if (a.glint !== null && a.glint !== undefined && t >= a.glint && pt < a.glint) this.tell(a);
+    // (the glint rides the weapon as it draws back, fading, instead of hanging where it flashed)
+    if (this.glintT > 0) {
+      this.glintT -= dt;
+      const w = this.parts.weapon && this.parts.weapon.userData.tip, p = w ? w.getWorldPosition(this._t) : this.rig.j.handR.getWorldPosition(this._t);
+      const c = this.glintRed ? [4.2, 0.9, 0.35] : [3.4, 2.9, 2.1], k = Math.max(0, this.glintT / 0.2);
+      FX.glow.spawn({ x: p.x, y: p.y, z: p.z, life: 0.06, s: 0.05 + 0.2 * k, s2: 0.03, c: [c[0], c[1], c[2], 0.9 * k], c2: [c[0], c[1], c[2], 0] });
+    }
     if (a.track && t < a.track) this.faceTo(P.pos.x, P.pos.z, this.def.turn * 1.6, dt);
     if (a.move) {
       let mv = 0;
@@ -347,7 +373,7 @@ class Enemy {
       if (mv) World.move(this.pos, Math.sin(this.heading) * mv, Math.cos(this.heading) * mv, this.radius);
     }
     if (a.hits) a.hits.forEach(([s, e], i) => {
-      if (t >= s && pt < s) Sound.swing(this.size > 1.2, Sound.at(this.pos, 40));
+      if (t >= s && pt < s) { Sound.swing(this.size > 1.2, Sound.at(this.pos, 40)); P.dodgeCheck(this.pos, this.heading, a.hitRange + 0.3, a.arc, this); }
       if (t >= s && pt <= e && !this.hitWins.has(i)) {
         const dx = P.pos.x - this.pos.x, dz = P.pos.z - this.pos.z, d = Math.hypot(dx, dz);
         if (d - P.radius <= a.hitRange && Math.abs(P.pos.y - this.pos.y) < 2 + this.height * 0.3) {
@@ -381,16 +407,39 @@ class Enemy {
     Sound.boom(v * 0.8);
     G.cam.shake(0.9 * v);
     const d = Math.hypot(P.pos.x - c.x, P.pos.z - c.z);
+    P.dodgeCheck(c, 0, a.aoe.r + 0.3, null, this);
     if (d <= a.aoe.r + P.radius && Math.abs(P.pos.y - c.y) < 3) P.takeDamage(a.dmg * (this.dmgMul || 1), c, { knock: a.knock });
   }
 
-  takeHit(dmg, poiseDmg, from, kind, hitPos) {
+  /**
+   * A blow from Ariel. opts: melee (a sword blow or something like it, which can interrupt), swing (the world
+   * direction the blade travelled), push (m/s it shoves a light body back), riposte (the counter after a
+   * perfect dodge: it always breaks the guard).
+   */
+  takeHit(dmg, poiseDmg, from, kind, hitPos, opts = {}) {
     if (!this.alive || this.invulnerable) return;
     if (!this.aggro) this.alert(true);
     this.hp -= dmg;
     this.poise -= poiseDmg;
-    this.rig.flinch = Math.min(1, 0.4 + poiseDmg / 40);
-    const dir = hitPos.clone().sub(from).setY(0).normalize();
+    const dir = hitPos.clone().sub(from).setY(0);
+    if (dir.lengthSq() < 1e-6) dir.set(this.pos.x - from.x, 0, this.pos.z - from.z);
+    if (dir.lengthSq() < 1e-6) dir.set(-Math.sin(this.heading), 0, -Math.cos(this.heading));
+    dir.normalize();
+    // the body gives the way the blow drove it (its own frame: +x its left, +z ahead), twisted by a cut that
+    // went across it; a giant hardly moves for a sword, a man is knocked half over
+    const h = this.heading, cs = Math.cos(h), sn = Math.sin(h);
+    const lx = dir.x * cs - dir.z * sn, lz = dir.x * sn + dir.z * cs;
+    let tw = 0;
+    if (opts.swing) tw = clamp(opts.swing.x * cs - opts.swing.z * sn, -1, 1) * 0.8;
+    const give = clamp(0.25 + poiseDmg / 45, 0.3, 1.25) / Math.max(1, this.size * (this.def.boss ? 1.6 : 1.1));
+    this.rig.hit(lx, lz, tw, give);
+    const fromBehind = lz > 0.35;
+    // a light body is shoved back along the blow (a little more for a heavier one)
+    if (opts.push && this.size <= 1.5 && !this.def.boss && !this.airborne) {
+      if (!this.kb) this.kb = new THREE.Vector2();
+      const k = opts.push / Math.max(1, this.size);
+      this.kb.x += dir.x * k; this.kb.y += dir.z * k;
+    }
     // blood: thrown along the blow, more for a heavier one (a burn or a bolt sears the wound: far less)
     const nb = Math.round(clamp(18 + dmg * 0.45, 22, 60) * (kind === 'fire' || kind === 'lightning' ? 0.35 : 1) * (this.size > 1.5 ? 1.5 : 1));
     // thrown across the cut, the way the swing went, more than straight away from the blade (so it sweeps across the screen)
@@ -400,22 +449,50 @@ class Enemy {
     else if (this.def.blood === 'ichor') { FX.sparks(hitPos, dir, 8, [2.6, 0.7, 0.2, 1], 7, false); }
     else if (this.def.blood === 'rot') { FX.ash(hitPos, 6, [0.3, 0.08, 0.42, 0.7]); }
     if (kind === 'lightning') FX.sparks(hitPos, null, 16, [1.4, 1.9, 3.2, 1], 5);
-    Sound.hit(this.def.hitSound, 1);
+    // bronze takes a blade with a spit of sparks off the plate, thrown along the cut
+    if (this.def.hitSound === 'metal' && kind === 'slash') FX.sparks(hitPos, (opts.swing || dir).clone().multiplyScalar(0.7).add(dir).normalize(), 7, [2.6, 1.9, 1.0, 1], 6, false);
+    Sound.hit(this.def.hitSound, clamp(0.75 + poiseDmg / 60, 0.8, 1.3));
     UI.enemyDamaged(this, dmg);
-    if (this.hp <= 0) { this.hp = 0; this.die(); return; }
+    if (this.hp <= 0) { this.hp = 0; this.die(dir); return; }
     if (this.onHurt) this.onHurt();
+    if (opts.riposte) this.poise = Math.min(this.poise, 0);
     if (this.poise <= 0) {
       this.poise = this.def.poise;
       if (this.state !== 'dormant') {
         this.state = 'stagger'; this.act = null;
-        this.rig.play('stagger', { speed: this.size > 1.5 ? 0.9 : 1.1 });
-        this.timer = 1.1;
+        // broken from in front he reels back; from behind he pitches forward and stumbles
+        this.rig.play(fromBehind ? 'staggerFwd' : 'stagger', { speed: this.size > 1.5 ? 0.9 : 1.1, fade: 0.06 });
+        this.timer = this.def.boss ? 1.6 : 1.1;
         this.airborne = false;
+        this.hurtN = 0;
+        // a broken guard is felt: a beat more hit-stop, and for a giant the lens leans in on it
+        G.hitStop = Math.max(G.hitStop, this.size > 1.5 ? 0.12 : 0.07);
+        if (this.size > 1.5) { G.cam.punch(-2.5); G.cam.shake(0.5); }
+        if (this.def.boss) { Game.slow(0.4, 0.45); Sound.roar(0.5, 0.8); }
+      }
+      return;
+    }
+    // a blade interrupts a soldier: a short hit reaction cancels its swing while that is still winding up
+    // (once the blow is coming it trades), and three in quick succession make him force his way through
+    this.hurtT = (this.hurtT || 0);
+    const light = this.size <= 1.35 && !this.def.boss;
+    if (opts.melee && light && poiseDmg >= this.def.poise * 0.4 && this.state !== 'dormant' && this.state !== 'stagger') {
+      const a = this.act, t = this.state === 'attack' && a ? this.rig.progress(a.clip) : 0;
+      const first = a ? (a.hits ? a.hits[0][0] : a.aoe ? a.aoe.t : 0.5) : 1;
+      const winding = this.state !== 'attack' || t < first - 0.06;
+      this.hurtN = this.hurtT > 0 ? (this.hurtN || 0) + 1 : 1;
+      this.hurtT = 2.2;
+      if (this.hurtN > 3) { this.cool = Math.min(this.cool, 0.05); this.hurtN = 0; return; }
+      if (winding) {
+        this.state = 'hurt'; this.act = null;
+        this.rig.play(fromBehind ? 'hitBack' : 'hit', { speed: 1.1, fade: 0.04 });
+        this.timer = 0.36 + poiseDmg / 200;
+        this.cool = Math.max(this.cool, 0.3);
       }
     }
   }
 
-  die() {
+  die(dir = null) {
     this.alive = false;
     this.state = 'dead';
     // a pool spreads under the body once it is down
@@ -423,7 +500,18 @@ class Enemy {
     setTimeout(() => FX.bloodPool(pp, 1.2 * Math.max(1, sz * 0.9), bc.tint), 900);
     this.act = null;
     this.airborne = false;
-    this.rig.play(this.size > 1.5 ? 'deathFwd' : 'death', { fade: 0.1 });
+    // a man falls the way the killing blow drove him: onto his back if it came from in front, onto his face
+    // from behind, and slides a little with it (a giant always comes down onto its knees and forward)
+    let fwd = false;
+    if (dir && this.size <= 1.5) {
+      fwd = dir.x * Math.sin(this.heading) + dir.z * Math.cos(this.heading) > 0.35;
+      if (!this.kb) this.kb = new THREE.Vector2();
+      this.kb.x += dir.x * 2.2; this.kb.y += dir.z * 2.2;
+    }
+    // (a man cut down goes at once: the quick fall from in front, the forward collapse hurried from behind)
+    if (this.size > 1.5) this.rig.play('deathFwd', { fade: 0.06 });
+    else if (fwd) this.rig.play('deathFwd', { fade: 0.05, speed: 1.35 });
+    else this.rig.play(dir ? 'deathBack' : 'death', { fade: 0.04 });
     Sound.roar(this.size > 1.5 ? 0.6 : 1.4, Sound.at(this.pos, 60) * (this.size > 1.5 ? 1 : 0.35));
     this.deadT = 0;
     Game.onEnemyKilled(this);
@@ -432,9 +520,15 @@ class Enemy {
   updateDead(dt) {
     if (!this.root.visible) return;
     this.deadT += dt;
+    if (this.kb && this.kb.lengthSq() > 1e-3) {
+      World.move(this.pos, this.kb.x * dt, this.kb.y * dt, this.radius * 0.6);
+      this.kb.multiplyScalar(Math.exp(-6 * dt));
+    }
     this.ground(dt);
     this.place(dt);
     this.rig.update(dt, 0, 1);
+    // (the skinned sculpt follows the rig down: without this a dead hoplite stood frozen until it dissolved)
+    if (this.model) this.model.update();
     if (this.cape && this.cape.mesh.visible) this.cape.update(dt);
     if (this.trail) this.trail.update(dt);
     const dissolveAt = this.def.boss ? 99 : this.size > 1.5 ? 2.4 : 1.6;

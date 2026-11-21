@@ -14,23 +14,82 @@ class CameraRig {
     this.shakeAmt = 0;
     this.fov = 55;
     this.manual = false;
-    this._v = new THREE.Vector3();
+    this._v = new THREE.Vector3(); this._w = new THREE.Vector3();
+    // the blows: a spring the camera is knocked along and settles back from, a punch of the lens, and
+    // real seconds for the shake (it keeps going through hit-stop, when game time all but stops)
+    this.kickP = new THREE.Vector3(); this.kickV = new THREE.Vector3();
+    this.punchF = 0; this.punchV = 0; this.rt = 0;
+    // the fight: the foe the camera keeps in frame when nothing is locked, and how long the mouse has been still
+    this.threat = null; this.threatW = 0; this.mouseIdle = 9;
+    this.threatPrev = null; this.threatAng = 0; this.threatAV = 0;
+    this.frame = new THREE.Vector3(); this.frameBig = 0;
   }
   shake(a) { if (G.settings.shake) this.shakeAmt = Math.min(1.5, Math.max(this.shakeAmt, a)); }
+  /** knock the camera along a world direction, `amt` metres at the peak, springing back in about a fifth of a second */
+  kick(dir, amt) {
+    if (!G.settings.shake || !dir) return;
+    this.kickV.addScaledVector(this._w.copy(dir).normalize(), amt * 30);
+  }
+  /** a punch of the lens: negative degrees push in on the blow, positive pull out (a burst of speed) */
+  punch(deg) { if (G.settings.shake) this.punchV += deg * 34; }
+  /** one blow's whole weight on the camera: kick along dir, a shake, a punch of the lens */
+  impact(dir, kick, shake, punch = 0) {
+    if (dir) this.kick(dir, kick);
+    if (shake) this.shake(shake);
+    if (punch) this.punch(punch);
+  }
   snap(player) {
     this.pivot.copy(player.pos).add(new THREE.Vector3(0, 1.55, 0));
     this.curDist = this.dist;
+    this.kickP.set(0, 0, 0); this.kickV.set(0, 0, 0); this.punchF = this.punchV = 0;
+    this.threat = null; this.threatW = 0;
     this.update(0.016, player, true);
   }
-  update(dt, player, snap = false) {
+  /**
+   * The foe that matters most right now: the nearest awake one, a little nearer if it is mid-attack,
+   * and the one already framed keeps the frame until another is clearly closer (no flicking between two).
+   */
+  pickThreat(player) {
+    let best = null, bs = 12;
+    for (const e of G.enemies) {
+      if (!e.alive || !e.root.visible || !e.aggro || e.state === 'dormant' || e.state === 'return') continue;
+      if (Math.abs(e.pos.y - player.pos.y) > 6) continue;
+      const d = Math.hypot(e.pos.x - player.pos.x, e.pos.z - player.pos.z) - e.radius;
+      const s = d - (e.state === 'attack' ? 1.5 : 0) - (e === this.threat ? 1.5 : 0) - (e.size > 1.5 ? 2 : 0);
+      if (s < bs) { bs = s; best = e; }
+    }
+    return best;
+  }
+  update(dt, player, snap = false, raw = dt) {
     const lock = player.lock && player.lock.alive ? player.lock : null;
     const sens = 0.0021 * G.settings.sensitivity;
+    const steer = Math.abs(Input.dx) + Math.abs(Input.dy) > 0.5 || Input.down('ArrowLeft') || Input.down('ArrowRight') || Input.down('ArrowUp') || Input.down('ArrowDown');
+    this.mouseIdle = steer ? 0 : this.mouseIdle + raw;
+    // the fight: with nothing locked, the nearest threat is kept in frame (see below)
+    const threat = !lock && !player.flying && player.alive ? this.pickThreat(player) : null;
+    if (threat) this.threat = threat;
+    this.threatW = damp(this.threatW, threat ? 1 : 0, threat ? 2.2 : 1.2, dt);
+    if (this.threatW < 0.01 && !threat) this.threat = null;
     if (!lock) {
       this.yaw -= Input.dx * sens;
       this.pitch += Input.dy * sens * (G.settings.invertY ? -1 : 1);
+      // when the mouse rests mid-fight, the camera turns gently to compose the threat: a little round to Ariel's right
+      // of straight behind him, so the foe stands centre-right of him instead of hidden behind his back (seen
+      // straight over the shoulder, a foe dead ahead lines up exactly behind his body). Only for a foe that is
+      // close and roughly ahead (never swinging all the way round to one behind), never while sprinting off.
+      const T = this.threat;
+      if (T && T.alive && this.mouseIdle > 0.45 && !player.sprinting && !snap) {
+        const dx = T.pos.x - player.pos.x, dz = T.pos.z - player.pos.z, d = Math.hypot(dx, dz), ang = Math.atan2(-dx, -dz);
+        // (a foe circling him is led a little, by how fast it goes round, so the camera keeps up instead of trailing)
+        this.threatAV = this.threatPrev === T ? damp(this.threatAV, clamp(wrapAngle(ang - this.threatAng) / Math.max(dt, 1e-4), -2, 2), 5, dt) : 0;
+        this.threatPrev = T; this.threatAng = ang;
+        const rel = wrapAngle(ang + CameraRig.COMPOSE / Math.max(1, d / 4) + this.threatAV * 0.4 - this.yaw);
+        if (d > 1.2 && d < 11 && Math.abs(rel) < 1.6) this.yaw += rel * (1 - Math.exp(-3 * this.threatW * dt));
+      } else this.threatPrev = null;
     } else {
       const d = this._v.copy(lock.pos).sub(player.pos);
-      const want = Math.atan2(-d.x, -d.z);
+      // (locked on, the same composition: the foe centre-right of him, not behind him)
+      const want = Math.atan2(-d.x, -d.z) + CameraRig.COMPOSE * 0.8 / Math.max(1, Math.hypot(d.x, d.z) / 5);
       this.yaw = dampAngle(this.yaw, want, 9, dt);
       const hd = Math.hypot(d.x, d.z);
       const close = lock.size > 1.5 ? smooth(9, 3, hd) * 0.3 : 0;
@@ -57,9 +116,22 @@ class CameraRig {
     let fight = 0;
     for (const e of G.enemies) if (e.alive && e.aggro && e.pos.distanceTo(player.pos) < 16) { fight = 1; break; }
     this.fightAmt = damp(this.fightAmt, fight, 1.5, dt);
-    const sh = 0.62 - this.fightAmt * 0.12;
+    // (further over the shoulder in a fight, so a foe straight ahead stands clear of his body, not behind it)
+    const sh = 0.62 + this.fightAmt * 0.2;
+    // framing the threat: the look point leans part of the way toward it (further for a giant, whose head
+    // must stay in the picture), and the camera backs off a little more for a big one
+    const T = this.threat;
+    if (T && this.threatW > 0.01) {
+      const big = T.size > 1.5 ? 1 : 0;
+      const tx = T.pos.x - this.pivot.x, tz = T.pos.z - this.pivot.z, td = Math.hypot(tx, tz) || 1;
+      const k = Math.min(big ? 0.38 : 0.26, (big ? 4.5 : 2.4) / td) * this.threatW;
+      this._w.set(tx * k, clamp((T.pos.y + T.height * 0.55 - this.pivot.y) * k * 0.5, -0.4, 0.9), tz * k);
+      this.frameBig = damp(this.frameBig, big * this.threatW, 2, dt);
+    } else { this._w.set(0, 0, 0); this.frameBig = damp(this.frameBig, 0, 2, dt); }
+    if (snap) this.frame.copy(this._w);
+    else this.frame.lerp(this._w, 1 - Math.exp(-3.5 * dt));
     // keep the camera above ground and out of rock walls
-    let dist = this.dist + this.fightAmt * 0.8 + (lock ? 0.9 : 0);
+    let dist = this.dist + this.fightAmt * 0.8 + (lock ? 0.9 : 0) + this.frameBig * 1.4;
     for (let d = 0.6; d <= dist; d += 0.3) {
       const px = this.pivot.x + dx * d + rx * sh, py = this.pivot.y + dy * d, pz = this.pivot.z + dz * d + rz * sh;
       if (World.terrainHeight(px, pz) + 0.35 > py || (d > 1.2 && World.cameraBlocked(px, py, pz))) { dist = Math.max(0.9, d - 0.3); break; }
@@ -77,45 +149,75 @@ class CameraRig {
     }
     const gy = World.terrainHeight(c.position.x, c.position.z) + 0.3;
     if (c.position.y < gy) c.position.y = gy;
-    this.look.set(this.pivot.x + rx * sh, this.pivot.y, this.pivot.z + rz * sh);
+    this.look.set(this.pivot.x + rx * sh + this.frame.x, this.pivot.y + this.frame.y, this.pivot.z + rz * sh + this.frame.z);
     if (lock) this.look.lerp(this._v.copy(lock.pos).add(new THREE.Vector3(0, lock.height * 0.55, 0)), 0.18);
-    // shake
-    if (this.shakeAmt > 0) {
-      const s = this.shakeAmt * 0.12, t = G.time * 40;
-      c.position.x += Math.sin(t * 1.3) * s; c.position.y += Math.sin(t * 1.7 + 1) * s; c.position.z += Math.cos(t * 1.1) * s;
-      this.shakeAmt = Math.max(0, this.shakeAmt - dt * 2.4);
+    // the blows, on real time: the kick spring (a touch under-damped, so it rebounds once), the lens punch
+    this.rt += raw;
+    for (let left = Math.min(raw, 0.05); left > 1e-5; left -= 1 / 120) {
+      const h = Math.min(left, 1 / 120);
+      this.kickV.addScaledVector(this.kickP, -300 * h).multiplyScalar(Math.exp(-21 * h));
+      this.kickP.addScaledVector(this.kickV, h);
+      this.punchV += -260 * this.punchF * h; this.punchV *= Math.exp(-22 * h);
+      this.punchF += this.punchV * h;
     }
+    if (this.kickP.lengthSq() > 0.36) this.kickP.setLength(0.6);
+    this.punchF = clamp(this.punchF, -8, 8);
+    c.position.add(this.kickP);
     c.lookAt(this.look);
-    const fovT = (player.sprinting ? 63 : 55) + this.fightAmt * 3;
+    // shake: smooth noise in the camera's own yaw, pitch and roll (a few degrees at most) plus a little drift,
+    // felt as the square of its strength so small knocks stay small; it decays on real time
+    if (this.shakeAmt > 0.001) {
+      const tr = Math.min(1, this.shakeAmt), a = tr * Math.sqrt(tr), t = this.rt;
+      const n = (s) => Math.sin(t * 71 + s) * 0.5 + Math.sin(t * 113 + s * 2.1) * 0.3 + Math.sin(t * 167 + s * 3.7) * 0.2;
+      c.rotateY(n(1.3) * 0.042 * a); c.rotateX(n(4.1) * 0.036 * a); c.rotateZ(n(7.7) * 0.03 * a);
+      c.translateX(n(9.2) * 0.05 * a); c.translateY(n(2.6) * 0.05 * a);
+      this.shakeAmt = Math.max(0, this.shakeAmt - raw * 2.2);
+    }
+    const fovT = (player.sprinting ? 63 : 55) + this.fightAmt * 3 + this.frameBig * 3;
     this.fov = damp(this.fov, fovT, 4, dt);
-    if (Math.abs(c.fov - this.fov) > 0.01) { c.fov = this.fov; c.updateProjectionMatrix(); }
+    const fov = this.fov + this.punchF;
+    if (Math.abs(c.fov - fov) > 0.01) { c.fov = fov; c.updateProjectionMatrix(); }
   }
 }
 
+/*
+ * Every action, timed as fractions of its clip:
+ *   hits    windows when the blade can connect (lined up with the frames the blade actually crosses the front)
+ *   combo   from when the next light cut may start (a press any time before is remembered: see queue)
+ *   cancel  from when moving ends the recovery early      atk / dodge: from when an attack / a dodge may follow
+ *   hs      hit-stop seconds when it lands                kick, shake, punch: the camera's share of the blow
+ *   side    which way the blade travels (+1 to his left, -1 to his right, 0 straight down)
+ */
+// how far (radians) the fight camera swings round to Ariel's right of straight behind him, so a close foe isn't hidden by him
+CameraRig.COMPOSE = 0.3;
+
 const PLAYER_ACTIONS = {
-  light1: { clip: 'light1', st: 14, hits: [[0.28, 0.46]], dmg: 1.0, poise: 16, range: 3.0, arc: 160, move: [[0.16, 0.45, 1.0]], next: 'light2', combo: 0.42, trail: [0.2, 0.55], track: 0.26 },
-  light2: { clip: 'light2', st: 14, hits: [[0.26, 0.46]], dmg: 1.08, poise: 16, range: 3.0, arc: 160, move: [[0.14, 0.44, 0.9]], next: 'light3', combo: 0.42, trail: [0.18, 0.55], track: 0.24 },
+  light1: { clip: 'light1', st: 14, hits: [[0.33, 0.47]], dmg: 1.0, poise: 16, range: 3.0, arc: 160, move: [[0.2, 0.46, 1.0]], next: 'light2', combo: 0.5, cancel: 0.74, trail: [0.27, 0.55], track: 0.3, hs: 0.055, kick: 0.05, shake: 0.18, side: 1, push: 2.4 },
+  light2: { clip: 'light2', st: 14, hits: [[0.31, 0.46]], dmg: 1.08, poise: 16, range: 3.0, arc: 160, move: [[0.18, 0.45, 0.9]], next: 'light3', combo: 0.5, cancel: 0.74, trail: [0.25, 0.54], track: 0.28, hs: 0.06, kick: 0.055, shake: 0.2, side: -1, push: 2.6 },
   // the third cut lets go of the lightning stored in Keraunos: it arcs on to the next foes
-  light3: { clip: 'light3', st: 18, hits: [[0.4, 0.55]], dmg: 1.5, poise: 28, range: 3.2, arc: 100, move: [[0.25, 0.52, 1.4]], next: 'light1', combo: 0.62, trail: [0.3, 0.62], track: 0.3, discharge: true },
-  heavy: { clip: 'heavy', st: 30, aoe: [0.56, 4.2], dmg: 2.6, poise: 60, move: [[0.25, 0.56, 1.9]], trail: [0.38, 0.66], hyper: [0.15, 0.62], track: 0.35 },
-  roll: { clip: 'roll', st: 18, iframes: [0.04, 0.46], move: [[0.03, 0.62, 4.7]] },
-  back: { clip: 'backstep', st: 10, iframes: [0.02, 0.32], move: [[0.0, 0.5, -2.8]] },
-  cast: { clip: 'cast', fp: 24, release: 0.48, track: 0.45 },
+  light3: { clip: 'light3', st: 18, hits: [[0.41, 0.54]], dmg: 1.5, poise: 28, range: 3.2, arc: 100, move: [[0.25, 0.52, 1.4]], next: 'light1', combo: 0.66, cancel: 0.82, trail: [0.3, 0.62], track: 0.32, discharge: true, hs: 0.1, kick: 0.11, shake: 0.42, punch: -1.6, side: 0, push: 4.2 },
+  heavy: { clip: 'heavy', st: 30, aoe: [0.56, 4.2], dmg: 2.6, poise: 60, move: [[0.25, 0.56, 1.9]], trail: [0.38, 0.66], hyper: [0.15, 0.62], track: 0.36, cancel: 0.86, hs: 0.13, kick: 0.16, shake: 0.75, punch: -2.6, side: 0, push: 6.5 },
+  roll: { clip: 'roll', st: 18, iframes: [0.04, 0.46], move: [[0.03, 0.62, 4.7]], atk: 0.62, dodge: 0.72, cancel: 0.8 },
+  back: { clip: 'backstep', st: 10, iframes: [0.02, 0.32], move: [[0.0, 0.5, -2.8]], atk: 0.48, dodge: 0.6, cancel: 0.66 },
+  cast: { clip: 'cast', fp: 24, release: 0.48, track: 0.45, cancel: 0.82 },
   heal: { clip: 'drink', heal: 0.55, moveMul: 0.3 },
-  hit: { clip: 'hit' },
-  knock: { clip: 'knock', iframes: [0, 0.78], move: [[0.05, 0.3, -1.6]] },
+  hit: { clip: 'hit', atk: 0.7, dodge: 0.4, cancel: 0.78 },
+  hitBack: { clip: 'hitBack', atk: 0.7, dodge: 0.4, cancel: 0.78 },
+  knock: { clip: 'knock', iframes: [0, 0.78], move: [[0.05, 0.3, -1.6]], atk: 0.9, dodge: 0.8, cancel: 0.92 },
   // ---- the gifts of Zeus (fire: the moment in the clip the power is let go, see abilityFire)
-  chain: { clip: 'chainCast', fp: 22, fire: 0.48, track: 0.45 },
-  dash: { clip: 'dashStrike', st: 14, fire: 0.14, iframes: [0.04, 0.5], track: 0.12 },
+  chain: { clip: 'chainCast', fp: 22, fire: 0.48, track: 0.45, cancel: 0.8 },
+  dash: { clip: 'dashStrike', st: 14, fire: 0.14, iframes: [0.04, 0.5], track: 0.12, cancel: 0.62 },
   storm: { clip: 'nova', fp: 45, fire: 0.6, hyper: [0, 0.95], speed: 1.35 },
   // ---- the gifts of Ares
-  warcry: { clip: 'warcry', fp: 18, fire: 0.36, hyper: [0, 0.95] },
-  charge: { clip: 'charge', st: 24, move: [[0.1, 0.74, 9.5]], hits: [[0.1, 0.76]], dmg: 1.7, poise: 80, range: 1.7, arc: 140, hyper: [0, 0.82], charge: true, track: 0.1 },
-  spear: { clip: 'spearThrow', fp: 26, fire: 0.5, track: 0.48 },
+  warcry: { clip: 'warcry', fp: 18, fire: 0.36, hyper: [0, 0.95], cancel: 0.85 },
+  charge: { clip: 'charge', st: 24, move: [[0.1, 0.74, 9.5]], hits: [[0.1, 0.76]], dmg: 1.7, poise: 80, range: 1.7, arc: 140, hyper: [0, 0.82], charge: true, track: 0.1, cancel: 0.86, hs: 0.045, kick: 0.12, shake: 0.45, side: 0, push: 12 },
+  spear: { clip: 'spearThrow', fp: 26, fire: 0.5, track: 0.48, cancel: 0.8 },
   // ---- in the air
   skybolt: { clip: 'chainCast', fp: 5, fire: 0.48, track: 0.45, speed: 1.6 },
   dive: { clip: 'dive', fire: 0.5, hyper: [0, 1], iframes: [0.3, 0.5] },
 };
+// the actions that swing Keraunos (they turn toward a target over the wind-up and lunge to reach it)
+const MELEE = new Set(['light1', 'light2', 'light3', 'heavy']);
 
 // the six gifts on the number keys: three of Zeus' thunder, three of Ares' war (cd: seconds of cooldown)
 const ABILITIES = [
@@ -167,7 +269,7 @@ class Player {
       : { width: 0.56, topWidth: sh * 2, top: 0.25, back: -0.14 };
     this.cape = new Cape(this.rig, { length: 1.08, cols: 12, rows: 14, material: Mat.capeBlue, ...capeFit });
     this.cape.attach(scene);
-    this.trail = new Trail(new THREE.Color(1.3, 1.9, 3.6), 1, 22, 0.13);
+    this.trail = new Trail(new THREE.Color(0.95, 1.4, 2.7), 1, 22, 0.12);
     this.trailBase = this.trail.mesh.material.uniforms.uColor.value.clone();
     scene.add(this.trail.mesh);
     // the light he gives off when the gods are in him (always in the scene, so turning it on never recompiles a shader)
@@ -389,10 +491,13 @@ class Player {
       if (t >= this.act.trail[0] && t <= this.act.trail[1]) {
         this.parts.sword.userData.base.getWorldPosition(this._b);
         this.parts.sword.userData.tip.getWorldPosition(this._t);
-        this.trail.push(this._b, this._t);
+        // (the smear rides the outer part of the blade, where it moves fastest, not a whole sheet from the hilt)
+        this.trail.push(this._b.lerp(this._t, 0.4), this._t);
       }
     }
-    this.trail.update(dt);
+    // (the smear fades on at least part of real time: through a hit-stop or a slow-motion kill it thins out
+    // instead of hanging in the air as a solid white fan)
+    this.trail.update(Math.max(dt, (G.rawDt || dt) * 0.6));
   }
 
   updateFree(dt, inp) {
@@ -428,12 +533,14 @@ class Player {
     }
     this.anim.speed = sp; this.anim.dir = dir;
 
+    this.takeQueued(inp);
     if (inp.interact && Game.tryInteract()) return;
     if (inp.god) { this.awaken(); return; }
     if (inp.fly) { this.takeOff(); return; }
     if (inp.ability && this.useAbility(inp.ability, inp)) return;
     if (inp.roll) { this.startAction(inp.mag > 0.1 ? 'roll' : 'back', inp); return; }
-    if (inp.light) { this.startAction('light1', inp); return; }
+    // the light chain carries on if the next cut comes in rhythm, even after the last one has finished
+    if (inp.light) { this.startAction(this.comboNext && G.time - this.comboT < 0.32 ? this.comboNext : 'light1', inp); return; }
     if (inp.heavy) { this.startAction('heavy', inp); return; }
     if (inp.cast) { this.startAction('cast', inp); return; }
     if (inp.heal) { this.startAction('heal', inp); return; }
@@ -479,6 +586,7 @@ class Player {
       if (Math.random() < 0.25) FX.arc(f.clone(), f.clone().add(new THREE.Vector3(rand(-0.4, 0.4), rand(-0.7, -0.2), rand(-0.4, 0.4))), 0.009);
     }
     if (!this.flying) return;
+    this.takeQueued(inp);
     if (inp.fly) { this.land(); return; }
     if (inp.god) { this.awaken(); return; }
     if (inp.ability) { if (this.useAbility(inp.ability, inp)) return; }
@@ -544,10 +652,12 @@ class Player {
   }
   dmgMul() { return (this.god ? GOD.dmg : 1) * (this.fury > 0 ? 1.35 : 1) * (this.grip ? 1.35 : 1); }
   /** every blow Ariel lands goes through here: the multipliers, Rage, War Cry's lifesteal */
-  strike(e, dmg, poise, kind, hitPos, from = null, raw = false) {
+  strike(e, dmg, poise, kind, hitPos, from = null, raw = false, opts = {}) {
     if (!e.alive) return;
     if (!raw) dmg *= this.dmgMul();
-    e.takeHit(dmg * rand(0.95, 1.05), poise * (this.god ? 1.5 : 1), from || this.pos, kind, hitPos);
+    // the counter after a dodge timed to the last instant: harder, and it breaks the guard
+    if (opts.melee && this.riposteT > G.time) { dmg *= 1.5; poise *= 3; opts.riposte = true; }
+    e.takeHit(dmg * rand(0.95, 1.05), poise * (this.god ? 1.5 : 1), from || this.pos, kind, hitPos, opts);
     this.sinceFight = 0;
     if (!this.god && !raw) {
       const was = this.rage;
@@ -653,6 +763,7 @@ class Player {
     else { World.move(this.pos, fx * dist, fz * dist, this.radius); this.pos.y = World.getHeight(this.pos.x, this.pos.z, this.pos.y + 1); }
     const end = this.pos.clone();
     const sx = end.x - start.x, sz = end.z - start.z, L = Math.hypot(sx, sz) || 1;
+    let struck = 0, killed = false;
     for (const e of G.enemies) {
       if (!e.alive || !e.root.visible) continue;
       const ex = e.pos.x - start.x, ez = e.pos.z - start.z;
@@ -660,8 +771,13 @@ class Player {
       const lat = Math.hypot(ex - sx * u, ez - sz * u);
       if (lat > e.radius + 1.3 || Math.abs(e.pos.y - lerp(start.y, end.y, u)) > 2 + e.height * 0.5) continue;
       const hp = e.pos.clone().add(new THREE.Vector3(0, e.height * 0.5, 0));
-      this.strike(e, this.dmg * 1.9, 45, 'lightning', hp, start);
+      this.strike(e, this.dmg * 1.9, 45, 'lightning', hp, start, false, { melee: true, push: 3.5, swing: new THREE.Vector3(fx, 0, fz) });
+      struck++; if (!e.alive) killed = true;
     }
+    // the speed of it in the lens (it pulls out as he goes), and the weight of whatever it cut through
+    G.cam.punch(3.5);
+    if (struck) { G.hitStop = Math.max(G.hitStop, 0.07); G.cam.kick(new THREE.Vector3(fx, 0, fz), 0.1); }
+    if (killed) this.killBeat(false);
     // (thin: seen end-on from behind him, a thick bolt stacks into a white blob)
     const a = start.clone().add(new THREE.Vector3(fx * 0.8, 1.0, fz * 0.8)), b = end.clone().add(new THREE.Vector3(0, 1.0, 0));
     FX.bolt(a, b, { radius: 0.035, life: 0.24, branches: 4 });
@@ -821,7 +937,8 @@ class Player {
     FX.ring(c, 6, { color: [2.6, 0.9, 0.3], life: 0.7 });
     FX.dust(c, 4, 26);
     Sound.boom(1);
-    G.hitStop = 0.08;
+    G.hitStop = Math.max(G.hitStop, 0.1);
+    G.cam.impact(new THREE.Vector3(0, -1, 0), 0.22, 0, -3);
     this.aoeDamage(c, 5.2, this.dmg * 3.2, 90, 'lightning', (e) => this.shove(e, e.pos.x - c.x, e.pos.z - c.z, 11));
   }
 
@@ -897,19 +1014,39 @@ class Player {
     }
     if (a.st && !free) { this.st -= a.st; this.stDelay = 0.7; }
     if (a.fp && !free) this.fp -= a.fp;
+    const carry = Math.hypot(this.vx, this.vz);
     this.state = 'action'; this.act = a; this.actName = name;
-    this.prevT = 0; this.hitSet = new Set(); this.buffer = null; this.fired = {};
+    this.prevT = 0; this.hitSet = new Set(); this.buf = null; this.fired = {}; this.actAt = G.time;
+    this.comboNext = null;
     this.rig.legYaw = 0;
-    // facing
-    if (name === 'roll' && inp && inp.mag > 0.1) this.heading = Math.atan2(inp.dx, inp.dz);
-    else if (name !== 'back' && name !== 'hit' && name !== 'knock') {
+    // facing. A sword blow picks its foe now (the locked one, else the nearest the way the stick points, else the
+    // way he faces) and turns into it over the wind-up instead of snapping round in one frame; it also lunges
+    // as far as it takes to reach that foe, no further. A roll goes exactly where it is pressed, the body
+    // swinging round into it a beat behind. The gifts still face their aim at once.
+    this.target = null; this.moveK = 1; this.rollDir = null;
+    if (MELEE.has(name)) {
+      // the counter after a perfect dodge goes straight for the foe that missed, closing the gap the roll opened
+      const R = this.riposteT > G.time && this.riposteFoe && this.riposteFoe.alive ? this.riposteFoe : null;
+      const rip = R && Math.hypot(R.pos.x - this.pos.x, R.pos.z - this.pos.z) < 8;
+      this.target = rip ? R : this.meleeTarget(inp);
+      const total = a.move ? a.move.reduce((s, m) => s + m[2], 0) : 0;
+      if (this.target && total > 0) {
+        const T = this.target, d = Math.hypot(T.pos.x - this.pos.x, T.pos.z - this.pos.z);
+        // where the blow lands best: a step short of his body (the slam lands 1.9 m ahead)
+        const want = a.aoe ? d - 1.9 : d - T.radius - this.radius - 0.5;
+        this.moveK = clamp(want / total, 0.12, rip ? 4 : 2.3);
+        if (rip && this.moveK > 2.3) { this.heading = Math.atan2(T.pos.x - this.pos.x, T.pos.z - this.pos.z); Sound.zap(); }
+      } else if (carry > 6) this.moveK = 1.45;          // swung out of a sprint: the run carries into it
+    } else if (name === 'roll' && inp && inp.mag > 0.1) this.rollDir = Math.atan2(inp.dx, inp.dz);
+    if (name === 'roll' || name === 'back') (this.dodgeFrom || (this.dodgeFrom = new THREE.Vector3())).copy(this.pos);
+    else if (name !== 'back' && name !== 'hit' && name !== 'hitBack' && name !== 'knock') {
       if (this.lock) this.heading = Math.atan2(this.lock.pos.x - this.pos.x, this.lock.pos.z - this.pos.z);
       else if (inp && inp.mag > 0.1) this.heading = Math.atan2(inp.dx, inp.dz);
     }
     // the gods make him quicker; in the air only the upper body acts, the flying pose holds the legs
     const quick = this.god ? 1.2 : this.fury > 0 && (a.hits || a.aoe) ? 1.1 : 1;
     const air = this.flying && name !== 'dive';
-    this.rig.play(a.clip, { fade: name === 'roll' || name === 'back' ? 0.05 : 0.08, speed: (a.speed || 1) * quick, mask: air ? 'upper' : undefined });
+    this.rig.play(a.clip, { fade: name === 'roll' || name === 'back' ? 0.05 : name === 'hit' || name === 'hitBack' ? 0.04 : 0.08, speed: (a.speed || 1) * quick, mask: air ? 'upper' : undefined });
     if (name === 'roll' || name === 'back') Sound.roll();
     if (name === 'cast' || name === 'chain' || name === 'skybolt') Sound.zap();
     if (name === 'charge') { Sound.roar(1.4, 0.5); Sound.roll(); }
@@ -936,15 +1073,32 @@ class Player {
       } else this.diving = false;
     }
     const t = this.rig.progress(a.clip), pt = this.prevT;
+    // turning into the blow over the wind-up: toward its target (followed as it moves), else the stick;
+    // a roll's body swings round into the direction it is already travelling
+    if (a.track && t < a.track) {
+      const tg = this.target && this.target.alive ? this.target : this.lock && this.lock.alive ? this.lock : null;
+      let want = null;
+      if (tg) want = Math.atan2(tg.pos.x - this.pos.x, tg.pos.z - this.pos.z);
+      else if (inp.mag > 0.1) want = Math.atan2(inp.dx, inp.dz);
+      if (want !== null) this.heading = dampAngle(this.heading, want, MELEE.has(this.actName) ? 24 : 10, dt);
+    }
+    if (this.rollDir !== null) this.heading = dampAngle(this.heading, this.rollDir, 30, dt);
     // root motion
     let mv = 0;
     if (a.move) for (const [t0, t1, d] of a.move) {
       const f = (x) => d * easeOutQuad(clamp((x - t0) / (t1 - t0), 0, 1));
       mv += f(t) - f(pt);
     }
+    if (mv > 0) mv *= this.moveK;
     // lunges and rolls stop at an enemy's body instead of sliding into it (the charge only stops at a giant)
-    if (mv > 0) mv = Math.min(mv, this.roomAhead(a.charge));
-    if (mv) World.move(this.pos, Math.sin(this.heading) * mv, Math.cos(this.heading) * mv, this.radius);
+    const mh = this.rollDir ?? this.heading;
+    if (mv > 0) mv = Math.min(mv, this.roomAhead(a.charge, mh));
+    if (mv) World.move(this.pos, Math.sin(mh) * mv, Math.cos(mh) * mv, this.radius);
+    // a lunge longer than any step (the counter closing on its foe) goes as a streak of the storm
+    if (mv > 0 && this.moveK > 2.3) {
+      const b = this.root.position;
+      for (let i = 0; i < 3; i++) FX.sparkle.spawn({ x: b.x + rand(-0.25, 0.25), y: b.y + rand(0.4, 1.6), z: b.z + rand(-0.25, 0.25), vx: -Math.sin(mh) * rand(1, 3), vy: rand(-0.3, 0.6), vz: -Math.cos(mh) * rand(1, 3), s: rand(0.008, 0.014), life: rand(0.15, 0.3), c: [1.6, 2.2, 3.6, 1], c2: [0.4, 0.7, 1.8, 0], g: 0, drag: 4 });
+    }
     if (a.charge && t > 0.1 && t < 0.74 && Math.random() < 0.6) FX.dust(this.pos, 0.5, 2);
     if (a.moveMul && inp.mag > 0.1 && !this.flying) {
       World.move(this.pos, inp.dx * 5 * a.moveMul * dt, inp.dz * 5 * a.moveMul * dt, this.radius);
@@ -956,16 +1110,9 @@ class Player {
       this.vx = damp(this.vx, 0, 2.5, dt); this.vz = damp(this.vz, 0, 2.5, dt);
       this.vy = damp(this.vy, (inp.up ? 5 : 0) - (inp.down ? 6 : 0), 4, dt);
     }
-    // tracking during wind-up
-    if (a.track && t < a.track) {
-      let want = null;
-      if (this.lock) want = Math.atan2(this.lock.pos.x - this.pos.x, this.lock.pos.z - this.pos.z);
-      else if (inp.mag > 0.1) want = Math.atan2(inp.dx, inp.dz);
-      if (want !== null) this.heading = dampAngle(this.heading, want, 10, dt);
-    }
-    // sword hits
+    // sword hits (the whoosh a moment before the blade arrives)
     if (a.hits) a.hits.forEach(([s, e], i) => {
-      if (t >= s && pt < s) Sound.swing(this.actName === 'light3');
+      if (t >= s - 0.04 && pt < s - 0.04) Sound.swing(this.actName === 'light3' || this.actName === 'charge');
       if (t >= s && pt <= e) this.hitEnemies(a.range, a.arc, this.dmg * a.dmg, a.poise);
     });
     // thunder slam
@@ -974,11 +1121,17 @@ class Player {
       Sound.swing(true);
       const c = this._v.set(this.pos.x + Math.sin(this.heading) * 1.9, 0, this.pos.z + Math.cos(this.heading) * 1.9);
       c.y = World.getHeight(c.x, c.z, this.pos.y + 1);
-      FX.lightningStrike(c.clone(), { radius: 2.8, scale: 0.8, shake: 0.7 });
+      // (a bright flash, not a blinding one: at full strength this close to the camera it whited out the screen for half a second)
+      FX.lightningStrike(c.clone(), { radius: 2.8, scale: 0.8, shake: 0, flash: 0.08, light: 140, puff: false });
       // in God Mode Ares' fire goes with Zeus' thunder
       if (this.god || this.fury > 0) { FX.fireBurst(c, 2.6, 50); FX.ring(c, a.aoe[1] * 1.2, { color: [2.6, 0.8, 0.2], life: 0.5 }); }
-      this.aoeDamage(c, a.aoe[1] * (this.god ? 1.3 : 1), this.dmg * a.dmg, a.poise, 'lightning');
-      G.hitStop = 0.07;
+      const n = this.aoeDamage(c, a.aoe[1] * (this.god ? 1.3 : 1), this.dmg * a.dmg, a.poise, 'lightning', null, { push: a.push, melee: true, swing: new THREE.Vector3(0, -1, 0) });
+      // the slam's weight: hard into the ground, harder still into bodies
+      const big = n.big ? 1.25 : 1;
+      G.hitStop = Math.max(G.hitStop, n.count ? a.hs * big * (n.killed ? 1.3 : 1) : 0.05);
+      G.cam.impact(this._v.set(0, -1, 0), n.count ? a.kick : a.kick * 0.6, n.count ? a.shake : a.shake * 0.7, n.count ? a.punch : a.punch * 0.5);
+      if (n.count) this.hitSound(n.count, true);
+      if (n.killed) this.killBeat(n.big);
     }
     // Zeus's bolt
     if (a.release && t >= a.release && !this.fired.cast) {
@@ -1002,22 +1155,88 @@ class Player {
       FX.healAura(this.pos);
       Sound.heal();
     }
-    // input buffering
-    if (a.next && inp.light && t > 0.2) this.buffer = a.next;
-    if (inp.roll && t > 0.3 && !this.flying) this.buffer = inp.mag > 0.1 ? 'roll' : 'back';
-    if (inp.heavy && a.next && t > 0.3) this.buffer = 'heavy';
-    if (inp.roll) this.bufferInp = inp;
-    const lastHit = a.hits ? a.hits[a.hits.length - 1][1] : a.aoe ? a.aoe[0] : 0.5;
-    if (this.buffer) {
-      const isDodge = this.buffer === 'roll' || this.buffer === 'back';
-      const ready = isDodge ? (a.hits || a.aoe ? t > lastHit + 0.08 : t > 0.75) : t >= (a.combo || 0.85);
-      if (ready && this.actName !== 'hit' && this.actName !== 'knock') {
-        const b = this.buffer; this.buffer = null;
-        if (this.startAction(b, isDodge ? this.bufferInp || inp : inp)) { this.prevT = 0; return; }
-      }
+    // input: a press made any time during the action is remembered for half a second and acted on at the
+    // first frame the action allows it (the next cut, a dodge, a gift), so nothing pressed early is lost
+    this.queue(inp);
+    const q = this.buf;
+    if (q && t >= this.allowAt(q.kind)) {
+      this.buf = null;
+      const name = this.resolveQueued(q);
+      if (name && (name.startsWith('gift:') ? this.useAbility(name.slice(5), q.inp) : this.startAction(name, q.kind === 'roll' ? q.inp : inp))) { this.prevT = 0; return; }
     }
     this.prevT = t;
-    if (t >= 1) { this.state = 'free'; this.act = null; }
+    // moving ends the tail of a recovery early (the light chain stays open a moment after: see updateFree)
+    if (a.cancel && t >= a.cancel && inp.mag > 0.1 && !this.flying && !this.diving) { this.endAction(0.2); return; }
+    if (t >= 1) this.endAction();
+  }
+  /** back to free movement; a light cut remembers which cut comes next for a moment */
+  endAction(fade) {
+    this.comboNext = this.act && this.act.next ? this.act.next : null;
+    this.comboT = G.time;
+    this.state = 'free'; this.act = null; this.rollDir = null; this.target = null;
+    if (fade) this.rig.stop(fade);
+  }
+  /** remember the latest press (a dodge wins over an attack pressed in the same frame); forget it after 0.5 s */
+  queue(inp) {
+    let kind = null;
+    if (inp.light) kind = 'light';
+    else if (inp.heavy) kind = 'heavy';
+    if (inp.roll && !this.flying) kind = 'roll';
+    if (inp.ability) kind = 'gift';
+    if (kind) this.buf = { kind, inp: { ...inp }, at: G.time };
+    else if (this.buf && G.time - this.buf.at > 0.5) this.buf = null;
+  }
+  /** a press remembered from the action just ended counts as made now */
+  takeQueued(inp) {
+    const q = this.buf;
+    this.buf = null;
+    if (!q || G.time - q.at > 0.45) return;
+    if (q.kind === 'light') inp.light = true;
+    else if (q.kind === 'heavy') inp.heavy = true;
+    else if (q.kind === 'roll') inp.roll = true;
+    else if (q.kind === 'gift' && !inp.ability) inp.ability = q.inp.ability;
+  }
+  /** the point in the current action from which a remembered press may start the next one */
+  allowAt(kind) {
+    const a = this.act, n = this.actName;
+    const lastHit = a.hits ? a.hits[a.hits.length - 1][1] : a.aoe ? a.aoe[0] : a.fire ?? a.release ?? 0.5;
+    if (kind === 'roll') {
+      if (a.dodge !== undefined) return a.dodge;
+      // out of a swing: once the blade has done its work (no dodging out of a blow before it lands)
+      return a.hits || a.aoe ? lastHit + 0.06 : Math.max(lastHit + 0.05, 0.6);
+    }
+    if (kind === 'light' || kind === 'heavy') {
+      if (a.next) return a.combo;
+      if (a.atk !== undefined) return a.atk;
+    }
+    return a.cancel ?? 0.9;
+  }
+  resolveQueued(q) {
+    if (q.kind === 'roll') return q.inp.mag > 0.1 ? 'roll' : 'back';
+    if (q.kind === 'gift') return 'gift:' + q.inp.ability;
+    if (this.flying) return q.kind === 'light' ? 'skybolt' : 'dive';
+    if (q.kind === 'light') return this.act.next || 'light1';
+    return 'heavy';
+  }
+  /** the foe a sword blow goes for: the locked one, else the nearest within a lunge the way the stick points (or he faces) */
+  meleeTarget(inp, reach = 5) {
+    if (this.lock && this.lock.alive) return this.lock;
+    const stick = inp && inp.mag > 0.1;
+    const want = stick ? Math.atan2(inp.dx, inp.dz) : this.heading;
+    const fx = Math.sin(want), fz = Math.cos(want);
+    let best = null, bs = Infinity;
+    for (const e of G.enemies) {
+      if (!e.alive || !e.root.visible || e.state === 'dormant' || e.airborne) continue;
+      if (Math.abs(e.pos.y - this.pos.y) > 2.2) continue;
+      const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, cd = Math.hypot(dx, dz) || 1, d = cd - e.radius;
+      if (d > reach) continue;
+      const dot = (dx * fx + dz * fz) / cd;
+      // in front (wide when he is right on top of it), and nearer and straighter ahead is better
+      if (dot < (d < 1.2 ? -0.2 : stick ? 0.45 : 0.25)) continue;
+      const s = d * (1.6 - dot);
+      if (s < bs) { bs = s; best = e; }
+    }
+    return best;
   }
 
   /* ------------------------------------------------------------ the war-shard */
@@ -1099,8 +1318,8 @@ class Player {
   }
 
   /** how far Ariel can travel straight ahead before touching an enemy (charging: only one too big to shove) */
-  roomAhead(charging = false) {
-    const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
+  roomAhead(charging = false, heading = this.heading) {
+    const fx = Math.sin(heading), fz = Math.cos(heading);
     let room = Infinity;
     for (const e of G.enemies) {
       if (!e.alive || !e.root.visible || e.airborne) continue;
@@ -1132,9 +1351,32 @@ class Player {
     }
   }
 
+  /** which way Keraunos is travelling in this blow (world): across to his left or right, or straight down */
+  swingDir(a) {
+    const h = this.heading, s = a && a.side ? a.side : 0;
+    if (!s) return new THREE.Vector3(Math.sin(h) * 0.35, -1, Math.cos(h) * 0.35).normalize();
+    return new THREE.Vector3(Math.cos(h) * s, -0.25, -Math.sin(h) * s).normalize();
+  }
+  /** the sound of a blow landing, heavier for the big ones (the hit itself plays in each enemy's takeHit) */
+  hitSound(n, heavy) {
+    if (heavy) Sound.tone({ f: 62, f2: 34, dur: 0.32, gain: 0.5, attack: 0.002 });
+    else if (n > 0) Sound.tone({ f: 88, f2: 46, dur: 0.16, gain: 0.22, attack: 0.002 });
+  }
+  /**
+   * A killing blow: a held beat. The last foe of a fight (or a giant) gets a slow-motion moment as it goes
+   * down, any other just a longer hit-stop.
+   */
+  killBeat(big = false) {
+    let left = 0;
+    for (const e of G.enemies) if (e.alive && e.aggro && e.state !== 'dormant' && e.pos.distanceTo(this.pos) < 18) left++;
+    G.hitStop = Math.max(G.hitStop, big ? 0.16 : 0.09);
+    if (left === 0 || big) { Game.slow(big ? 0.22 : 0.3, big ? 0.9 : 0.5); G.cam.punch(-2); }
+  }
   hitEnemies(range, arc, dmg, poise) {
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
     const a = this.act;
+    let n = 0, killed = false, big = false;
+    const swing = this.swingDir(a);
     for (const e of G.enemies) {
       if (!e.alive || this.hitSet.has(e)) continue;
       const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, d = Math.hypot(dx, dz);
@@ -1146,7 +1388,8 @@ class Player {
       }
       this.hitSet.add(e);
       const p = this._b.set(e.pos.x - dx / d * e.radius * 0.6, e.pos.y + e.height * 0.55, e.pos.z - dz / d * e.radius * 0.6).clone();
-      this.strike(e, dmg, poise, 'slash', p);
+      this.strike(e, dmg, poise, 'slash', p, null, false, { melee: true, swing, push: a && !a.charge ? a.push : 0 });
+      n++; if (!e.alive) killed = true; if (e.size > 1.5) big = true;
       if (a && a.charge) {
         // thrown aside and back by the shoulder
         const side = Math.sign(dx * fz - dz * fx) || 1;
@@ -1161,18 +1404,33 @@ class Player {
       } else if (this.fury > 0) for (let k = 0; k < 2; k++) FX.flame(p, 0.4);
       // the third cut lets the stored lightning go on to the next foes
       if (a && a.discharge) { const q = p.clone(); setTimeout(() => this.chainLightning(null, this.god ? 4 : 2, this.dmg * 0.6, q, e), 60); }
-      G.hitStop = Math.max(G.hitStop, a && a.charge ? 0.04 : 0.055);
-      G.cam.shake(a && a.charge ? 0.45 : 0.25);
     }
+    if (!n) return;
+    // the weight of the blow, once per swing however many it cut: the world stops for a few hundredths
+    // (longer on a giant, longer on the one that dies), and the camera is knocked the way the blade went
+    if (!this.fired.impact || (a && a.charge)) {
+      this.fired.impact = true;
+      const hs = (a && a.hs) || 0.05, rip = this.riposteT > G.time;
+      G.hitStop = Math.max(G.hitStop, hs * (big ? 1.3 : 1) * (rip ? 1.5 : 1));
+      const kd = this._v.copy(swing).addScaledVector(this._t.set(fx, 0, fz), 0.4);
+      G.cam.impact(kd, ((a && a.kick) || 0.05) * (rip ? 1.6 : 1), ((a && a.shake) || 0.2) * (rip ? 1.5 : 1), ((a && a.punch) || 0) + (rip ? -1.5 : 0));
+      this.hitSound(n, !!(a && (a.side === 0 || rip)));
+      if (rip) this.riposteT = 0;
+    }
+    if (killed) this.killBeat(big);
   }
-  aoeDamage(c, r, dmg, poise, kind, each = null) {
+  /** strike everything within r of c; returns how many it hit, and whether one was a giant or died */
+  aoeDamage(c, r, dmg, poise, kind, each = null, opts = {}) {
+    const res = { count: 0, big: false, killed: false };
     for (const e of G.enemies) {
       if (!e.alive) continue;
       const d = Math.hypot(e.pos.x - c.x, e.pos.z - c.z) - e.radius;
       if (d > r || Math.abs(e.pos.y - c.y) > 4 + e.height * 0.5) continue;
-      this.strike(e, dmg * (d < r * 0.5 ? 1 : 0.75), poise, kind, e.pos.clone().add(new THREE.Vector3(0, e.height * 0.5, 0)), c);
+      this.strike(e, dmg * (d < r * 0.5 ? 1 : 0.75), poise, kind, e.pos.clone().add(new THREE.Vector3(0, e.height * 0.5, 0)), c, false, { ...opts });
+      res.count++; if (e.size > 1.5) res.big = true; if (!e.alive) res.killed = true;
       if (each) each(e);
     }
+    return res;
   }
   spellTarget() {
     if (this.lock && this.lock.alive) return this.lock.pos.clone();
@@ -1200,8 +1458,46 @@ class Player {
     if (best) { this.lock = best; Sound.ui('move'); }
   }
 
+  /**
+   * A blow that would have landed met the dodge's untouchable moment. Timed to the last instant (early in
+   * the roll), the fight slows for a breath, the stamina comes back and the next cut is a counter that hits
+   * harder and breaks the guard (see strike).
+   */
+  /**
+   * A foe's blow arriving while he dodges: if it would have landed where he stood when he set off, and he set off
+   * at the last instant, it counts as a perfect dodge even though the roll has already carried him out of reach.
+   */
+  dodgeCheck(from, heading, range, arc = null, src = null) {
+    if (this.state !== 'action' || (this.actName !== 'roll' && this.actName !== 'back') || !this.dodgeFrom) return;
+    const dx = this.dodgeFrom.x - from.x, dz = this.dodgeFrom.z - from.z, d = Math.hypot(dx, dz);
+    if (d - this.radius > range) return;
+    if (arc !== null && d >= 1 && Math.acos(clamp((dx * Math.sin(heading) + dz * Math.cos(heading)) / d, -1, 1)) > (arc / 2) * DEG) return;
+    this.dodged(from, 0.26, src);
+  }
+  dodged(from, window = 0.24, src = null) {
+    if (this.state !== 'action' || (this.actName !== 'roll' && this.actName !== 'back') || G.time - this.actAt > window) return;
+    if (this.perfectT > G.time) return;
+    this.perfectT = G.time + 1.2;
+    this.riposteT = G.time + 1.1;
+    // the foe that missed: the counter goes to it, wherever the roll carried him
+    if (!src && from) {
+      let best = 2.5;
+      for (const e of G.enemies) if (e.alive && e.aggro) { const d = Math.hypot(e.pos.x - from.x, e.pos.z - from.z); if (d < best) { best = d; src = e; } }
+    }
+    this.riposteFoe = src;
+    this.st = Math.min(this.maxSt, this.st + 25);
+    Game.slow(0.28, 0.6);
+    G.cam.punch(-2.2);
+    Sound.swing(false, 0.7);
+    Sound.tone({ type: 'sine', f: 1320, f2: 1900, dur: 0.28, gain: 0.05, rev: 0.5 });
+    const c = this.pos.clone().add(new THREE.Vector3(0, 0.05, 0));
+    FX.ring(c, 2.2, { color: [0.6, 0.85, 1.6], life: 0.4, opacity: 0.35 });
+    const b = this.root.position.clone().add(new THREE.Vector3(0, 1.1, 0));
+    for (let i = 0; i < 10; i++) FX.sparkle.spawn({ x: b.x + rand(-0.3, 0.3), y: b.y + rand(-0.6, 0.6), z: b.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(0.2, 1.2), vz: rand(-1, 1), s: rand(0.008, 0.016), life: rand(0.3, 0.6), c: [1.6, 2.2, 3.6, 1], c2: [0.4, 0.7, 1.8, 0], g: -1, drag: 2 });
+  }
   takeDamage(dmg, from, opts = {}) {
-    if (!this.alive || this.state === 'locked' || this.invulnerable()) return false;
+    if (!this.alive || this.state === 'locked') return false;
+    if (this.invulnerable()) { this.dodged(from); return false; }
     // the armour turns part of it; in God Mode the gods take most of the rest
     dmg *= (1 - this.armor) * (this.god ? GOD.taken : 1) * (this.fury > 0 ? 0.85 : 1);
     this.hp -= dmg;
@@ -1217,18 +1513,28 @@ class Player {
     FX.blood(chest, away, Math.round(clamp(14 + dmg * 0.4, 16, 40)), [0.17, 0.006, 0.004], { ground: this.pos.y });
     FX.sparks(chest, away, 6, [2.4, 1.6, 0.5, 1], 6, false);
     Sound.hit('flesh', 1);
-    G.cam.shake(opts.knock ? 1.0 : 0.55);
+    // the blow's weight on the camera: knocked away from it, a hit-stop that is felt, harder for a knock-down
+    const knock = opts.knock || dmg > this.maxHp * 0.38;
+    G.cam.impact(away, knock ? 0.16 : 0.08, knock ? 0.9 : 0.5, knock ? -2 : -0.8);
+    G.hitStop = Math.max(G.hitStop, knock ? 0.09 : 0.05);
     UI.damage();
+    // the body gives the way the blow drove it (in his own frame: +x his left, +z ahead)
+    const h = this.heading, lx = away.x * Math.cos(h) - away.z * Math.sin(h), lz = away.x * Math.sin(h) + away.z * Math.cos(h);
     if (this.hp <= 0) { this.hp = 0; this.die(); return true; }
     const hyper = this.god || this.flying || (this.state === 'action' && this.act.hyper && (() => { const t = this.rig.progress(this.act.clip); return t >= this.act.hyper[0] && t <= this.act.hyper[1]; })());
-    if (hyper) { this.rig.flinch = 1; return true; }
-    if (opts.knock || dmg > this.maxHp * 0.38) {
+    if (hyper) { this.rig.hit(lx, lz, 0, 0.45); return true; }
+    if (knock) {
+      // thrown onto his back, away from it
       this.heading = Math.atan2(from.x - this.pos.x, from.z - this.pos.z);
       this.startAction('knock');
       this.invuln = 0.9;
     } else {
-      this.heading = Math.atan2(from.x - this.pos.x, from.z - this.pos.z);
-      this.startAction('hit');
+      // struck from in front he half-turns to it; from behind he is shoved forward, not spun round
+      const rel = wrapAngle(Math.atan2(from.x - this.pos.x, from.z - this.pos.z) - h);
+      const front = Math.abs(rel) < 1.75;
+      if (front) this.heading = h + rel * 0.5;
+      this.startAction(front ? 'hit' : 'hitBack');
+      this.rig.hit(lx, lz, 0, 0.5);
       this.kb.set(away.x * 4, away.z * 4);
     }
     return true;
