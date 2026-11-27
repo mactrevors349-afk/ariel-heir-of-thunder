@@ -152,6 +152,25 @@ const CLUTCH = {
   thighL: [-16, 0, 6], kneeL: [24, 0, 0], thighR: [-4, 0, -6], kneeR: [18, 0, 0],
 };
 
+// the Berserker's kill (see bzReach .. bzPull): Ares' reach, and Ariel's crouch, leap and the blow from above
+const BZ_REACH = { armL: [-84, 0, 4], elbowL: [-8, 0, 0], chest: [-4, -10, 0], spine: [2, -5, 0], neck: [-6, 8, 0] };
+const BZ_CROUCH = {
+  hp: [0, -0.34, 0.02], spine: [26, 0, 0], chest: [10, 0, 0], neck: [-22, 0, 0],
+  thighL: [-62, 0, 8], kneeL: [92, 0, 0], footL: [-20, 0, 0], thighR: [-20, 0, -6], kneeR: [86, 0, 0], footR: [-6, 0, 0],
+  armR: [-10, 0, -34], elbowR: [-40, 0, 0], handR: [-30, 0, 0], armL: [-30, 0, 30], elbowL: [-50, 0, 0],
+};
+const BZ_AIR = {
+  hp: [0, 0.02, -0.05], spine: [-14, 0, 0], chest: [-12, 0, 0], neck: [8, 0, 0],
+  armR: [-185, 0, -10], elbowR: [-50, 0, 0], handR: [-30, 0, 0], armL: [-175, 0, 10], elbowL: [-55, 0, 0],
+  thighL: [-74, 0, 6], kneeL: [100, 0, 0], footL: [20, 0, 0], thighR: [-28, 0, -6], kneeR: [112, 0, 0], footR: [30, 0, 0],
+};
+// (solved for the blade: straight down within ~12°, the hilt at 0.62 m, the point 0.84 m ahead of him, clear of his front knee)
+const BZ_PLUNGE = {
+  hp: [0, -0.3, 0.02], spine: [40, 0, 0], chest: [16, 0, 0], neck: [-26, 0, 0],
+  thighL: [-80, 0, 18], kneeL: [92, 0, 0], footL: [-6, 0, 0], thighR: [14, 0, -8], kneeR: [108, 0, 0], footR: [50, 0, 0],
+  armR: [-43, 3, -120], elbowR: [-90, 0, 0], handR: [9, -20, 32], armL: [-40, 0, 60], elbowL: [-30, 0, 0],
+};
+
 // in flight: tipped a little into the air, legs trailing loose with the toes down, arms held clear
 const FLY = {
   hp: [0, 0, 0], spine: [8, 0, 0], chest: [4, 0, 0], neck: [-10, 0, 0],
@@ -264,7 +283,8 @@ const CLIPS = {
   lookUp: { dur: 1.6, hold: true, keys: [[0, {}], [1, { neck: [-35, 0, 0], head: [-15, 0, 0], spine: [-4, 0, 0] }]] },
   talk: { dur: 2.6, loop: true, mask: 'upper', keys: [[0, {}], [0.3, { armR: [-40, 0, -20], elbowR: [-70, 0, 0], handR: [0, 0, 0], neck: [-3, 5, 0] }], [0.6, { armR: [-28, 0, -26], elbowR: [-45, 0, 0], neck: [2, -4, 0] }], [1, {}]] },
   point: { dur: 1.0, hold: true, mask: 'upper', keys: [[0, {}], [1, { armR: [-85, 12, -10], elbowR: [-5, 0, 0], handR: [0, 0, 0], neck: [0, -10, 0] }]] },
-  raise: { dur: 1.2, hold: true, keys: [[0, {}], [0.6, { armR: [-175, 0, -5], elbowR: [-5, 0, 0], handR: [0, 0, 0], neck: [-20, 0, 0], chest: [-8, 0, 0], armL: [-10, 0, 30] }], [1, { armR: [-178, 0, -4], elbowR: [-4, 0, 0], handR: [0, 0, 0], neck: [-22, 0, 0], chest: [-8, 0, 0], armL: [-10, 0, 30] }]] },
+  // (up and a little out, the elbow soft: straight up overhead, the auto-skinned shoulders wrung the forearm flat)
+  raise: { dur: 1.2, hold: true, keys: [[0, {}], [0.6, { armR: [-136, 0, -36], elbowR: [-36, 0, 0], handR: [-8, 0, 0], neck: [-20, 0, 0], chest: [-8, 0, 0], armL: [-10, 0, 30] }], [1, { armR: [-140, 0, -38], elbowR: [-38, 0, 0], handR: [-10, 0, 0], neck: [-22, 0, 0], chest: [-8, 0, 0], armL: [-10, 0, 30] }]] },
   struck: {
     dur: 1.4, hold: true, keys: [[0, {}],
       [0.2, { hp: [0, 0.06, 0], spine: [-15, 0, 0], chest: [-18, 0, 0], neck: [-35, 0, 0], armL: [-30, 0, 75], elbowL: [-10, 0, 0], armR: [-30, 0, -75], elbowR: [-10, 0, 0], thighL: [-4, 0, 6], thighR: [4, 0, -6] }],
@@ -418,6 +438,18 @@ const CLIPS = {
       [0.62, { hp: [0, 0.02, 0], spine: [-10, 0, 0], chest: [-22, 0, 0], neck: [-38, 0, 0], head: [-14, 0, 0], armL: [-40, 0, 70], elbowL: [-30, 0, 0], armR: [-40, 0, -70], elbowR: [-30, 0, 0], handR: [-20, 0, 0], thighL: [-12, 0, 6], kneeL: [26, 0, 0], footL: [30, 0, 0], thighR: [4, 0, -6], kneeR: [36, 0, 0], footR: [32, 0, 0] }, 'in'],
       [1, { hp: [0, 0.03, 0], spine: [-10, 0, 0], chest: [-24, 0, 0], neck: [-40, 0, 0], head: [-14, 0, 0], armL: [-42, 0, 74], elbowL: [-28, 0, 0], armR: [-42, 0, -74], elbowR: [-28, 0, 0], handR: [-20, 0, 0], thighL: [-14, 0, 6], kneeL: [28, 0, 0], footL: [30, 0, 0], thighR: [4, 0, -6], kneeR: [38, 0, 0], footR: [32, 0, 0] }]],
   },
+
+  /* ---------------------------------------------------------- the Berserker's kill (SCRIPTS.bossDefeat) */
+  // Ares reaching through the shard: the open hand thrust out at the boy, then closing
+  bzReach: { dur: 0.9, hold: true, keys: [[0, {}], [0.55, BZ_REACH, 'out'], [1, { ...BZ_REACH, armL: [-82, 0, 2], elbowL: [-5, 0, 0], neck: [-8, 10, 0] }]] },
+  // a crouch to spring from, the blade drawn back low
+  bzCrouch: { dur: 0.28, hold: true, keys: [[0, {}], [1, BZ_CROUCH, 'out']] },
+  // in the air over his brother: Keraunos high over his head in both hands, knees drawn up under him
+  bzAir: { dur: 0.32, hold: true, keys: [[0, BZ_CROUCH], [1, BZ_AIR, 'out']] },
+  // and down: the blade driven straight into the body below him, his weight behind it
+  bzPlunge: { dur: 0.2, hold: true, keys: [[0, BZ_AIR], [1, BZ_PLUNGE, 'in']] },
+  // drawing it back out: up off the knee, the blade lifted clear and lowered to his side
+  bzPull: { dur: 1.6, hold: true, keys: [[0, BZ_PLUNGE], [0.3, { ...BZ_PLUNGE, hp: [0, -0.2, 0.02], spine: [28, 0, 0], armR: [-55, 3, -120], elbowR: [-112, 0, 0] }], [1, { armR: [-14, 0, -12], elbowR: [-24, 0, 0], handR: [-20, 0, 0], neck: [14, 0, 0], spine: [4, 0, 0] }]] },
 
   /* ---------------------------------------------------------- hoplite */
   // the sword hoplites' flat cut (Ariel's old first light attack, kept for them)

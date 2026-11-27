@@ -153,20 +153,22 @@ Double-click `index.html` to open it in **Chrome** or **Edge**. The game runs, b
 7. **Explore:** the Golden Fields, the Agora of the Forgotten (guarded by the Kin of Polyphemus), the Fallen Colossus, and the Shrine of the Hesperides. Hollow hoplites (dead Spartans still under arms: crested bronze helmets, greaves, round shields, skin drained grey, a faint smoke coming off them), Thralls of Tartarus and winged Fallen Seraphim guard the roads.
 8. **The Mirror:** on the road to Ares, the war-shard wakes (see below).
 9. **Boss:** pass the golden mist into the Colosseum of Ares to fight the God of War. He has two phases.
-10. **Ending:** Ares, freed of the rot, gives Ariel the shard freely and Zeus speaks from the storm. Then:
-    - **The new God of War:** Ares gives up the mantle of war, and thunder and fire crown Ariel. The title card reads *ARIEL — God of War*.
+10. **Ending:** the rot burns out of the beaten Ares, and for a moment he seems himself again. Then he stands. The rot never made him, he says: he opened the gates of Olympus to Kronos himself, and the storms that hunted Anna's house for seventeen years were his. He reaches into Ariel through the shard and forces him to his knees. Then:
+    - **The Berserker:** Ariel's heart stops, and his eyes ignite in the helm. Lightning comes down on him and fire comes up out of the ground. He rises with Ares' war-red burning through his armour and Zeus' lightning crawling over it, and speaks with a voice that echoes. Ares charges and Ariel takes him apart with Thunder Steps, each a flash of lightning. A last cut throws Ares on his back, and Ariel leaps into the storm, hangs there while the sky pours into his blade, and comes down through Ares' chest.
+    - **Stone and ash:** stone spreads out from the wound while Ares says his last words. Ariel pulls the blade from stone, and the God of War crumbles into ash on the wind.
+    - **The new God of War:** Ariel tears Ares' spark out of the air and takes it into himself. Thunder and fire crown him, and the title card reads *ARIEL — God of War*. Zeus speaks from the storm, mourning both his sons, and warns Ariel to learn when to set the war down.
     - **The Fates' tapestry:** narrated slides painted as a Greek black-figure vase. They are drawn live from the game's own 3D figures (glaze silhouettes, incised detail, meander, rays, Greek name labels and rosettes) and show the war for the sparks, Kronos cast down, the gods home again and Olympus shining.
     - **Olympus restored (3D):** the rot drains out of the hall, each god's spark comes home, and Ariel stands at Zeus's right hand.
     - **Epilogue, *The Two Lives of Ariel Stormborn*:**
       - Ariel comes home to Anna and chooses to stay her son.
       - Jesse works out the truth on the school steps. As she lists what gave him away, the game cuts to flashbacks of those moments in a cold, faded memory grade: her phone dying in her hands, the vending machine frying, and the lightning on the school roof.
-      - Painted scenes of his mortal life (school by day, god by night, graduation, the wedding with Zeus and Ares as guests).
+      - Painted scenes of his mortal life (school by day, god by night, graduation, and the wedding, where Zeus comes as a summer rain and one place at the table is set for the brother whose war Ariel carries).
       - The **wedding photograph** on the pier where Anna met Zeus: Ariel in a tailcoat, Jesse in an ivory gown with veil and bouquet.
       - Years later, on **Olympus**, their son **Kratos** is born. Jesse wears a goddess gown, Anna is in white and gold, Ariel is in his god form, and Zeus looks on from his throne.
       - Then **Deimos**, the brothers growing up between Westbrook and Olympus, and the brothers as the myths remember them.
         - **Kratos** grows into his name, Strength. He stands at Zeus' right hand with his sister Bia, Force. He holds the Titan Prometheus to the Caucasus rock while Hephaestus drives the chains, and later walks beside Heracles on the day the chains are broken.
-        - **Deimos**, Dread, rides out at the side of his uncle Ares, the War-god, and armies lay down their spears before a blow is struck.
-        - Four of these slides cut away to short 3D scenes and back: Deimos grown, before a crag under a blood-red sky; Kratos beside Zeus' throne, then hauling the Titan's chain on the storm-lit Caucasus while the shackles ring; at dawn Heracles breaks the chain with his hands as Kratos looks on; and Deimos walking out with Ares as a line of hoplites goes down on one knee. Kratos wears his father's god-armour worked in dark bronze, with a crimson cloak.
+        - **Deimos**, Dread, rides out at the side of his father, the new War-god, and armies lay down their spears before a blow is struck.
+        - Four of these slides cut away to short 3D scenes and back: Deimos grown, before a crag under a blood-red sky; Kratos beside Zeus' throne, then hauling the Titan's chain on the storm-lit Caucasus while the shackles ring; at dawn Heracles breaks the chain with his hands as Kratos looks on; and Deimos walking out with his father as a line of hoplites goes down on one knee. Kratos wears his father's god-armour worked in dark bronze, with a crimson cloak.
       - Then Anna grows old, and the credits roll.
 
     (Kratos, "strength", and Deimos, "dread", are figures from Greek myth: Kratos and Bia at Zeus' throne in Hesiod's *Theogony*, Kratos binding Prometheus in Aeschylus' *Prometheus Bound*, and Deimos beside Ares in Hesiod and the *Iliad*. They are written fresh for this story.) Afterwards you can keep exploring.
@@ -174,7 +176,7 @@ Double-click `index.html` to open it in **Chrome** or **Edge**. The game runs, b
 ### The war-shard: why Ariel wears Ares' armour
 When Kronos began to stir, Zeus knew his thunder alone would never keep a mortal child alive, so he cut a shard from Ares' spark and sealed it in his newborn son beside his own. (In Anna's memory you can see it happen: a red ember beside the blue.) Ares was never asked, and that grudge is the crack Kronos' rot crept in through. The shard is why god-form Ariel has Ares' armour and face. In **the Mirror** cutscene Ares' voice gets into Ariel's head. A vision shows the God of War kneeling in his arena, and he tells Ariel why that armour and that face look like his own. Hermes explains the rest.
 
-After that, the corrupted Ares can **seize Ariel through the shard**: Ariel doubles over, Keraunos burns red, and Ares speaks through him. Mash **Space** to break his hold. While Ares holds you, your blows land with the God of War's strength. Once Ares is defeated and freed, he lets go for good.
+After that, the corrupted Ares can **seize Ariel through the shard**: Ariel doubles over, Keraunos burns red, and Ares speaks through him. Mash **Space** to break his hold. While Ares holds you, your blows land with the God of War's strength. Ares tries it once more after the fight, and that is what wakes the Berserker.
 
 ## Ariel's powers
 Ariel is a demigod, and plays like one. Keraunos hits hard, his armour turns a fifth of every blow, his health slowly comes back by itself, and it takes a heavy blow to knock him down.

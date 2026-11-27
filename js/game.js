@@ -401,7 +401,7 @@ const Game = {
       [done ? 'now' : 'ares', done ? 'What happens now?' : 'Any advice for fighting Ares?'], ['bye', 'Farewell.']];
     const choices = topics.map((t) => t[1]);
     let k = done
-      ? await hermes('You actually did it! Ares is himself again — well, as pleasant as Ares ever gets.', choices)
+      ? await hermes('So it is done. Ares is gone — I felt it from three valleys away. Nobody on Olympus will say it, so I will: you had no choice.', choices)
       : await hermes('Need something, Heir of Thunder? Be quick, I have fourteen deliveries and a very angry centaur waiting.', choices);
     while (topics[k][0] !== 'bye') {
       const id = topics[k][0];
@@ -416,8 +416,8 @@ const Game = {
         await hermes('Kill shades and you collect their Ichor — the golden blood of the divine. Offer it at an Altar of Hestia to grow stronger.');
         await hermes('And find the golden apples of the Hesperides. Each one lets you carry another draught of Ambrosia.');
       } else if (id === 'mirror' && done) {
-        await hermes('Because a piece of him lives in you — and now he has given it freely. The shard is yours, Ariel. The face, the strength, all of it.');
-        await hermes('He will still call you little thief, I imagine. From Ares, that is practically a hug.');
+        await hermes('Because a piece of him lived in you — and now all of him does. The shard, the face, the strength. You took the rest of it from him yourself.');
+        await hermes('Wear it well, Ariel. Better than he did.');
       } else if (id === 'mirror') {
         await hermes('Because a piece of him lives in you. The shard your father sealed in your cradle shaped you in its own image — armour, face and all.');
         await hermes('And while the rot holds him, it is a leash. Free him, and it becomes a gift. Until then, when the world goes red, fight him.');

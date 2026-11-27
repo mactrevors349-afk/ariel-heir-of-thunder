@@ -88,6 +88,12 @@ const ARMOUR_SCULPT = {
   // torso + skirt volume: arm bones may not claim vertices in here (narrow at the waist, where the
   // forearms hang only 5 cm from the belt; wider below the fists, where the skirt flares)
   torso: { x: 0.25, y0: 0.45, y1: 1.3, z: 0.3, xLow: 0.3, yLow: 0.86 },
+  // the helmet, its cheek guards and the face inside are one rigid thing on the head bone. Left to the nearest bone,
+  // the guards' lower half went to the neck: every nod or turn as he spoke bent them into flat ribbons and smeared the
+  // face behind them. (Sheet frame; the pauldrons rise to 1.62 just outside |x| 0.1, so the box stops short of them)
+  rigid: [
+    { bone: 'head', test: (x, y, z) => x > -0.125 && x < 0.095 && ((y > 1.585 && z > -0.135) || (y > 1.5 && z > 0.06 && x > -0.1 && x < 0.08)) },
+  ],
 };
 
 const MODEL_DEFS = {
@@ -1787,23 +1793,51 @@ function keraunosMaterial(m) {
 // Only the metal changes (the sculpt's skin and cloth share the texture, and stay as they are)
 // Berserker God Mode: how strongly the gods' fire burns along the armour's edges (Player.updateGlow sets it)
 const GOD_GLOW = { value: 0 };
+// The Berserker, as he kills Ares (SCRIPTS.bossDefeat): the gold drowned in Ares' red, Zeus' lightning crawling
+// through the metal in thin moving veins, fire and blue at the edges. 0..1
+const BERSERK = { value: 0 };
 function agedGold(m) {
   const c = m.clone();
   c.onBeforeCompile = (sh) => {
-    sh.uniforms.uGodGlow = GOD_GLOW;
-    sh.fragmentShader = 'uniform float uGodGlow;\n' + sh.fragmentShader.replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
+    sh.uniforms.uGodGlow = GOD_GLOW; sh.uniforms.uBerserk = BERSERK; sh.uniforms.uTime = G.uniforms.time;
+    sh.vertexShader = 'varying vec3 vBzP;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      vBzP = transformed;`);
+    sh.fragmentShader = 'uniform float uGodGlow, uBerserk, uTime; varying vec3 vBzP;\n' +
+      'float bzH(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }\n' +
+      'float bzN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(mix(mix(bzH(i), bzH(i + vec3(1,0,0)), f.x), mix(bzH(i + vec3(0,1,0)), bzH(i + vec3(1,1,0)), f.x), f.y), mix(mix(bzH(i + vec3(0,0,1)), bzH(i + vec3(1,0,1)), f.x), mix(bzH(i + vec3(0,1,1)), bzH(i + vec3(1,1,1)), f.x), f.y), f.z); }\n' +
+      sh.fragmentShader.replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
       float agL = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
       vec3 aged = mix(vec3(agL), diffuseColor.rgb, 0.72) * vec3(1.0, 0.91, 0.76) * 0.84;
       float agM = smoothstep(0.3, 0.7, metalnessFactor);
       diffuseColor.rgb = mix(diffuseColor.rgb, aged, agM);
-      roughnessFactor = mix(roughnessFactor, max(roughnessFactor, 0.36), agM);`).replace('#include <opaque_fragment>', `
-      // God Mode: Ares' fire at the grazing edges, a molten warmth in the metal itself
+      roughnessFactor = mix(roughnessFactor, max(roughnessFactor, 0.36), agM);
+      // Berserker: the metal goes to Ares' blood-red, polished (the sky still runs along it), the skin a little flushed
+      vec3 bzMetal = vec3(agL) * vec3(0.62, 0.075, 0.05);
+      vec3 bzSkin = diffuseColor.rgb * vec3(1.0, 0.9, 0.86);
+      diffuseColor.rgb = mix(diffuseColor.rgb, mix(bzSkin, bzMetal, agM), uBerserk);
+      roughnessFactor = mix(roughnessFactor, mix(roughnessFactor, 0.3, agM), uBerserk);`).replace('#include <opaque_fragment>', `
+      // God Mode: Ares' fire at the grazing edges, a molten warmth in the metal itself (much less of it under the
+      // Berserker's own light: together they washed him out to a glowing pink)
       float gdF = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
-      outgoingLight += (vec3(1.0, 0.36, 0.06) * pow(gdF, 3.2) * 1.5 + vec3(1.0, 0.5, 0.16) * agM * 0.07) * uGodGlow;
+      outgoingLight += (vec3(1.0, 0.36, 0.06) * pow(gdF, 3.2) * 1.5 + vec3(1.0, 0.5, 0.16) * agM * 0.07) * uGodGlow * (1.0 - 0.75 * uBerserk);
+      if (uBerserk > 0.001) {
+        // Zeus in him: hair-thin lines of lightning (the crossings of a moving noise, a pixel or two wide at any
+        // distance), lit a few at a time where a slower noise passes over them, so they crawl and flicker
+        vec3 bzq = vBzP * 9.0 + vec3(0.0, -uTime * 1.7, uTime * 0.6);
+        // (warped, so the lines kink and fork like a discharge; unwarped they were smooth closed loops, a contour map)
+        bzq += (vec3(bzN(bzq * 0.6 + 3.0), bzN(bzq * 0.6 + 11.0), bzN(bzq * 0.6 + 19.0)) - 0.5) * 2.2;
+        float bzv = bzN(bzq) + bzN(bzq * 2.3 + 7.1) * 0.5;
+        float bzw = max(fwidth(bzv) * 1.3, 0.004);
+        float vein = (1.0 - smoothstep(0.0, bzw, abs(bzv - 0.75)));
+        vein *= smoothstep(0.6, 0.78, bzN(vBzP * 3.0 + vec3(uTime * 2.3, uTime * 1.1, -uTime * 1.7)));
+        float flick = 0.7 + 0.3 * sin(uTime * 31.0 + vBzP.y * 12.0);
+        outgoingLight += (vec3(1.0, 0.1, 0.02) * pow(gdF, 3.0) * 0.55 + vec3(0.4, 0.62, 1.6) * pow(gdF, 7.0) * flick * 0.45
+          + vec3(0.7, 0.95, 2.8) * vein * (0.3 + 0.7 * agM) * flick + vec3(0.5, 0.05, 0.01) * agM * 0.05) * uBerserk;
+      }
       #include <opaque_fragment>`);
   };
   c.envMapIntensity = 0.85;
-  c.customProgramCacheKey = () => 'agedGold';
+  c.customProgramCacheKey = () => 'agedGold4';
   return c;
 }
 // the Hollow hoplites' skin: the colour drained out of it, grey and cold, a little darker
@@ -1830,24 +1864,73 @@ function stormEyes(m) {
 // where they went gunmetal grey; they carry a little of their own light so they stay the colour of teeth.
 function teenFace(m) {
   if (/Cornea/i.test(m.name)) { const c = m.clone(); c.transparent = false; c.opacity = 1; c.depthWrite = true; c.roughness = 0.08; return c; }
-  if (/Teeth/i.test(m.name)) { const c = m.clone(); c.emissive = new THREE.Color(0xffffff); c.emissiveMap = c.map; c.emissiveIntensity = 0.3; c.normalMap = null; return c; }
+  // (only a little: at 0.3 they glowed out of the dark of an open mouth like a denture)
+  if (/Teeth/i.test(m.name)) { const c = m.clone(); c.emissive = new THREE.Color(0xffffff); c.emissiveMap = c.map; c.emissiveIntensity = 0.12; c.normalMap = null; return c; }
   return m;
 }
-// Ares: the same armour gone dark, blood-red and smouldering
+// Ares: the same armour, blackened bronze with blood in its lacquer, over a man's skin gone ashen. (It was all one
+// copper-red, skin and metal alike, polished, which made him look like a melted toy in the close shots.) The texture
+// tells metal from skin by its metalness, as agedGold does.
+// His death (see SCRIPTS.bossDefeat): stone spreads from the wound (at, r: a sphere in the world, growing) with a
+// rim of fire at its front; stone: all of him; crumble: the stone falls away to nothing, a dissolve with hot edges.
+const ARES_STONE = { stone: { value: 0 }, at: { value: new THREE.Vector3() }, r: { value: 0 }, crumble: { value: 0 } };
 function aresCrimson(m) {
   const c = m.clone();
   c.onBeforeCompile = (sh) => {
-    sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+    const U = ARES_STONE;
+    sh.uniforms.uStone = U.stone; sh.uniforms.uStoneAt = U.at; sh.uniforms.uStoneR = U.r; sh.uniforms.uCrumble = U.crumble;
+    sh.vertexShader = 'varying vec3 vStoneW, vArP;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      vStoneW = (modelMatrix * vec4(transformed, 1.0)).xyz; vArP = position;`);   // (vArP: where the point is on the sculpt at rest, whatever pose he is in)
+    sh.fragmentShader = 'uniform float uStone, uStoneR, uCrumble; uniform vec3 uStoneAt; varying vec3 vStoneW, vArP;\n' +
+      'float stHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }\n' +
+      'float stNoise(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(mix(mix(stHash(i), stHash(i + vec3(1,0,0)), f.x), mix(stHash(i + vec3(0,1,0)), stHash(i + vec3(1,1,0)), f.x), f.y), mix(mix(stHash(i + vec3(0,0,1)), stHash(i + vec3(1,0,1)), f.x), mix(stHash(i + vec3(0,1,1)), stHash(i + vec3(1,1,1)), f.x), f.y), f.z); }\n' +
+      sh.fragmentShader.replace('void main() {', `void main() {
+      // the stone's reach, ragged; and what has already fallen away
+      float stN = stNoise(vStoneW * 3.1) * 0.6 + stNoise(vStoneW * 9.0) * 0.4;
+      float stD = distance(vStoneW, uStoneAt) + (stN - 0.5) * 0.7;
+      float stK = max(uStone, 1.0 - smoothstep(uStoneR - 0.25, uStoneR, stD));
+      float stFront = uStoneR > 0.01 && uStone < 1.0 ? smoothstep(0.1, 0.0, abs(stD - uStoneR + 0.1)) : 0.0;
+      // (from the head down: what is higher than the wound goes first, the knees last)
+      float cr = stNoise(vStoneW * 4.3 + vec3(0.0, vStoneW.y * 0.6, 0.0)) * 0.7 + stNoise(vStoneW * 13.0) * 0.3 - (vStoneW.y - uStoneAt.y) * 0.22;
+      float crCut = uCrumble * 1.6 - 0.35;
+      if (uCrumble > 0.0 && cr < crCut) discard;
+      float crEdge = uCrumble > 0.0 ? smoothstep(0.035, 0.0, cr - crCut) : 0.0;`)
+      .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
       float crL = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(crL) * vec3(1.15, 0.2, 0.14), 0.85) * 0.46;`)
-      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
-      roughnessFactor = max(roughnessFactor, 0.44);`);
+      float crM = smoothstep(0.3, 0.7, metalnessFactor);
+      // metal: near-black bronze, a deep red in the hollows of the lacquer
+      vec3 crMetal = mix(vec3(crL) * vec3(0.3, 0.22, 0.19), vec3(crL) * vec3(0.5, 0.08, 0.05), 0.5) * 0.72;
+      // skin: the colour drained toward ash, a little darker
+      vec3 crSkin = mix(vec3(crL), diffuseColor.rgb, 0.55) * vec3(0.9, 0.82, 0.78) * 0.82;
+      // the face sits in the dark of the helm: lit flat, it read as a pale mask floating inside it. (Only the head:
+      // in the sculpt's own frame it stands over (0.13, -0.235), the shoulders spreading out from 1.6 down)
+      // (the jaw and the throat under the cheek-guards too: lit, they showed as a pale bleached strip beside the nose-guard)
+      float crFace = smoothstep(1.36, 1.46, vArP.y) * (1.0 - smoothstep(0.15, 0.21, length(vArP.xz - vec2(0.13, -0.235)))) * (1.0 - crM);
+      crSkin = mix(crSkin, vec3(0.16, 0.1, 0.085) * (0.6 + crL * 0.6), crFace * 0.9);
+      diffuseColor.rgb = mix(crSkin, crMetal, crM);
+      // (the sculpt's metal is mapped mirror-smooth over a crumpled surface: it glittered like foil. Hammered and dull)
+      roughnessFactor = mix(max(roughnessFactor, 0.55), clamp(roughnessFactor + 0.5, 0.5, 0.66), crM);
+      metalnessFactor = mix(0.0, 0.85, crM);
+      // turned to stone: grey, rough and matte, with the sculpt's own relief (its shading) kept as weathering
+      vec3 stone = vec3(0.1 + crL * 0.12) * vec3(1.0, 0.93, 0.84) * (0.72 + stN * 0.5);
+      diffuseColor.rgb = mix(diffuseColor.rgb, stone, stK);
+      roughnessFactor = mix(roughnessFactor, 0.96, stK);
+      metalnessFactor = mix(metalnessFactor, 0.0, stK);`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      // the fire at the stone's front, and at the edges of what is crumbling
+      totalEmissiveRadiance += vec3(1.1, 0.32, 0.06) * stFront + vec3(0.8, 0.22, 0.05) * crEdge;`)
+      .replace('#include <opaque_fragment>', `
+      // a war-god's smoulder at the grazing edges (gone once he is stone)
+      vec3 rimN = normalize(mix(normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0), normal, 0.2));
+      float rimF = 1.0 - clamp(dot(rimN, normalize(vViewPosition)), 0.0, 1.0);
+      outgoingLight += vec3(1.1, 0.2, 0.04) * pow(rimF, 3.6) * 0.22 * (1.0 - stK);
+      // (and its sheen too: darkened colour alone still caught the sky as a grey gloss on the chin)
+      outgoingLight *= mix(1.0, 0.42, crFace * (1.0 - stK));
+      #include <opaque_fragment>`);
   };
-  c.metalness = Math.max(c.metalness || 0, 0.55);
-  c.roughness = Math.max(c.roughness, 0.42);
-  c.envMapIntensity = 0.5;
-  c.customProgramCacheKey = () => 'aresCrimson2';
-  return Models.rim(c, [1.3, 0.22, 0.03], 3.6, 0.35);
+  c.envMapIntensity = 0.45;
+  c.customProgramCacheKey = () => 'aresCrimson5';
+  return c;
 }
 
 /* ------------------------------------------------------------------ faces
@@ -1880,6 +1963,7 @@ class Face {
     this.names = names;
     this.lids = names.has('eyeBlinkLeft');
     this.kind = names.has('aa') && names.has('PP') ? 'visemes' : names.has('mouthOpen') ? 'open' : null;
+    if (this.kind === 'visemes') for (const m of this.meshes) Face.morphNormals(m.geometry);
     this.cur = {};          // the weight each shape has now
     this.eyes = [];
     this.jaw = null;
@@ -1894,6 +1978,54 @@ class Face {
     this.sac = new THREE.Vector2(); this.sacT = 0; this.eyeYaw = 0; this.eyePitch = 0;
     this._q = new THREE.Quaternion(); this._h = new THREE.Quaternion(); this._p = new THREE.Quaternion(); this._w = new THREE.Quaternion();
     this._v = new THREE.Vector3(); this._e = new THREE.Euler(0, 0, 0, 'YXZ');
+  }
+  /**
+   * Normals for each face shape. The file carries only the shapes' positions, so the light on a moving mouth stayed
+   * where it fell on the closed one: an open jaw or a rounded lip looked smeared, as if the face were melting.
+   * Worked out on the welded surface as a change from the rest shape, so the file's own normals (and the seams
+   * between its UV islands) are kept. Once per geometry: every copy of the character shares it.
+   */
+  static morphNormals(g) {
+    const P = g.attributes.position, N = g.attributes.normal, M = g.morphAttributes.position;
+    if (!M || !M.length || !N || g.morphAttributes.normal) return;
+    const n = P.count, idx = g.index ? g.index.array : null, tri = idx ? idx.length : n;
+    const id = new Int32Array(n), map = new Map();
+    for (let i = 0; i < n; i++) {
+      const k = Math.round(P.getX(i) * 1e4) + ',' + Math.round(P.getY(i) * 1e4) + ',' + Math.round(P.getZ(i) * 1e4);
+      let v = map.get(k);
+      if (v === undefined) { v = map.size; map.set(k, v); }
+      id[i] = v;
+    }
+    const acc = new Float32Array(map.size * 3), pos = new Float32Array(n * 3);
+    const normals = (out) => {
+      acc.fill(0);
+      for (let t = 0; t < tri; t += 3) {
+        const a = idx ? idx[t] : t, b = idx ? idx[t + 1] : t + 1, c = idx ? idx[t + 2] : t + 2;
+        const ux = pos[b * 3] - pos[a * 3], uy = pos[b * 3 + 1] - pos[a * 3 + 1], uz = pos[b * 3 + 2] - pos[a * 3 + 2];
+        const vx = pos[c * 3] - pos[a * 3], vy = pos[c * 3 + 1] - pos[a * 3 + 1], vz = pos[c * 3 + 2] - pos[a * 3 + 2];
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        for (const p of [id[a], id[b], id[c]]) { acc[p * 3] += nx; acc[p * 3 + 1] += ny; acc[p * 3 + 2] += nz; }
+      }
+      for (let i = 0; i < n; i++) {
+        const p = id[i], x = acc[p * 3], y = acc[p * 3 + 1], z = acc[p * 3 + 2], l = Math.hypot(x, y, z) || 1;
+        out[i * 3] = x / l; out[i * 3 + 1] = y / l; out[i * 3 + 2] = z / l;
+      }
+    };
+    for (let i = 0; i < n; i++) { pos[i * 3] = P.getX(i); pos[i * 3 + 1] = P.getY(i); pos[i * 3 + 2] = P.getZ(i); }
+    const base = new Float32Array(n * 3), cur = new Float32Array(n * 3);
+    normals(base);
+    const rel = g.morphTargetsRelative;
+    g.morphAttributes.normal = M.map((D) => {
+      for (let i = 0; i < n; i++) {
+        pos[i * 3] = D.getX(i) + (rel ? P.getX(i) : 0); pos[i * 3 + 1] = D.getY(i) + (rel ? P.getY(i) : 0); pos[i * 3 + 2] = D.getZ(i) + (rel ? P.getZ(i) : 0);
+      }
+      normals(cur);
+      const out = new Float32Array(n * 3);
+      for (let i = 0; i < n * 3; i++) out[i] = cur[i] - base[i] + (rel ? 0 : N.array[i]);
+      return new THREE.BufferAttribute(out, 3);
+    });
+    // (the GPU's copy of the shapes is rebuilt with the normals in it)
+    g.dispose();
   }
   /** a jaw bone: find which way it swings open (whichever turn drops the chin furthest) */
   findJaw(jaw) {
@@ -2012,7 +2144,10 @@ class Face {
     // the words open the mouth only while there is voice in the recording
     const gate = sp ? smooth(0.02, 0.2, lvl) * (0.6 + 0.4 * lvl) : 0;
     if (this.kind === 'visemes') {
-      for (const n of VISEMES) { const on = sp && sp.v === n; this.ease(n, on ? gate * 0.9 : 0, on ? 24 : 16, dt); }
+      // the blend of the shapes around this moment, each held to a natural strength (Lips.blend), eased as a mouth
+      // moves: one shape flows into the next instead of snapping on at full strength over the last
+      const bl = sp && sp.blend;
+      for (const n of VISEMES) this.ease(n, bl ? (bl[n] || 0) * gate : 0, 30, dt);
     } else if (this.kind === 'open') this.ease('mouthOpen', sp ? sp.open * gate * 0.75 : 0, 20, dt);
     else if (this.kind === 'jaw') {
       this.jawA = damp(this.jawA, sp ? sp.open * gate * 0.2 : 0, 20, dt);
@@ -2034,8 +2169,10 @@ class Face {
         let w = M[n] || 0;
         const lid = n === 'eyeBlinkLeft' || n === 'eyeBlinkRight';
         if (n === 'browInnerUp') w += lvl * 0.14;
+        // (the jaw drops a little more on the loud, open syllables, under the mouth shapes)
+        if (n === 'jawOpen' && this.kind === 'visemes' && sp) w += sp.open * gate * 0.1;
         if (lid) w = Math.max(w, this.blink);
-        this.ease(n, Math.min(1, w), lid ? 40 : 5, dt);
+        this.ease(n, Math.min(1, w), lid ? 40 : n === 'jawOpen' ? 20 : 5, dt);
       }
     }
     // the eyes: on whoever he is talking to, with the small darts eyes make; back to centre when alone
@@ -2106,7 +2243,7 @@ const Perform = {
   headOf(b) { return b.rig.j.head.getWorldPosition(new THREE.Vector3()); },
   update(dt) {
     if (dt <= 0) return;
-    const live = Voice.clock() >= 0, lvl = live ? Voice.level() : 0, mouth = live ? Voice.mouth() : Lips.REST;
+    const live = Voice.clock() >= 0, lvl = live ? Voice.level() : 0, mouth = live ? Voice.mouth() : Lips.REST, blend = live ? Voice.blend() : null;
     const sp = live ? this.speaker : null;
     this.quiet = sp ? 0 : this.quiet + dt;
     for (const b of this.cast) {
@@ -2136,7 +2273,7 @@ const Perform = {
       rig.lookPitch = damp(rig.lookPitch, pitch, 3.2, dt);
       const f = b.face;
       if (f) {
-        f.speech = speaking ? { v: mouth.v, open: mouth.open, level: lvl } : null;
+        f.speech = speaking ? { v: mouth.v, open: mouth.open, level: lvl, blend } : null;
         f.gaze = gaze;
         f.mood = speaking ? this.mood : (b.mood || null);
       }

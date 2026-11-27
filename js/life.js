@@ -579,7 +579,8 @@ const Memory = {
       for (let t = 0.01; t <= 0.091; t += 0.02) { p.copy(h).addScaledVector(fin, t * s); probe(R.palm * s); }
     }
     if (gap === Infinity) return;
-    B.position.addScaledVector(up.set(0, 0, 1).applyQuaternion(B.quaternion), -(gap + 0.02 * s));
+    // (the gap is measured in the bundle's own units: scaled down, it is that much less in the world)
+    B.position.addScaledVector(up.set(0, 0, 1).applyQuaternion(B.quaternion), -(gap * B.scale.x + 0.02 * s));
   },
   update(dt) {
     this.anna.update(dt);

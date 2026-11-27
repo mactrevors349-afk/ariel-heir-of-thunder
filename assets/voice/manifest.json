@@ -191,6 +191,12 @@
   "voice": "en-US-BrianMultilingualNeural",
   "text": "Because the answer is always \"he had to go.\" Seventeen years, Mom. Who just goes?"
  },
+ "92822c9d": {
+  "who": "Anna",
+  "dur": 6.29,
+  "voice": "en-US-EmmaMultilingualNeural",
+  "text": "…All right. You want to know? Then I'll tell you. All of it. Just once."
+ },
  "e6314f09": {
   "who": "Anna",
   "dur": 9.17,
@@ -551,35 +557,77 @@
   "voice": "en-US-GuyNeural",
   "text": "The rot… it burns away. My mind is… my own again."
  },
- "f9d66a32": {
+ "4c054c26": {
   "who": "Ares",
-  "dur": 8.4,
+  "dur": 6.84,
   "voice": "en-US-GuyNeural",
-  "text": "Boy. Kronos waits on Olympus, on your father's throne. Every god you free will weaken his hold."
+  "text": "Over? The rot never made me, boy. It only took off the chains."
  },
- "bda62c2e": {
-  "who": "Ares",
-  "dur": 9.65,
-  "voice": "en-US-GuyNeural",
-  "text": "That shard in your chest… I hated you for it before you could walk. A mortal, wearing my strength like a borrowed cloak."
- },
- "6e8e7554": {
-  "who": "Ares",
-  "dur": 6.72,
-  "voice": "en-US-GuyNeural",
-  "text": "It was never his to give. So let it be mine. Keep it, brother."
- },
- "9a376fe1": {
-  "who": "Ares",
-  "dur": 4.54,
-  "voice": "en-US-GuyNeural",
-  "text": "Take my spark. Wield it better than I did."
- },
- "84aba09a": {
+ "5bd83fca": {
   "who": "Ariel",
   "dur": 1.87,
   "voice": "en-US-BrianMultilingualNeural",
-  "text": "…Dad?"
+  "text": "Then it's over."
+ },
+ "a027fe6f": {
+  "who": "Ares",
+  "dur": 6.17,
+  "voice": "en-US-GuyNeural",
+  "text": "I opened the gates of Olympus to Kronos. I held them while our father burned."
+ },
+ "1d4da051": {
+  "who": "Ares",
+  "dur": 6.46,
+  "voice": "en-US-GuyNeural",
+  "text": "And the storms over your mother's house, every night for seventeen years… who did you think was hunting you?"
+ },
+ "52e20117": {
+  "who": "Ariel",
+  "dur": 0.7,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "…You."
+ },
+ "873ed4f6": {
+  "who": "Ares",
+  "dur": 7.01,
+  "voice": "en-US-GuyNeural",
+  "text": "Let me walk out of here, and I will finish it. Her first. Then you."
+ },
+ "1b6dc335": {
+  "who": "Ares",
+  "dur": 5.33,
+  "voice": "en-US-GuyNeural",
+  "text": "There… there it is. Now you know… what I was."
+ },
+ "0a7972e2": {
+  "who": "Ariel",
+  "dur": 3.46,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "I am war now, brother. And war answers to me."
+ },
+ "15bb61a8": {
+  "who": "Ariel",
+  "dur": 2.18,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "No. Now you know what I am."
+ },
+ "acee758e": {
+  "who": "Ariel",
+  "dur": 1.87,
+  "voice": "en-US-BrianMultilingualNeural",
+  "text": "…He gave me no choice."
+ },
+ "25bf1d94": {
+  "who": "Zeus",
+  "dur": 2.74,
+  "voice": "en-GB-ThomasNeural",
+  "text": "He was my son, too."
+ },
+ "346aae35": {
+  "who": "Zeus",
+  "dur": 8.64,
+  "voice": "en-GB-ThomasNeural",
+  "text": "I cut his war from him to keep you alive, and he never forgave me. His blood is on my hands before it is on yours."
  },
  "e2a0b7ad": {
   "who": "Zeus",
@@ -592,24 +640,6 @@
   "dur": 7.3,
   "voice": "en-GB-ThomasNeural",
   "text": "I am sorry I was not there. Rise now, Heir of Thunder. Olympus awaits."
- },
- "f0861463": {
-  "who": "Ares",
-  "dur": 8.71,
-  "voice": "en-US-GuyNeural",
-  "text": "Hear me, brother. The mantle of war was never mine to keep. I wore it like a butcher wears his apron."
- },
- "70523bd2": {
-  "who": "Ares",
-  "dur": 4.61,
-  "voice": "en-US-GuyNeural",
-  "text": "Take it. Be the god of war that I never was."
- },
- "830174be": {
-  "who": "Ariel",
-  "dur": 2.16,
-  "voice": "en-US-BrianMultilingualNeural",
-  "text": "…Then I will make it mean something."
  },
  "0075ba3b": {
   "who": "Narrator",
@@ -749,11 +779,11 @@
   "voice": "en-GB-ThomasNeural",
   "text": "You never needed to ask, my son. The sky has always been yours."
  },
- "63e08697": {
-  "who": "Ares",
-  "dur": 5.88,
-  "voice": "en-US-GuyNeural",
-  "text": "And the war answers with it, brother. Let them see what the two of us made."
+ "a2507c96": {
+  "who": "Zeus",
+  "dur": 7.94,
+  "voice": "en-GB-ThomasNeural",
+  "text": "But his war is in you now — all of it. Learn when to set it down, or it will wear you the way it wore him."
  },
  "deb72ca9": {
   "who": "Ares",
@@ -845,11 +875,11 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "And the Fates, who see every thread, wove what was still to come."
  },
- "deaca9d9": {
-  "who": "Narrator",
-  "dur": 6.41,
-  "voice": "en-US-AndrewMultilingualNeural",
-  "text": "The son of Zeus took up the mantle of war, and carried it into the dark places of the world."
+ "7228c0ff": {
+  "who": "Ares",
+  "dur": 7.58,
+  "voice": "en-US-GuyNeural",
+  "text": "You killed me, brother, and still you call on me. Very well. Take the war."
  },
  "01137801": {
   "who": "Narrator",
@@ -905,11 +935,11 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "Seven summers later, on the pier where Anna once met a stranger in the rain, Ariel married Jesse. Anna gave the bride away, and Hermes, of course, was late."
  },
- "6589a168": {
+ "2ff8286a": {
   "who": "Narrator",
-  "dur": 7.2,
+  "dur": 6.41,
   "voice": "en-US-AndrewMultilingualNeural",
-  "text": "Zeus came as a warm summer rain. Ares came in his own fire, and for the first time it warmed instead of burned."
+  "text": "The son of Zeus carried the war he had torn from his brother into the dark places of the world."
  },
  "3a125724": {
   "who": "Narrator",
@@ -923,11 +953,11 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "The brothers grew up between two worlds: Saturday football in Westbrook, and Sunday sword-drill on the slopes of Olympus."
  },
- "3b9ce218": {
+ "3567ff9f": {
   "who": "Narrator",
-  "dur": 12.19,
+  "dur": 9.07,
   "voice": "en-US-AndrewMultilingualNeural",
-  "text": "Kratos had his father's strength, and Deimos the War-god's fury. Ariel, who had carried both, taught them the one thing no god had ever learned: when not to fight."
+  "text": "Zeus came as a warm summer rain. And Ariel set one place at the table that no one took, for the brother whose war he carried."
  },
  "0254fad0": {
   "who": "Narrator",
@@ -941,11 +971,11 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "And it was Kratos, too, who walked beside Heracles on the day the chains were broken. His father had taught him that strength is also knowing when to let go."
  },
- "0ed12fd0": {
+ "90af7ae2": {
   "who": "Narrator",
-  "dur": 12.77,
+  "dur": 12.86,
   "voice": "en-US-AndrewMultilingualNeural",
-  "text": "Deimos rode out with his uncle Ares, Dread beside the War-god as in every song since. But wherever the two of them came, the armies laid down their spears before a blow was struck."
+  "text": "Deimos rode out at his father's side, Dread beside the War-god as in every song since. But wherever the two of them came, the armies laid down their spears before a blow was struck."
  },
  "fe2c3fc4": {
   "who": "Narrator",
@@ -959,11 +989,11 @@
   "voice": "en-US-AndrewMultilingualNeural",
   "text": "This is how the story ends. Everything else is how it happens."
  },
- "36f782c9": {
-  "who": "Hermes",
-  "dur": 5.83,
-  "voice": "en-GB-RyanNeural",
-  "text": "You actually did it! Ares is himself again — well, as pleasant as Ares ever gets."
+ "bd1443d2": {
+  "who": "Narrator",
+  "dur": 12.77,
+  "voice": "en-US-AndrewMultilingualNeural",
+  "text": "Kratos had his father's strength, and Deimos the War-god's fury. Ariel, who had once been unable to stop, taught them the one thing no god had ever learned: when not to fight."
  },
  "8d2a1632": {
   "who": "Hermes",
@@ -1013,17 +1043,17 @@
   "voice": "en-GB-RyanNeural",
   "text": "And find the golden apples of the Hesperides. Each one lets you carry another draught of Ambrosia."
  },
- "d8f424d8": {
+ "30d7c4b7": {
   "who": "Hermes",
-  "dur": 9.43,
+  "dur": 9.48,
   "voice": "en-GB-RyanNeural",
-  "text": "Because a piece of him lives in you — and now he has given it freely. The shard is yours, Ariel. The face, the strength, all of it."
+  "text": "So it is done. Ares is gone — I felt it from three valleys away. Nobody on Olympus will say it, so I will: you had no choice."
  },
- "31657ad3": {
+ "5e5d61a2": {
   "who": "Hermes",
-  "dur": 6.24,
+  "dur": 9.31,
   "voice": "en-GB-RyanNeural",
-  "text": "He will still call you little thief, I imagine. From Ares, that is practically a hug."
+  "text": "Because a piece of him lived in you — and now all of him does. The shard, the face, the strength. You took the rest of it from him yourself."
  },
  "b508daec": {
   "who": "Hermes",
@@ -1163,10 +1193,10 @@
   "voice": "en-US-EricNeural",
   "text": "Fire, O fire… when he lifts his blade to the sky, run."
  },
- "92822c9d": {
-  "who": "Anna",
-  "dur": 6.29,
-  "voice": "en-US-EmmaMultilingualNeural",
-  "text": "…All right. You want to know? Then I'll tell you. All of it. Just once."
+ "f362833f": {
+  "who": "Hermes",
+  "dur": 4.01,
+  "voice": "en-GB-RyanNeural",
+  "text": "Wear it well, Ariel. Better than he did."
  }
 }

@@ -716,6 +716,33 @@ const Lips = {
     for (const s of tl) if (t >= s.t0 && t < s.t1) return s.v ? { v: s.v, open: this.OPEN[s.v] } : this.REST;
     return this.REST;
   },
+  // how far each shape is ever pushed: a real mouth in speech never reaches the rig's extremes, and the lips must
+  // close fully only for p, b and m (at full strength the rig's "aa" curled the lips back off the teeth)
+  PEAK: { aa: 0.64, E: 0.54, ih: 0.48, oh: 0.62, ou: 0.58, PP: 0.85, FF: 0.62, TH: 0.46, DD: 0.42, kk: 0.4, CH: 0.52, SS: 0.46, nn: 0.38, RR: 0.48 },
+  /**
+   * The mouth at this moment as a blend (coarticulation): each shape swells over its own stretch of the line and
+   * hands over to the next across a short overlap, the way a mouth already shapes the next sound while finishing
+   * this one. Weights are scaled so together they never pass one shape at full strength. out: { viseme: weight }
+   */
+  blend(tl, t, out) {
+    for (const k in out) out[k] = 0;
+    let i = 0;
+    while (i < tl.length - 1 && tl[i].t1 <= t) i++;
+    let sum = 0;
+    for (let j = Math.max(0, i - 1); j <= Math.min(tl.length - 1, i + 1); j++) {
+      const s = tl[j];
+      if (!s.v) continue;
+      // a soft bump over the stretch, reaching 70 ms (or a third of a short stretch) past each end
+      const len = s.t1 - s.t0, ov = Math.min(0.07, len * 0.6 + 0.02), m = (s.t0 + s.t1) / 2, half = len / 2 + ov;
+      const u = Math.abs(t - m) / half;
+      if (u >= 1) continue;
+      const w = 0.5 + 0.5 * Math.cos(Math.PI * Math.max(0, (u - len / (2 * half)) / (1 - len / (2 * half) + 1e-6)));
+      out[s.v] = Math.max(out[s.v] || 0, w * this.PEAK[s.v]);
+      sum += w;
+    }
+    if (sum > 1) for (const k in out) out[k] /= sum;
+    return out;
+  },
 };
 
 const Voice = {
@@ -732,6 +759,9 @@ const Voice = {
     Zeus: { rev: 0.42, low: 5, presence: 1.5, rate: 0.95 },
     Echo: { rev: 0.75, lp: 3800, gain: 0.85 },
   },
+  // Ariel as the Berserker (laid over his own voice while the gods' war is in him: see SCRIPTS.bossDefeat): deeper,
+  // in a great hall, every word coming back off the sky
+  BERSERK: { rev: 0.5, low: 6, presence: 2.5, rate: 0.94, delay: 0.16, fb: 0.36, wet: 0.42 },
   async init() {
     this.initTTS();
     try {
@@ -802,6 +832,11 @@ const Voice = {
     const t = this.clock();
     return t < 0 ? Lips.REST : Lips.at(this.now.lips, t);
   },
+  /** the blend of mouth shapes for this moment (see Lips.blend), or null in a silence */
+  blend() {
+    const t = this.clock();
+    return t < 0 ? null : Lips.blend(this.now.lips, t, this._blend || (this._blend = {}));
+  },
   /** loudness of a recording, 50 values a second, 0..1 (the 95th percentile counts as full voice) */
   envelope(buf) {
     const d = buf.getChannelData(0), hop = Math.floor(buf.sampleRate / 50), n = Math.ceil(d.length / hop);
@@ -834,7 +869,7 @@ const Voice = {
     if (fx.rev) { const s = ctx.createGain(); s.gain.value = fx.rev; g.connect(s); s.connect(Sound.revIn); }
     if (fx.delay) {
       const d = ctx.createDelay(1), fb = ctx.createGain(), out = ctx.createGain();
-      d.delayTime.value = fx.delay; fb.gain.value = 0.25; out.gain.value = 0.3;
+      d.delayTime.value = fx.delay; fb.gain.value = fx.fb ?? 0.25; out.gain.value = fx.wet ?? 0.3;
       g.connect(d); d.connect(fb); fb.connect(d); d.connect(out); out.connect(Sound.voiceBus);
     }
     src.start();

@@ -934,8 +934,24 @@ const Vase = {
   },
   /** a figure for the studio (one of each, made once) */
   figure(key, f) {
-    if (!this.cast[key]) this.cast[key] = Prologue.actor(this.S, f.model || key, { stance: f.stance || 'casual', size: f.size || 1.1 });
+    if (!this.cast[key]) {
+      // (a model that has not loaded yet is drawn as a hoplite, never as nobody)
+      const model = f.model && MODEL_DEFS[f.model] && !Models.loaded[f.model] ? 'spartan' : f.model || key;
+      this.cast[key] = Prologue.actor(this.S, model, { stance: model === f.model ? f.stance || 'casual' : 'hopliteSword', size: f.size || 1.1 });
+    }
     return this.cast[key];
+  },
+  /**
+   * A boy's proportions on a man's body: the head larger for the height, the shoulders narrower. The painters drew
+   * youths that way (and the silhouette is all a vase shows). Set on the model's own bones, which the rig only turns.
+   */
+  child(a, k) {
+    const bone = (j) => {
+      const m = a.model && a.model.map && a.model.map.find((e) => e.joint === a.rig.j[j]);
+      return m ? m.bone : a.rig.j[j];
+    };
+    bone('head').scale.setScalar(k);
+    for (const s of ['armL', 'armR']) bone(s).scale.setScalar(1 / Math.sqrt(k));
   },
   /** a temple front, for Olympus standing again */
   temple() {
@@ -991,6 +1007,7 @@ const Vase = {
       if (typeof f.pose === 'string') a.rig.pose(f.pose, f.t ?? 1); else a.rig.poseFrom(f.pose || {});
       a.root.updateMatrixWorld(true);
       if (a.model) a.model.update();
+      if (f.child) this.child(a, f.child);
       a.root.updateMatrixWorld(true);
       if (f.carry) {
         const b = this.props.baby || (this.props.baby = Memory.baby.clone());
@@ -1159,8 +1176,8 @@ const Vase = {
 const ASCENSION_SLIDES = [
   { line: 'And the Fates, who see every thread, wove what was still to come.',
     figures: [{ key: 'ariel', model: 'arielGod', stance: 'sword', size: 1.1, x: -1.5, face: 1, pose: 'raise', t: 1, label: 'ΑΡΙΕΛ' },
-      { key: 'ares', model: 'ares', stance: 'aresCourt', size: 1.24, x: 1.7, face: -1, pose: 'kneelBowed', t: 1, label: 'ΑΡΗΣ' }], cam: { y: 1.25, dist: 12 } },
-  { line: 'The son of Zeus took up the mantle of war, and carried it into the dark places of the world.',
+      { key: 'ares', model: 'ares', stance: 'aresCourt', size: 1.24, x: 0.5, face: -1, pose: 'deathBack', t: 1, label: 'ΑΡΗΣ' }], cam: { y: 1.25, dist: 12 } },
+  { line: 'The son of Zeus carried the war he had torn from his brother into the dark places of the world.',
     figures: [{ key: 'ariel', model: 'arielGod', stance: 'sword', size: 1.1, x: -2.3, face: 1, pose: 'lunge', t: 0.45, label: 'ΑΡΙΕΛ' },
       { key: 'cyclops', model: 'cyclops', stance: 'brute', size: 1.5, x: 1.2, face: -1, pose: 'struck', t: 0.5, label: 'ΚΥΚΛΩΨ' },
       { key: 'hoplite', model: 'spartan', stance: 'hopliteSword', size: 1.0, x: 4.0, face: -1, pose: 'backstep', t: 0.5 }], cam: { x: 0.6, y: 1.5, dist: 14.5 } },
@@ -1200,26 +1217,28 @@ const LIFE_SLIDES_A = [
       { key: 'teen', model: 'arielTeen', size: 1.0, x: -0.6, face: 1, pose: 'offer', t: 1, label: 'ΑΡΙΕΛ' },
       { key: 'jesse', model: 'jesse', size: 0.95, x: 0.55, face: -1, pose: 'offer', t: 1, label: 'ΤΖΕΣΣΙ' },
       { key: 'anna', model: 'anna', size: 0.97, x: 3.0, face: -1, pose: {}, label: 'ΑΝΝΑ' }], cam: { y: 1.1, dist: 15 } },
-  { line: 'Zeus came as a warm summer rain. Ares came in his own fire, and for the first time it warmed instead of burned.',
+  { line: 'Zeus came as a warm summer rain. And Ariel set one place at the table that no one took, for the brother whose war he carried.',
     figures: [{ key: 'zeus', model: 'zeus', size: 1.25, x: -3.0, face: 1, pose: 'point', t: 0.7, label: 'ΖΕΥΣ' },
       { key: 'teen', model: 'arielTeen', size: 1.0, x: -0.6, face: 1, pose: 'offer', t: 1 },
       { key: 'jesse', model: 'jesse', size: 0.95, x: 0.55, face: -1, pose: 'offer', t: 1 },
-      { key: 'ares', model: 'ares', stance: 'aresCourt', size: 1.2, x: 3.1, face: -1, pose: {}, label: 'ΑΡΗΣ' }], cam: { y: 1.3, dist: 16 } },
+      { key: 'anna', model: 'anna', size: 0.97, x: 3.0, face: -1, pose: {}, label: 'ΑΝΝΑ' }], cam: { y: 1.3, dist: 16 } },
 ];
 const LIFE_SLIDES_B = [
   { line: 'Two winters after Kratos came his brother, Deimos. The old poets had a word for him before he was born: Dread, who rides at the War-god\'s side. A red ember burned beside the blue in him, the war-god\'s shard come home in the blood.',
     vignette: 'dread',
     figures: [{ key: 'teen', model: 'arielTeen', size: 1.0, x: -1.3, face: 1, pose: 'look', t: 1, label: 'ΑΡΙΕΛ' },
       { key: 'jesse', model: 'jesse', size: 0.95, x: 0.2, face: -1, pose: 'cradle', t: 1, carry: true, label: 'ΤΖΕΣΣΙ' },
-      { key: 'kid1', model: 'arielTeen', size: 0.56, x: 1.6, face: -1, pose: 'lookUp', t: 1, label: 'ΚΡΑΤΟΣ' }], cam: { y: 1.0, dist: 10 } },
+      // (the boys are their own people, not small copies of their father: Kratos in a hoplite's kit, Deimos bare-chested
+      // in a warrior's kilt as he will be grown, both with a boy's proportions)
+      { key: 'kid1', model: 'spartan', stance: 'hopliteSword', size: 0.5, child: 1.3, x: 1.6, face: -1, pose: 'lookUp', t: 1, label: 'ΚΡΑΤΟΣ' }], cam: { y: 1.0, dist: 10 } },
   { line: 'The brothers grew up between two worlds: Saturday football in Westbrook, and Sunday sword-drill on the slopes of Olympus.',
     figures: [{ key: 'ariel', model: 'arielGod', stance: 'sword', size: 1.1, x: -2.2, face: 1, pose: 'point', t: 0.8, label: 'ΑΡΙΕΛ' },
-      { key: 'kid1', model: 'arielTeen', size: 0.62, x: 0.6, face: 1, pose: 'heavy', t: 0.4, label: 'ΚΡΑΤΟΣ' },
-      { key: 'kid2', model: 'arielTeen', size: 0.5, x: 2.3, face: -1, pose: 'backstep', t: 0.5, label: 'ΔΕΙΜΟΣ' }], cam: { y: 1.0, dist: 12 } },
-  { line: 'Kratos had his father\'s strength, and Deimos the War-god\'s fury. Ariel, who had carried both, taught them the one thing no god had ever learned: when not to fight.',
-    figures: [{ key: 'kid1', model: 'arielTeen', size: 0.66, x: -1.7, face: 1, pose: 'charge', t: 0.3, label: 'ΚΡΑΤΟΣ' },
+      { key: 'kid1', model: 'spartan', stance: 'hopliteSword', size: 0.6, child: 1.25, x: 0.6, face: 1, pose: 'heavy', t: 0.4, label: 'ΚΡΑΤΟΣ' },
+      { key: 'kid2', model: 'deimos', size: 0.5, child: 1.3, x: 2.3, face: -1, pose: 'backstep', t: 0.5, label: 'ΔΕΙΜΟΣ' }], cam: { y: 1.0, dist: 12 } },
+  { line: 'Kratos had his father\'s strength, and Deimos the War-god\'s fury. Ariel, who had once been unable to stop, taught them the one thing no god had ever learned: when not to fight.',
+    figures: [{ key: 'kid1', model: 'spartan', stance: 'hopliteSword', size: 0.64, child: 1.22, x: -1.7, face: 1, pose: 'charge', t: 0.3, label: 'ΚΡΑΤΟΣ' },
       { key: 'ariel', model: 'arielGod', stance: 'sword', size: 1.1, x: 0, face: 1, pose: 'raise', t: 0.6, label: 'ΑΡΙΕΛ' },
-      { key: 'kid2', model: 'arielTeen', size: 0.55, x: 1.7, face: -1, pose: 'charge', t: 0.3, label: 'ΔΕΙΜΟΣ' }], cam: { y: 1.0, dist: 13 } },
+      { key: 'kid2', model: 'deimos', size: 0.55, child: 1.26, x: 1.7, face: -1, pose: 'charge', t: 0.3, label: 'ΔΕΙΜΟΣ' }], cam: { y: 1.0, dist: 13 } },
   // Kratos as the myths remember him (Hesiod's Theogony; Aeschylus' Prometheus Bound): Strength, who stands by Zeus' throne
   // with his sister Bia, Force, and who held Prometheus to the Caucasus rock while Hephaestus drove the chains
   { line: 'Kratos grew into his name. Strength, the poets called him, who stands at the right hand of Zeus with his sister Bia, Force. When the Titan Prometheus stole fire for mankind, it was Kratos who held him to the Caucasus rock while Hephaestus drove the chains.',
@@ -1235,10 +1254,10 @@ const LIFE_SLIDES_B = [
       { key: 'prometheus', model: 'zeus', size: 1.0, x: 0.45, y: 1.02, face: -1, pose: 'raise', t: 1, label: 'ΠΡΟΜΗΘΕΥΣ', labelUp: 0.3 },
       { key: 'heracles', model: 'spartan', stance: 'hopliteSword', size: 1.06, x: 2.9, face: -1, pose: 'point', t: 1, label: 'ΗΡΑΚΛΗΣ' }], cam: { y: 1.6, dist: 15.5 } },
   // Deimos as the myths remember him (Hesiod; the Iliad): Dread, who goes into battle beside Ares with his brother Phobos, Fear
-  { line: 'Deimos rode out with his uncle Ares, Dread beside the War-god as in every song since. But wherever the two of them came, the armies laid down their spears before a blow was struck.',
+  { line: 'Deimos rode out at his father\'s side, Dread beside the War-god as in every song since. But wherever the two of them came, the armies laid down their spears before a blow was struck.',
     vignette: 'armies',
-    figures: [{ key: 'grownD', model: 'arielTeen', size: 1.0, x: -2.6, face: 1, pose: 'offer', t: 1, label: 'ΔΕΙΜΟΣ' },
-      { key: 'ares', model: 'ares', stance: 'aresCourt', size: 1.2, x: -0.9, face: 1, pose: 'point', t: 1, label: 'ΑΡΗΣ' },
+    figures: [{ key: 'grownD', model: 'deimos', size: 1.02, x: -2.6, face: 1, pose: 'offer', t: 1, label: 'ΔΕΙΜΟΣ' },
+      { key: 'ariel', model: 'arielGod', stance: 'sword', size: 1.1, x: -0.9, face: 1, pose: 'point', t: 1, label: 'ΑΡΙΕΛ' },
       { key: 'hop1', model: 'spartan', stance: 'hopliteSword', size: 1.0, x: 1.4, face: -1, pose: 'kneelBowed', t: 1 },
       { key: 'hop2', model: 'spartan', stance: 'hopliteSword', size: 1.0, x: 3.0, face: -1, pose: 'kneelBowed', t: 1 }], cam: { y: 1.3, dist: 15 } },
   { line: 'Anna grew old in the house by the sea. And every storm that ever passed over it stopped there, for a moment, to rest.',
@@ -1249,7 +1268,7 @@ const LIFE_SLIDES_B = [
 
 /* ------------------------------------------------------------------ the brothers in the round
    3D scenes cut into the KRATOS AND DEIMOS slides (see mythSlide): the Caucasus crag where the Titan was bound,
-   Kratos at his grandfather's throne, Deimos and Ares before the armies. */
+   Kratos at his grandfather's throne, Deimos and his father before the armies. */
 
 /** Kratos' armour: his father's god-armour, its gold gone to dark, oiled bronze (the skin is left as it is) */
 function darkBronze(m) {
@@ -1415,7 +1434,7 @@ const frontOf = (a, j, dist, side = 0, up = 0) => {
 
 /** only these of the cast are on stage (the others step out of every scene they are not in) */
 const castOnly = (M, ...keep) => {
-  for (const a of [M.kratos, M.deimos, M.heracles, M.titan, M.ares, ...(M.hoplites || [])]) if (a) { const on = keep.includes(a); a.root.visible = on; if (a.cape) a.cape.mesh.visible = on; }
+  for (const a of [M.kratos, M.deimos, M.heracles, M.titan, M.father, ...(M.hoplites || [])]) if (a) { const on = keep.includes(a); a.root.visible = on; if (a.cape) a.cape.mesh.visible = on; }
   if (M.chains) M.chains.group.visible = false;
 };
 
@@ -1567,9 +1586,10 @@ const MYTH = {
     await at(0.2);
     const S = G.scene, base = World.sites.colossus, ox = base.x - 42, oz = base.z + 70;  // open, level ground: no trees in any shot
     const gy = (x, z) => World.getHeight(x, z, 50);
-    if (!M.ares) M.ares = PR.actor(S, 'ares', { stance: 'aresCourt', size: 1.24 });
+    // (Ares is dead by his father's hand: Dread rides beside the new War-god, his father)
+    if (!M.father) M.father = PR.actor(S, 'arielGod', { stance: 'sword', size: 1.14 });
     if (!M.hoplites) M.hoplites = [0, 1, 2, 3, 4, 5].map(() => PR.actor(S, 'spartan', { stance: 'hopliteSword', size: 1.0 }));
-    const A = M.ares, Hs = M.hoplites;
+    const A = M.father, Hs = M.hoplites;
     const fwd = V3(0, 0, -1);
     await this.mythCut(c, S, () => {
       S.add(D.root);
@@ -1732,7 +1752,45 @@ const Garments = {
     out.children.forEach((c) => c.geometry.translate(-cx, -bb.min.y, -cz));
     out.userData.h = bb.max.y - bb.min.y;
     out.userData.pivot = { x: -cx, y: -bb.min.y, z: -cz };   // where the garment's own origin went
+    if (k === 'goddess') out.add(this.underskirt());
     return out;
+  },
+  /**
+   * The goddess gown is cut with a slit to the hip, made to show the dummy it came on: marble legs with gilt knee
+   * plates and gilt heels. Under it now, an underskirt of the same ivory satin, from just under the drape at her
+   * hips to the floor, round the legs and the heels, so the gown falls closed to the ground. (In the gown's own
+   * units, as prepared: hem at y = 0, front +z, the legs inside x -0.14..0.12, z -0.12..0.03)
+   */
+  underskirt() {
+    const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    // (just outside the legs, just inside the gown's own side panels and the drape at the hips, which stay in front)
+    return this.slip((t) => [0.58 - t * 0.576, 0.08 + 0.05 * t + 0.025 * sm(0.75, 1, t), 0.05 + 0.006 * t + 0.02 * sm(0.85, 1, t), 0.06 + 0.05 * t], 0.005, 0, 0xd6cdbd, 1);
+  },
+  /**
+   * A plain satin slip, an open tube from the waist to the hem: ring(t) gives [y, half-width, front depth, back
+   * depth] from the top (t = 0) to the hem (t = 1), centred on (x, z). Soft vertical folds deepen toward the hem
+   * (fold: their depth in the slip's own size), and the hem itself waves a little
+   */
+  slip(ring, x, z, color, fold) {
+    const NU = 56, NV = 22, pos = [], idx = [];
+    const sm = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+    for (let j = 0; j <= NV; j++) {
+      const t = j / NV, [y, rx, zf, zb] = ring(t);
+      for (let i = 0; i <= NU; i++) {
+        const th = Math.PI + (i / NU) * TAU, sx = Math.sin(th), cz = Math.cos(th);   // (the seam at the back)
+        const f = 1 + (0.008 + 0.02 * t) * fold * Math.sin(th * 7 + 0.4) * sm(0.05, 0.5, t);
+        pos.push(x + sx * rx * f, y + (t > 0.97 ? 0.006 * fold * Math.sin(th * 7 + 0.4) : 0), z + cz * (cz > 0 ? zf : zb) * f);
+      }
+    }
+    for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a = j * (NU + 1) + i, b = a + NU + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.MeshStandardMaterial({ color, roughness: 0.5, side: THREE.DoubleSide });
+    m.envMapIntensity = 0.8;
+    const mesh = new THREE.Mesh(g, m);
+    mesh.castShadow = mesh.receiveShadow = true; mesh.frustumCulled = false;
+    return mesh;
   },
   /**
    * Put a garment on an actor standing still: its own clothes hidden, the garment scaled from the actor's own
@@ -1824,6 +1882,18 @@ const Garments = {
         this._arms = ['Left', 'Right'].map((S) => [B(S + 'Arm'), B(S + 'ForeArm'), B(S + 'Hand')]).filter((p) => p[0] && p[1] && p[2]);
         this._arms.forEach(([u, f2, h]) => { u.scale.set(ku, 1, ku); f2.scale.set(kf, 1, kf); h.scale.set(1 / (ku * kf), 1, 1 / (ku * kf)); });
       }
+    }
+    if (k === 'dress') {
+      // the wedding gown's skirt is open at the hips (it was cut over a dummy, and her own hips and thighs showed
+      // through, with the dummy's lace bands round them): a slip of ivory satin under it, from her waist to the
+      // floor, round her hips and inside the skirt. Measured on her, posed (her hips joint 0.865 up): it clears her
+      // hips by a centimetre or two, a little wider than the gown's own narrow waist, so it shows there as a sash
+      const hp = loc('hips'), k2 = hp.y / 0.865;
+      const rows = [[1.04, 0.14, 0.125, 0.105], [1.0, 0.158, 0.135, 0.118], [0.92, 0.18, 0.13, 0.13], [0.84, 0.19, 0.125, 0.135], [0.72, 0.21, 0.18, 0.2], [0.5, 0.235, 0.22, 0.25], [0.25, 0.27, 0.26, 0.31], [0.02, 0.3, 0.3, 0.35]];
+      const at = (t) => { const y = 1.04 - t * 1.02; let i = 0; while (i < rows.length - 2 && rows[i + 1][0] > y) i++; const A = rows[i], B2 = rows[i + 1], u = (A[0] - y) / (A[0] - B2[0]);
+        return [y * k2, (A[1] + (B2[1] - A[1]) * u) * k2, (A[2] + (B2[2] - A[2]) * u) * k2, (A[3] + (B2[3] - A[3]) * u) * k2]; };
+      liner = this.slip(at, hp.x + 0.011 * k2, hp.z - 0.005 * k2, 0xece5d8, 3);   // (her hips sit a little to her left of the joint)
+      a.root.add(liner);
     }
     const hidden = [];
     a.root.traverse((o) => { if (o.isMesh && o.visible && fit.hide && fit.hide.test((o.name + ' ' + (o.material && o.material.name)).toLowerCase())) { o.visible = false; hidden.push(o); } });
@@ -2736,70 +2806,455 @@ const SCRIPTS = {
       } else Z.setOpacity = (v) => { Mat.zeus.uniforms.uOpacity.value = v * 0.85; };
       return Z;
     },
+    /**
+     * The Berserker (see BERSERK in models.js): two eyes burning in the helm, riding his head, and a driver that eases
+     * the red over his armour, the eyes and the crawl of Zeus' lightning over him toward S.bz.target every frame
+     */
+    berserkOn(P) {
+      const S = SCRIPTS.bossDefeat;
+      if (!S.eyeTex) {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+        const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.2, 'rgba(255,235,210,0.9)'); gr.addColorStop(0.5, 'rgba(255,110,50,0.35)'); gr.addColorStop(1, 'rgba(255,40,10,0)');
+        g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+        S.eyeTex = new THREE.CanvasTexture(cv); S.eyeTex.colorSpace = THREE.SRGBColorSpace;
+      }
+      if (!S.eyes) {
+        // (found on the god-form helm: the eye holes sit 4 cm above the head joint, a little to his left of it)
+        const mk = (col, w) => { const m = new THREE.SpriteMaterial({ map: S.eyeTex, color: col, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }); const sp = new THREE.Sprite(m); sp.scale.set(w, w * 0.6, 1); sp.renderOrder = 12; return sp; };
+        S.eyes = new THREE.Group();
+        for (const sx of [-1, 1]) {
+          const halo = mk(new THREE.Color(3, 0.55, 0.18), 0.075), core = mk(new THREE.Color(2, 2.2, 3.2), 0.026);
+          halo.position.set(0.008 + sx * 0.039, 0.042, 0.088); core.position.set(0.008 + sx * 0.039, 0.042, 0.09);
+          S.eyes.add(halo, core);
+        }
+      }
+      P.rig.j.head.add(S.eyes);
+      S.eyes.visible = true;
+      const D = (S.bz = { k: 0, target: 0, rate: 2.2, eye: 0, eyeT: 0, arcT: 0, rec: null });
+      const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+      FX.temp(new THREE.Object3D(), 1e6, (t, dt) => {
+        if (D.dead) { t.life = 0; return; }
+        D.k = damp(D.k, D.target, D.rate, Math.max(dt, 1 / 240));
+        D.eye = damp(D.eye, D.eyeT, 6, Math.max(dt, 1 / 240));
+        BERSERK.value = D.k;
+        const fl = 0.85 + 0.15 * Math.sin(G.time * 23) * Math.sin(G.time * 7.3);
+        S.eyes.children.forEach((s, i) => { s.material.opacity = D.eye * (i % 2 ? 1 : 0.85 * fl); });
+        if (!P.root.visible || D.k < 0.2) return;
+        // the eyes leave a short smear of light when he moves, and lightning crawls over him
+        if (D.eye > 0.3) for (let i = 1; i < 4; i += 2) { S.eyes.children[i].getWorldPosition(tmp); FX.glow.spawn({ x: tmp.x, y: tmp.y, z: tmp.z, life: 0.14, s: 0.035, s2: 0.01, c: [2.6, 0.7, 0.3, 0.7 * D.eye], c2: [1.4, 0.2, 0.05, 0] }); }
+        D.arcT -= dt;
+        if (D.arcT <= 0) {
+          D.arcT = rand(0.05, 0.16) / D.k;
+          const J = P.rig.j, js = [J.chest, J.spine, J.armL, J.armR, J.elbowL, J.elbowR, J.handL || J.elbowL, J.thighL, J.thighR, J.neck];
+          js[Math.floor(Math.random() * js.length)].getWorldPosition(tmp);
+          tmp2.copy(tmp).add(new THREE.Vector3(rand(-0.28, 0.28), rand(-0.2, 0.32), rand(-0.28, 0.28)));
+          FX.arc(tmp, tmp2, 0.007);
+        }
+      }, false);
+    },
+    berserkOff() {
+      const S = SCRIPTS.bossDefeat;
+      if (S.bz) S.bz.dead = true;
+      S.bz = null;
+      BERSERK.value = 0;
+      if (S.eyes) { S.eyes.visible = false; if (S.eyes.parent) S.eyes.parent.remove(S.eyes); }
+      if (S.arielFX !== undefined) { Voice.FX.Ariel = S.arielFX; S.arielFX = undefined; }
+    },
+    /**
+     * Ares beaten, and the truth out of him at last: the rot never made him, it only freed him. He opened Olympus to
+     * Kronos, he hunted Ariel and his mother through seventeen years of storms, and he will finish it. He reaches into
+     * the boy through the shard to make him kneel, and the war in that shard answers the boy instead, with his father's
+     * thunder in it: Ariel rises as the Berserker. He takes Ares apart, drives Keraunos down through his chest from
+     * the sky, and the God of War turns to stone and blows away as ash. His spark does not pass to Ariel; Ariel tears it
+     * out of the air. Then Zeus, who lost a son today too.
+     */
     async run(c) {
-      const R = World.arena, P = G.player, B = G.boss;
+      const R = World.arena, P = G.player, B = G.boss, S = SCRIPTS.bossDefeat;
+      Garments.preload(); Models.ensure('deimos'); Models.ensure('heracles');
       Music.play('none');
+      // (a boss's body never dissolves on its own, but this scene is long: keep it from counting toward that)
+      B.deadT = -1e4;
+      // where Keraunos' point and hilt sit when he has driven it down (bzPlunge), in his own frame: the landing is
+      // worked out from it so the blade goes into Ares' chest and not beside him
+      {
+        P.rig.pose('bzPlunge', 1); P.root.updateMatrixWorld(true);
+        const sw = P.parts.sword.userData, inv = -P.heading;
+        const loc = (o) => o.getWorldPosition(new THREE.Vector3()).sub(P.root.position).applyAxisAngle(V(0, 1, 0), inv);
+        S.plunge = { tip: loc(sw.tip), base: loc(sw.base) };
+      }
       await c.wait(0.5);
       B.rig.play('kneelBowed', { fade: 0.6 });
-      // stage the ending in the open centre of the arena, Zeus rises behind Ares
+      // staged in the open centre of the arena: the line from Ares to Ariel is +z
       B.pos.set(R.x, World.getHeight(R.x, R.z - 4), R.z - 4);
       B.heading = 0;
       B.root.position.copy(B.pos); B.root.rotation.y = 0;
-      if (B.cape) B.cape.needsReset = true;
-      const bp = B.pos.clone();
-      const toP = new THREE.Vector3(0, 0, 1);
-      P.setPosition(bp.x + toP.x * 8, bp.z + toP.z * 8, Math.atan2(-toP.x, -toP.z));
-      c.shot(bp.clone().add(toP.clone().multiplyScalar(14)).add(V(3, 3, 0)), bp.clone().add(V(0, 3, 0)), 45);
-      await c.wait(2.2);
-      // the rot leaves him
+      const bp = B.pos.clone(), f = V(0, 0, 1), sd = V(1, 0, 0);
+      const W = (fw, s, y = 0) => { const p = bp.clone().addScaledVector(f, fw).addScaledVector(sd, s); p.y = World.getHeight(p.x, p.z) + y; return p; };
+      const hd = (a, b) => Math.atan2(b.x - a.x, b.z - a.z);
+      const jw = (a, j) => { a.root.updateMatrixWorld(true); return a.rig.j[j].getWorldPosition(new THREE.Vector3()); };
+      // a tween on the world's clock (so slow motion slows it too)
+      const tw = (dur, fn) => { const t0 = G.time; return c.wait(1e4, () => { const u = clamp((G.time - t0) / dur, 0, 1); fn(u); return u >= 1; }); };
+      { const p = W(4.4, 0); P.setPosition(p.x, p.z, Math.PI); }
+      P.rig.stop(0.3);
+      c.shot(W(10, 3.4, 2.6), W(0, 0, 2.6), 45);
+      await c.wait(1.6);
+      // the rot leaves him, and the giant goes with it: he burns down to a god's own height, his cape going up in embers
       for (let i = 0; i < 6; i++) setTimeout(() => {
-        for (let k = 0; k < 40; k++) FX.smoke.spawn({ x: bp.x + rand(-2, 2), y: bp.y + rand(1, 6), z: bp.z + rand(-2, 2), vx: rand(-1, 1), vy: rand(1, 4), vz: rand(-1, 1), life: rand(1.5, 3), s: rand(0.8, 1.6), s2: 3.5, c: [0.22, 0.06, 0.3, 0.5], c2: [0.1, 0.02, 0.15, 0] });
+        for (let k = 0; k < 40; k++) FX.smoke.spawn({ x: bp.x + rand(-2, 2), y: bp.y + rand(0.5, 5), z: bp.z + rand(-2, 2), vx: rand(-1, 1), vy: rand(1, 4), vz: rand(-1, 1), life: rand(1.5, 3), s: rand(0.8, 1.6), s2: 3.5, c: [0.22, 0.06, 0.3, 0.5], c2: [0.1, 0.02, 0.15, 0] });
       }, i * 250);
       B.fuller.material.color.setRGB(0.8, 0.15, 0.05);
       B.crestMat.color.setRGB(1.0, 0.25, 0.08);
       if (B.bodyMat) B.bodyMat.emissive.setRGB(0, 0, 0);
       Sound.roar(0.4, 0.6);
-      // kneeling and bowed his head is only ~2.4 m up and a metre forward: look up into it from below, not over it
-      c.shot(bp.clone().add(toP.clone().multiplyScalar(4.6)).add(V(-1.3, 1.5, 0)), bp.clone().add(V(0, 2.2, 0)).addScaledVector(toP, 0.8), 38);
-      await c.wait(1.6);
+      if (B.cape && B.cape.mesh.visible) {
+        const cp = jw(B, 'chest').addScaledVector(f, -1.0);
+        FX.fireBurst(cp, 2.2, 50); FX.ash(cp, 30, [0.1, 0.05, 0.04, 0.7]);
+        B.cape.mesh.visible = false;
+      }
+      S.aresSize = B.rig.size;
+      B.rig.size = 1.24;
+      const s0 = B.root.scale.x;
+      c.move(W(6.5, 2.4, 1.5), W(0, 0, 1.2), 2.2);
+      await tw(1.8, (u) => B.root.scale.setScalar(lerp(s0, 1.24, easeInOut(u))));
+      FX.flashLight(W(0, 0, 1.2), 0xff6a28, 40, 0.5, 12);
+      await c.wait(0.6);
+      // kneeling and bowed: three-quarters on, a little below him (and the low sun behind the camera, never in the shot)
+      { const fb = c.faceOf(B); c.shot(fb.clone().addScaledVector(f, 2.4).addScaledVector(sd, -1.2).add(V(0, -0.25, 0)), fb.clone().add(V(0, -0.2, 0)), 38); }
       await c.say('Ares', 'The rot… it burns away. My mind is… my own again.');
-      // (Ariel, hearing it: from the kneeling god's own eye line, looking up at the boy who beat him; low, so he stands
-      // against the colonnade and the sky rather than the bare edge of the arena floor)
-      { const sd = V(toP.z, 0, -toP.x); P.root.updateMatrixWorld(true);
-        c.shot(P.pos.clone().addScaledVector(toP, -2.3).addScaledVector(sd, 0.7).add(V(0, 1.0, 0)), P.pos.clone().add(V(0, 1.56, 0)), 32); }
-      await c.say('Ares', 'Boy. Kronos waits on Olympus, on your father\'s throne. Every god you free will weaken his hold.');
-      // the shard: what Zeus took from him is now his to give
-      c.shot(bp.clone().add(toP.clone().multiplyScalar(4.6)).add(V(-1.3, 1.5, 0)), bp.clone().add(V(0, 2.2, 0)).addScaledVector(toP, 0.8), 38);
-      await c.say('Ares', 'That shard in your chest… I hated you for it before you could walk. A mortal, wearing my strength like a borrowed cloak.');
-      // closer (the same place, a longer lens) for the line that ends it
-      c.shot(bp.clone().add(toP.clone().multiplyScalar(4.6)).add(V(-1.3, 1.5, 0)), bp.clone().add(V(0, 2.3, 0)).addScaledVector(toP, 0.8), 27);
-      await c.say('Ares', 'It was never his to give. So let it be mine. Keep it, brother.');
-      // the Spark of War
-      const orb = FX.plasma(0.42, [6, 1.6, 0.45]);
-      orb.position.copy(bp).add(V(0, 3.4, 0));
+      B.rig.play('kneelLookUp', { fade: 0.8 });
+      c.single(P, B, { tight: 0.5 });
+      await c.say('Ariel', 'Then it\'s over.');
+      // he gets up. Something in the way he does it is wrong
+      B.rig.play('standUp', { fade: 0.3 });
+      Sound.step(true, 0.5);
+      c.shot(W(2.2, 5.6, 1.4), W(2.0, 0, 1.3), 40);
+      await c.wait(1.6);
+      c.overAriel(P, B);
+      await c.say('Ares', 'Over? The rot never made me, boy. It only took off the chains.');
+      c.single(B, P, { tight: 0.35 });
+      await c.say('Ares', 'I opened the gates of Olympus to Kronos. I held them while our father burned.');
+      { const fb = c.faceOf(B), fp = c.faceOf(P), d = fp.clone().sub(fb).setY(0).normalize(), r = V(d.z, 0, -d.x);
+        c.shot(fb.clone().addScaledVector(d, 1.5).addScaledVector(r, 0.35), fb.clone().add(V(0, -0.05, 0)), 30);
+        c.move(fb.clone().addScaledVector(d, 1.05).addScaledVector(r, 0.25), fb.clone().add(V(0, -0.04, 0)), 6, { ease: (t) => t, fov: 26 }); }
+      await c.say('Ares', 'And the storms over your mother\'s house, every night for seventeen years… who did you think was hunting you?');
+      c.single(P, B, { tight: 1 });
+      await c.say('Ariel', '…You.');
+      // side on to them both, so the hand he reaches out with is seen to cross the space between them
+      // (far enough back that both stand well inside the frame: they are four paces apart)
+      { const mid = P.pos.clone().lerp(B.pos, 0.5); c.shot(mid.clone().addScaledVector(sd, -5.6).add(V(0, 1.45, 0)), mid.clone().add(V(0, 1.3, 0)), 38);
+        c.move(mid.clone().addScaledVector(sd, -5.0).add(V(0, 1.4, 0)), mid.clone().add(V(0, 1.3, 0)), 6, { ease: (t) => t }); }
+      setTimeout(() => B.rig.play('bzReach', { fade: 0.35 }), 1400);
+      await c.say('Ares', 'Let me walk out of here, and I will finish it. Her first. Then you.');
+      // and he reaches into the boy through the shard, as he did in the fight
+      G.post.possess = 0.7;
+      Sound.heartbeat(1); Sound.roar(0.75, 0.45);
+      G.cam.shake(0.5);
+      P.rig.play('clutch', { fade: 0.15 });
+      FX.sparks(jw(P, 'chest'), null, 40, [3, 0.5, 0.15, 1], 4, false);
+      c.shot(W(2.3, -5.2, 1.1), W(2.2, 0, 1.25), 40);
+      setTimeout(() => { if (Cutscene.active) P.rig.play('seized', { fade: 0.4 }); }, 900);
+      await c.say('Ares', 'And what is mine answers to me. Kneel to war, boy.');
+      P.rig.play('kneel', { fade: 0.5 });
+      Sound.heartbeat(1);
+      await c.wait(1.0);
+      // knelt, head down. The heart slows, and stops
+      { const fp = c.faceOf(P); c.shot(fp.clone().addScaledVector(f, -0.95).addScaledVector(sd, -0.45).add(V(0, -0.28, 0)), fp.clone().add(V(0, -0.02, 0)), 30); }
+      Sound.heartbeat(0.9);
+      await c.wait(1.1);
+      Sound.heartbeat(0.7);
+      await c.wait(1.5);
+      // the Berserker: first the eyes
+      S.berserkOn(P);
+      S.bz.eyeT = 1;
+      Sound.tone({ type: 'sawtooth', f: 55, f2: 41, dur: 3.2, gain: 0.16, lp: 420, rev: 0.6, attack: 0.4 });
+      Sound.zap();
+      FX.flashLight(c.faceOf(P), 0xff4a20, 6, 0.6, 3);
+      await c.wait(1.6);
+      // then the sky comes down on him, and the fire up out of the ground
+      c.shot(W(3.0, 7.2, 1.3), W(2.4, 0, 1.6), 42);
+      await c.wait(0.25);
+      FX.lightningStrike(P.pos.clone(), { radius: 2.4, scale: 1, shake: 1.1, flash: 0.14, light: 800 });
+      FX.later(0.05, () => {
+        FX.fireBurst(P.pos, 2.6, 70);
+        FX.ring(P.pos, 9, { color: [2.6, 0.5, 0.15], life: 0.9, opacity: 0.9 });
+        FX.ring(P.pos, 6, { color: [1.2, 1.6, 3.2], life: 0.6, opacity: 0.8 });
+        Sound.boom(1); Sound.roar(0.5, 0.9);
+        G.post.possess = 0;
+        S.bz.target = 1; P.cineGlow = 0.35;
+        // the hold breaks, and throws Ares off him
+        B.rig.play('hitBack', { fade: 0.05 }); B.rig.hit(0, -1, 0, 1.4);
+      });
+      { const b0 = B.pos.clone(), b1 = W(-0.4, 0); await tw(0.6, (u) => { B.pos.lerpVectors(b0, b1, 1 - (1 - u) * (1 - u)); }); }
+      // he rises: low in front of him, coming in
+      S.arielFX = Voice.FX.Ariel; Voice.FX.Ariel = Voice.BERSERK;
+      P.rig.play('rise', { fade: 0.3 });
+      { const p0 = P.pos.clone().addScaledVector(f, -3.4).addScaledVector(sd, -1.4).add(V(0, 0.75, 0)), p1 = P.pos.clone().addScaledVector(f, -2.2).addScaledVector(sd, -1.0).add(V(0, 0.95, 0));
+        c.shot(p0, P.pos.clone().add(V(0, 1.0, 0)), 42);
+        c.move(p1, P.pos.clone().add(V(0, 1.55, 0)), 3.4, { fov: 34 }); }
+      { let nb = 0; const t0 = G.time;
+        await c.wait(3.4, () => {
+          const k = G.time - t0;
+          if (k > nb) { nb = k + rand(0.3, 0.55); const a = rand(0, TAU), r = rand(2.5, 6), g = P.pos.clone().add(V(Math.cos(a) * r, 0, Math.sin(a) * r)); g.y = World.getHeight(g.x, g.z); FX.bolt(g.clone().add(V(rand(-5, 5), 45, rand(-5, 5))), g, { radius: 0.07, life: 0.28, branches: 3 }); FX.flashLight(g, 0xb8d4ff, 35, 0.25, 12); FX.dust(g, 0.6, 6); if (Math.random() < 0.5) Sound.thunder(rand(0.1, 0.4)); else Sound.zap(); }
+          if (Math.random() < 0.6) { const a = rand(0, TAU), r = rand(0.4, 1.3); FX.glow.spawn({ x: P.pos.x + Math.cos(a) * r, y: P.pos.y + rand(0, 0.3), z: P.pos.z + Math.sin(a) * r, vx: 0, vy: rand(1.5, 3.5), vz: 0, life: rand(0.8, 1.4), s: rand(0.04, 0.08), s2: 0.01, c: [2.6, 0.6, 0.15, 1], c2: [1.2, 0.15, 0.04, 0] }); }
+          return false;
+        }); }
+      c.single(P, B, { tight: 0.85 });
+      await c.say('Ariel', 'I am war now, brother. And war answers to me.');
+
+      // ---- the fight: Ares comes at him, and is taken apart
+      Music.play('boss'); Music.intensity = 1;
+      const trailOn = (a, on) => { a._bzTrail = on; };
+      const trails = () => {
+        if (P._bzTrail) { const sw = P.parts.sword.userData; P.trail.push(sw.base.getWorldPosition(new THREE.Vector3()).lerp(sw.tip.getWorldPosition(new THREE.Vector3()), 0.35), sw.tip.getWorldPosition(new THREE.Vector3())); }
+        if (B._bzTrail && B.trail) { const w = B.parts.weapon.userData; B.trail.push(w.base.getWorldPosition(new THREE.Vector3()).lerp(w.tip.getWorldPosition(new THREE.Vector3()), 0.35), w.tip.getWorldPosition(new THREE.Vector3())); }
+      };
+      // Thunder Step: he is the bolt for a blink, and comes out of it where he chooses
+      const blink = (to, heading) => {
+        const from = jw(P, 'chest');
+        P.setPosition(to.x, to.z, heading);
+        P.blink = 0.1;
+        const dst = to.clone(); dst.y = World.getHeight(dst.x, dst.z) + 1.1;
+        FX.bolt(from, dst, { radius: 0.08, life: 0.3, branches: 3 });
+        FX.flashLight(dst, 0xb8d4ff, 70, 0.25, 12);
+        FX.sparks(dst, null, 26, [1.4, 1.9, 3.4, 1], 6, false);
+        FX.glow.spawn({ x: from.x, y: from.y, z: from.z, life: 0.3, s: 0.5, s2: 1.4, c: [2.6, 0.6, 0.2, 0.8], c2: [1.4, 0.2, 0.05, 0] });
+        Sound.zap();
+      };
+      // a blow lands on Ares: his body gives along it (in his own frame: +x his left, +z ahead)
+      const struck = (dir, twist, s, at, clip) => {
+        const h = B.heading, px = dir.x * Math.cos(h) - dir.z * Math.sin(h), pz = dir.x * Math.sin(h) + dir.z * Math.cos(h);
+        if (clip) B.rig.play(clip, { fade: 0.05 });
+        B.rig.hit(px, pz, twist, s);
+        FX.ichor(at, dir, 34);
+        FX.sparks(at, dir, 22, [3, 0.8, 0.2, 1], 7, false);
+        FX.flashLight(at, 0xff7a3a, 45, 0.2, 8);
+        Sound.hit('flesh', 1.1); Sound.hit('metal', 0.6);
+        G.cam.shake(0.55);
+      };
+      const slow = (k, real) => { G.slowMo = k; setTimeout(() => { if (G.slowMo === k) G.slowMo = 1; }, real * 1000); };
+      // 1. he charges with the great overhead cut; Ariel is not there when it lands
+      B.heading = hd(B.pos, P.pos);
+      B.rig.play('roar', { fade: 0.2, speed: 1.6 });
+      Sound.roar(0.7, 1);
+      c.shot(W(2.6, 7.4, 1.7), W(2.0, 0, 1.3), 44);
+      await c.wait(0.9);
+      B.rig.play('overhead', { fade: 0.12 });
+      trailOn(B, true);
+      Sound.swing(true);
+      { const b0 = B.pos.clone(), b1 = W(2.3, 0); let blinked = false, landed = false; const t0 = G.time;
+        await c.wait(1e4, () => {
+          const k = G.time - t0;
+          B.pos.lerpVectors(b0, b1, easeInOut(clamp(k / 0.62, 0, 1)));
+          trails();
+          if (!blinked && k > 0.8) { blinked = true; const to = W(2.75, 1.75); blink(to, hd(to, b1)); }
+          if (!landed && k > 0.95) {
+            landed = true; trailOn(B, false);
+            const tp = B.parts.weapon.userData.tip.getWorldPosition(new THREE.Vector3()); tp.y = World.getHeight(tp.x, tp.z);
+            FX.fireBurst(tp, 1.6, 50); FX.dust(tp, 1.4, 20); FX.sparks(tp, V(0, 1, 0), 30); G.cam.shake(0.7); Sound.boom(0.7); Sound.hit('metal', 0.9);
+          }
+          return k > 1.0;
+        }); }
+      // 2. across his side, out of the bolt
+      P.rig.play('light2', { fade: 0.06, speed: 1.15 });
+      trailOn(P, true); Sound.swing(false);
+      { const fb = jw(B, 'chest'), toB = fb.clone().sub(P.pos).setY(0).normalize(), r = V(toB.z, 0, -toB.x);
+        c.shot(P.pos.clone().addScaledVector(toB, -1.5).addScaledVector(r, -0.9).add(V(0, 1.75, 0)), fb.clone().add(V(0, -0.1, 0)), 40); }
+      { let hit = false; const t0 = G.time;
+        await c.wait(1e4, () => {
+          const k = G.time - t0; trails();
+          if (!hit && k > 0.22) { hit = true; struck(V(-1, 0, 0), -1, 1.4, jw(B, 'chest').addScaledVector(sd, 0.25), 'stagger'); slow(0.22, 0.55); }
+          return k > 0.55;
+        }); }
+      trailOn(P, false);
+      { const h0 = B.heading, h1 = hd(B.pos, W(4.0, 0)); await tw(0.35, (u) => { B.heading = h0 + wrapAngle(h1 - h0) * easeInOut(u); }); }
+      // 3. in front of him now, down through his guard
+      { const to = W(3.85, 0.1); blink(to, hd(to, B.pos)); }
+      P.rig.play('light3', { fade: 0.05, speed: 1.1 });
+      trailOn(P, true); Sound.swing(true);
+      { const mid = P.pos.clone().lerp(B.pos, 0.5); c.shot(mid.clone().addScaledVector(sd, -4.2).add(V(0, 1.0, 0)), mid.clone().add(V(0, 1.15, 0)), 40); }
+      { let hit = false; const t0 = G.time;
+        await c.wait(1e4, () => {
+          const k = G.time - t0; trails();
+          if (!hit && k > 0.43) { hit = true; struck(V(0, -0.4, -1).normalize(), 0, 1.6, jw(B, 'neck').addScaledVector(f, 0.2), 'hitBack'); slow(0.25, 0.45); }
+          return k > 0.8;
+        }); }
+      trailOn(P, false);
+      // 4. the heavy blow, up off the ground: it throws him onto his back
+      P.rig.play('heavy', { fade: 0.06, speed: 1.05 });
+      trailOn(P, true); Sound.swing(true);
+      c.shot(W(-4.6, -2.4, 1.0), W(2.6, 0, 1.2), 42);
+      { let hit = false, down = false; const t0 = G.time, b0 = B.pos.clone(), b1 = W(0.1, 0);
+        await c.wait(1e4, () => {
+          const k = G.time - t0; trails();
+          if (!hit && k > 0.66) {
+            hit = true; trailOn(P, false);
+            struck(V(0, 0.3, -1).normalize(), 0.4, 2.2, jw(B, 'chest').addScaledVector(f, 0.2), 'deathBack');
+            FX.ring(jw(B, 'chest'), 4, { color: [2.6, 0.7, 0.2], life: 0.5, opacity: 0.8 });
+            Sound.boom(0.8); slow(0.3, 0.5); G.cam.shake(0.9);
+          }
+          if (hit) { const u = clamp((k - 0.66) / 0.6, 0, 1); B.pos.lerpVectors(b0, b1, 1 - (1 - u) * (1 - u)); }
+          if (!down && k > 0.66 + 0.63) { down = true; FX.dust(B.pos.clone().addScaledVector(f, -0.8), 1.8, 34); Sound.step(true, 1); Sound.boom(0.4); G.cam.shake(0.4); }
+          return k > 2.0;
+        }); }
+      // 5. up into the storm, and down through him
+      const C = jw(B, 'chest').addScaledVector(f, -0.06);
+      const hL = Math.PI * 0.75;         // landing at his hip, facing across him toward the head: clear of the head and the outflung arm
+      const gC = World.getHeight(C.x, C.z), hC = C.y - gC, pl = S.plunge;
+      const su = (pl.base.y - hC) / Math.max(0.1, pl.base.y - pl.tip.y), q = pl.base.clone().lerp(pl.tip, su);
+      const qW = V(q.x, 0, q.z).applyAxisAngle(V(0, 1, 0), hL);
+      const L = V(C.x - qW.x, 0, C.z - qW.z); L.y = World.getHeight(L.x, L.z);
+      P.heading = hd(P.pos, L);
+      P.rig.play('bzCrouch', { fade: 0.08 });
+      c.shot(W(2.2, 5.6, 0.8), W(2.2, 0, 0.9), 44);
+      await c.wait(0.3);
+      const S0 = P.pos.clone(), A = S0.clone().lerp(L, 0.55); A.y = World.getHeight(A.x, A.z) + 6.5;
+      P.rig.play('bzAir', { fade: 0.1 });
+      Sound.roll(); Sound.swing(true);
+      FX.dust(S0, 1.2, 20); FX.ring(S0, 3, { color: [1.2, 1.6, 3.2], life: 0.4, opacity: 0.6 });
+      // low beside Ares as he goes; the camera climbs with him and ends above him, so it is the arena floor behind him at the top and not white sky
+      const camTop = A.clone().addScaledVector(f, -2.7).addScaledVector(sd, -1.5).add(V(0, 2.1, 0)), lookTop = A.clone().add(V(0, 0.9, 0));
+      c.shot(C.clone().addScaledVector(f, -1.6).addScaledVector(sd, -2.3).add(V(0, 0.7, 0)), S0.clone().add(V(0, 1.2, 0)), 50);
+      c.move(camTop, lookTop, 0.6, { fov: 44 });
+      await tw(0.55, (u) => {
+        const e = 1 - (1 - u) * (1 - u);
+        P.pos.x = lerp(S0.x, A.x, u); P.pos.z = lerp(S0.z, A.z, u); P.pos.y = lerp(S0.y, A.y, e); P.vy = 0; P.visY = P.pos.y;
+        P.heading = hd(P.pos, L) || P.heading;
+        Cutscene.lastLook.copy(P.pos).add(V(0, 1.2, 0));
+      });
+      // held at the top: the sky pours itself into the blade
+      G.slowMo = 0.1;
+      { const A2 = A.clone();
+        c.shot(camTop, lookTop, 44);
+        c.move(A2.clone().addScaledVector(f, -2.0).addScaledVector(sd, -1.05).add(V(0, 1.55, 0)), A2.clone().add(V(0, 1.05, 0)), 2.2, { fov: 38, ease: (t) => t });
+        let nb = 0; const t0 = performance.now();
+        await c.wait(2.2, () => {
+          P.pos.copy(A2); P.vy = 0; P.visY = P.pos.y;
+          const k = (performance.now() - t0) / 1000;
+          if (k > nb) {
+            nb = k + rand(0.18, 0.32);
+            const tip = P.swordTip();
+            FX.bolt(tip.clone().add(V(rand(-8, 8), 40, rand(-8, 8))), tip, { radius: 0.09, life: 0.3, branches: 4 });
+            FX.flashLight(tip.clone().add(V(0, 1.2, 0)), 0xb8d4ff, 14, 0.3, 8);
+            FX.sparks(tip, null, 16, [1.4, 1.9, 3.4, 1], 5, false);
+            if (Math.random() < 0.5) Sound.thunder(0); else Sound.zap();
+          }
+          return false;
+        }); }
+      G.slowMo = 1;
+      // down
+      { const A2 = P.pos.clone(); let pl2 = false;
+        // from his far side, so he comes down at us
+        c.shot(C.clone().addScaledVector(f, -2.2).addScaledVector(sd, -2.6).add(V(0, 1.0, 0)), C.clone().add(V(0, 1.2, 0)), 50);
+        Sound.swing(true);
+        await tw(0.3, (u) => {
+          const e = u * u;
+          P.pos.lerpVectors(A2, L, e); P.vy = 0; P.visY = P.pos.y;
+          if (!pl2 && u > 0.55) { pl2 = true; P.rig.play('bzPlunge', { fade: 0.03, speed: 0.2 / (0.3 * 0.45) }); }
+        });
+        P.heading = hL; P.setPosition(L.x, L.z, hL); }
+      P.rig.play('bzPlunge', { fade: 0.001 }); P.rig.act.t = 1;
+      // through him
+      G.slowMo = 0.03;
+      UI.flash(0.18);
+      FX.lightningStrike(C.clone(), { radius: 3.4, scale: 1.2, shake: 1.4, flash: 0.06, light: 450, puff: true });
+      FX.ring(C, 10, { color: [2.4, 0.6, 0.2], life: 1.0, opacity: 0.9 });
+      FX.ring(C, 7, { color: [1.2, 1.6, 3.2], life: 0.7, opacity: 0.8 });
+      FX.dust(C, 2.4, 28); FX.fireBurst(C, 2.2, 50); FX.ichor(C, V(0, 1, 0), 50);
+      Sound.boom(1.3); Sound.thunder(0); Sound.hit('flesh', 1.4);
+      B.rig.hit(0, -0.4, 0, 0.6);
+      Music.play('none');
+      await c.wait(0.5);
+      { const t0 = performance.now(); await c.wait(1.0, () => { G.slowMo = lerp(0.03, 1, clamp((performance.now() - t0) / 1000, 0, 1)); return false; }); }
+      G.slowMo = 1;
+      // impaled. He has time for one more thing to say, and the stone comes for him while he says it
+      const H = jw(B, 'head');
+      c.shot(H.clone().addScaledVector(sd, 0.65).addScaledVector(f, 0.45).add(V(0, 0.8, 0)), H.clone().addScaledVector(f, 0.1).add(V(0, 0.05, 0)), 36);
+      ARES_STONE.at.value.copy(C); ARES_STONE.r.value = 0;
+      Sound.noise({ buf: 'brown', type: 'lowpass', f: 260, f2: 90, dur: 6, gain: 0.32, attack: 1.2, rev: 0.4 });
+      for (let i = 0; i < 18; i++) FX.later(0.3 + i * 0.28, () => Sound.noise({ type: 'bandpass', f: rand(1400, 3600), q: 3, dur: 0.07, gain: rand(0.06, 0.14) }));
+      if (B.fuller) B.fuller.visible = false;
+      if (B.crestMat) B.crestMat.color.setRGB(0.3, 0.28, 0.26);
+      FX.temp(new THREE.Object3D(), 4.6, (t) => { const u = clamp(t.age / 4.6, 0, 1); ARES_STONE.r.value = Math.max(ARES_STONE.r.value, 2.6 * u * (0.6 + 0.4 * u)); }, false);
+      await c.say('Ares', 'There… there it is. Now you know… what I was.');
+      // in profile, bent over the blade (from in front he had the low sun straight behind him)
+      { const fp = c.faceOf(P), fw = V(Math.sin(hL), 0, Math.cos(hL)), lt = V(fw.z, 0, -fw.x);
+        c.shot(fp.clone().addScaledVector(lt, 1.15).addScaledVector(fw, 0.45).add(V(0, -0.1, 0)), fp.clone().add(V(0, -0.05, 0)), 34); }
+      await c.say('Ariel', 'No. Now you know what I am.');
+      await tw(0.6, (u) => { ARES_STONE.stone.value = u; });
+      // the blade comes out of stone
+      P.rig.play('bzPull', { fade: 0.08 });
+      c.shot(C.clone().addScaledVector(sd, 3.2).addScaledVector(f, 1.6).add(V(0, 1.3, 0)), C.clone().addScaledVector(sd, -0.3).addScaledVector(f, 0.1).add(V(0, 0.6, 0)), 40);
+      FX.later(0.15, () => { FX.dust(C, 0.5, 14, [0.42, 0.4, 0.37, 0.5]); FX.sparks(C, V(0, 1, 0), 18); Sound.hit('metal', 0.6); });
+      await c.wait(2.0);
+      // and Ares, stone all through, falls away to nothing, the ash going off on the wind
+      c.move(C.clone().addScaledVector(sd, 4.4).addScaledVector(f, -1.4).add(V(0, 1.6, 0)), C.clone().add(V(0, 0.4, 0)), 5.5, { ease: (t) => t });
+      Sound.noise({ buf: 'brown', type: 'lowpass', f: 400, f2: 120, dur: 4.5, gain: 0.4, attack: 0.3, rev: 0.5 });
+      { const js = ['head', 'neck', 'chest', 'spine', 'hips', 'armL', 'armR', 'elbowL', 'elbowR', 'thighL', 'thighR', 'kneeL', 'kneeR'];
+        const wind = V(0.8, 0, 0.5).normalize(), p = new THREE.Vector3();
+        await tw(4.5, (u) => {
+          ARES_STONE.crumble.value = u;
+          for (let i = 0; i < 4; i++) {
+            B.rig.j[js[Math.floor(Math.random() * js.length)]].getWorldPosition(p);
+            p.x += rand(-0.15, 0.15); p.z += rand(-0.15, 0.15);
+            const sp = rand(1, 3);
+            FX.smoke.spawn({ x: p.x, y: p.y, z: p.z, vx: wind.x * sp + rand(-0.3, 0.3), vy: rand(0.2, 1.1), vz: wind.z * sp + rand(-0.3, 0.3), life: rand(1.6, 3), s: rand(0.1, 0.22), s2: rand(0.6, 1.1), c: [0.3, 0.28, 0.26, 0.55], c2: [0.32, 0.3, 0.28, 0], drag: 0.35, turb: 0.6 });
+            if (Math.random() < 0.4) FX.sparkle.spawn({ x: p.x, y: p.y, z: p.z, vx: wind.x * sp, vy: rand(0.5, 2), vz: wind.z * sp, s: rand(0.008, 0.016), life: rand(0.8, 1.8), c: [3, 1.2, 0.3, 1], c2: [1, 0.15, 0.03, 0], g: 0.6, drag: 0.6 });
+          }
+        }); }
+      B.root.visible = false;
+      if (B.trail) B.trail.mesh.visible = false;
+      await c.wait(1.0);
+      // his spark: it does not come to Ariel. Ariel takes it
+      const orb = FX.plasma(0.3, [2.6, 0.75, 0.2]);
+      orb.position.copy(C).add(V(0, 0.3, 0));
       G.scene.add(orb);
       Sound.bell();
-      const target = P.pos.clone().add(V(0, 1.3, 0));
-      // side-on, far enough back that the kneeling Ares and Ariel both sit inside the frame
-      c.shot(bp.clone().lerp(P.pos, 0.5).add(toP.clone().cross(V(0, 1, 0)).multiplyScalar(9.5)).add(V(0, 2.3, 0)), bp.clone().lerp(P.pos, 0.5).add(V(0, 2.2, 0)), 50);
-      await c.say('Ares', 'Take my spark. Wield it better than I did.', 3);
-      const t0 = G.time;
-      await c.wait(3, () => {
-        const u = clamp((G.time - t0) / 2.6, 0, 1);
-        orb.position.lerpVectors(bp.clone().add(V(0, 3.4, 0)), target, easeInOut(u));
-        orb.position.y += Math.sin(u * Math.PI) * 2.5;
-        FX.flame(orb.position.clone().add(V(rand(-0.15, 0.15), -0.1, rand(-0.15, 0.15))), 0.55);
-        if (Math.random() < 0.8) FX.sparkle.spawn({ x: orb.position.x, y: orb.position.y, z: orb.position.z, vx: rand(-1.2, 1.2), vy: rand(-0.4, 1.6), vz: rand(-1.2, 1.2), s: rand(0.01, 0.022), life: rand(0.5, 1.1), c: [3.2, 1.6, 0.45, 1], c2: [1.1, 0.18, 0.03, 0], g: -1.5, drag: 1 });
-        if (Math.random() < 0.5) FX.flashLight(orb.position, 0xff6a28, 40, 0.15, 12);
-        return false;
-      });
+      P.heading = hd(P.pos, C); P.root.rotation.y = P.heading;
+      P.rig.play('raise', { fade: 0.5 });
+      // (the low sun sits off his back here: both shots of him stand 70 degrees round from his front, out of its glare)
+      const pfS = V(Math.sin(P.heading), 0, Math.cos(P.heading)).applyAxisAngle(V(0, 1, 0), 1.22);
+      c.shot(P.pos.clone().addScaledVector(pfS, 3.0).add(V(0, 1.1, 0)), P.pos.clone().lerp(C, 0.5).add(V(0, 1.4, 0)), 44);
+      await tw(1.4, (u) => { orb.position.copy(C).add(V(Math.sin(u * 9) * 0.1, 0.3 + 1.6 * easeInOut(u), Math.cos(u * 7) * 0.1)); FX.flame(orb.position, 0.5); });
+      // torn out of the air and into him
+      P.rig.play('ascend', { fade: 0.2 });
+      Sound.roar(0.42, 1.1);
+      const lift0 = P.pos.clone(), chestAt = () => jw(P, 'chest');
+      { const o0 = orb.position.clone(); await tw(0.55, (u) => { orb.position.lerpVectors(o0, chestAt(), u * u); FX.fireStream(orb.position, chestAt(), 4); }); }
       G.scene.remove(orb);
-      FX.sparks(target, null, 80, [3, 1, 0.3, 1], 6, false);
-      FX.flashLight(target, 0xff6030, 200, 0.7, 18);
-      UI.flash(0.6);
+      FX.sparks(chestAt(), null, 80, [3, 1, 0.3, 1], 6, false);
+      FX.flashLight(chestAt(), 0xff6030, 90, 0.7, 14);
+      // level with him as he lifts, not under him looking up into the white sky
+      c.shot(P.pos.clone().addScaledVector(pfS, 4.2).add(V(0, 1.6, 0)), P.pos.clone().add(V(0, 2.0, 0)), 46);
+      c.move(P.pos.clone().addScaledVector(pfS, 5.0).add(V(0, 2.0, 0)), P.pos.clone().add(V(0, 2.5, 0)), 4.5, { ease: (t) => t });
+      { let nb = 0; const t0 = G.time;
+        await c.wait(3.6, () => {
+          const k = G.time - t0, u = clamp(k / 1.4, 0, 1);
+          P.pos.copy(lift0); P.pos.y += 1.4 * easeInOut(u); P.vy = 0; P.visY = P.pos.y;
+          if (k > nb) {
+            nb = k + rand(0.25, 0.45); const ch = chestAt();
+            FX.bolt(ch.clone().add(V(rand(-8, 8), 45, rand(-8, 8))), ch, { radius: 0.1, life: 0.3, branches: 4 });
+            FX.flashLight(ch, 0xb8d4ff, 60, 0.3, 12);
+            if (Math.random() < 0.5) Sound.thunder(0.1); else Sound.zap();
+          }
+          for (let i = 0; i < 2; i++) { const a = rand(0, TAU), g = lift0.clone().add(V(Math.cos(a) * 1.6, 0.1, Math.sin(a) * 1.6)); FX.fireStream(g, chestAt(), 2); }
+          return false;
+        }); }
+      // (a crack and a flicker, not a white frame: the bloom off a full strike blanked the whole picture)
+      UI.flash(0.18);
+      FX.lightningStrike(lift0.clone(), { radius: 2.6, scale: 0.8, shake: 0.9, flash: 0.04, light: 180, puff: false });
+      UI.chapter('ARIEL', 'God of War');
       Sound.victory();
+      await c.wait(3.6, () => { P.pos.y = lift0.y + 1.4; P.vy = 0; P.visY = P.pos.y; return false; });
+      UI.chapter(null);
+      // set down; the red goes out of him and the eyes go dark
+      P.rig.play('look', { fade: 0.6 });
+      FX.ring(lift0, 5, { color: [1.2, 1.6, 3.2], life: 0.6, opacity: 0.6 });
+      S.bz.target = 0; S.bz.rate = 1.1; S.bz.eyeT = 0; P.cineGlow = 0;
+      await c.wait(2.5);
+      S.berserkOff();
       // Zeus speaks from the storm
-      const Z = SCRIPTS.bossDefeat.zeus || (SCRIPTS.bossDefeat.zeus = SCRIPTS.bossDefeat.makeZeus());
+      const Z = S.zeus || (S.zeus = S.makeZeus());
       Z.root.scale.setScalar(13);
       // high over the far wall, in the storm: lower, his feet met the throne's back and he read as a statue on a plinth
       Z.root.position.set(R.x, R.y + 15, R.z - 38);
@@ -2809,6 +3264,8 @@ const SCRIPTS = {
       Z.root.visible = true;
       if (Z.model) Z.model.update();
       Z.setOpacity(0);
+      { const p = P.pos.clone(); P.setPosition(p.x, p.z, Math.PI); }
+      P.rig.play('look', { fade: 0.01 });
       const z0 = G.time;
       const fadeZ = () => { Z.setOpacity(clamp((G.time - z0) / 3, 0, 1)); return false; };
       FX.lightningStrike(V(R.x - 18, R.y, R.z - 30), { radius: 3, sound: true, shake: 0.4 });
@@ -2817,19 +3274,37 @@ const SCRIPTS = {
       await c.wait(3, fadeZ);
       P.rig.play('lookUp', { fade: 0.5 });
       await c.say('Zeus', 'Ariel. My son.');
-      // he is looking up: from a little below, so the raised face is in frame and not the top of the helmet
-      c.shot(P.pos.clone().add(V(-0.8, 1.5, -1.6)), P.pos.clone().add(V(0, 1.74, 0)), 34);
-      await c.say('Ariel', '…Dad?');
-      c.shot(P.pos.clone().add(V(2, 0.4, 4)), V(R.x, R.y + 30, R.z - 38), 50);
+      // he is looking up: three-quarters from his left at the height of his face (from under the chin the jaw caught
+      // the sky like chrome)
+      const onAriel = (fov, push) => { c.shot(P.pos.clone().add(V(-1.25, 1.62, -1.0)), P.pos.clone().add(V(0, 1.76, 0)), fov);
+        if (push) c.move(P.pos.clone().add(V(-1.0, 1.64, -0.8)), P.pos.clone().add(V(0, 1.76, 0)), 7, { ease: (t) => t, fov: fov - 3 }); };
+      // over his shoulder, low, with his helmet at the left of the frame and his father filling the sky beyond
+      // (tilted and opened up just enough to hold both, his helmet at the foot of the frame and his father's crown at
+      // the top: aimed at his father's middle, the giant's head went out of the top of the frame)
+      const overAriel = (k) => { const cam = P.pos.clone().add(V(0.8, 1.3 + 0.1 * k, 1.9 - 0.3 * k)), d = V(R.x, cam.y, R.z - 38).sub(cam), hz = d.length();
+        const eTop = Math.atan2(R.y + 39.5 - cam.y, hz), eBot = Math.atan2(P.pos.y + 1.55 - cam.y, 1.9 - 0.3 * k), e = (eTop + eBot) / 2;
+        d.normalize();
+        return [cam, cam.clone().add(V(d.x * Math.cos(e), Math.sin(e), d.z * Math.cos(e)).multiplyScalar(10)), clamp((eTop - eBot) * 180 / Math.PI + 8, 40, 58)]; };
+      onAriel(34, false);
+      await c.say('Ariel', '…He gave me no choice.');
+      const zHead = V(R.x, R.y + 30, R.z - 38);
+      { const [a0, l0, f0] = overAriel(0), [a1, l1, f1] = overAriel(1); c.shot(a0, l0, f0); c.move(a1, l1, 6, { ease: (t) => t, fov: f1 }); }
+      await c.say('Zeus', 'He was my son, too.');
+      c.shot(P.pos.clone().add(V(2, 0.4, 4)), zHead, 50);
+      await c.say('Zeus', 'I cut his war from him to keep you alive, and he never forgave me. His blood is on my hands before it is on yours.');
+      onAriel(32, true);
+      await c.say('Zeus', 'But his war is in you now — all of it. Learn when to set it down, or it will wear you the way it wore him.');
+      // small on the stone where his brother was, under the whole sky
+      c.shot(P.pos.clone().add(V(-2.5, 0.9, 7.5)), V(R.x, R.y + 14, R.z - 38), 56);
       await c.say('Zeus', 'One spark returns to Olympus. Eleven remain in shadow — and each will be harder won than the last.');
+      { const [a0, l0, f0] = overAriel(1), [a1, l1, f1] = overAriel(2); c.shot(a0, l0, f0); c.move(a1, l1, 6, { ease: (t) => t, fov: f1 }); }
       await c.say('Zeus', 'I am sorry I was not there. Rise now, Heir of Thunder. Olympus awaits.');
       FX.lightningStrike(V(R.x + 14, R.y, R.z - 26), { radius: 3, sound: true, shake: 0.3, light: 900, flash: 0.1 });
       // his father goes back into the storm
       const z1 = G.time;
-      c.shot(P.pos.clone().add(V(2, 0.4, 4)), V(R.x, R.y + 30, R.z - 38), 50);
       await c.wait(1.8, () => { Z.setOpacity(1 - clamp((G.time - z1) / 1.6, 0, 1)); return false; });
       G.scene.remove(Z.root);
-      await SCRIPTS.bossDefeat.ascend(c);
+      await S.ascend(c);
       UI.chapter('CHAPTER I COMPLETE', 'The Spark of War');
       Music.play('victory');
       await c.wait(5);
@@ -2839,7 +3314,7 @@ const SCRIPTS = {
       await UI.credits(`
         <h1>ARIEL</h1><p style="letter-spacing:.5em;color:#c9a95c">HEIR OF THUNDER</p>
         <h3>CHAPTER I</h3><p>The Spark of War</p>
-        <h3>STARRING</h3><p>Ariel Stormborn — son of Zeus, junior at Westbrook High, God of War</p><p>Jesse — who believed him first</p><p>Anna Stormborn — who waited in the storms</p><p>Hermes — messenger of the gods</p><p>Ares — freed from the rot</p><p>Zeus — King of Olympus</p><p>Kratos and Deimos — sons of the Heir of Thunder</p>
+        <h3>STARRING</h3><p>Ariel Stormborn — son of Zeus, junior at Westbrook High, God of War</p><p>Jesse — who believed him first</p><p>Anna Stormborn — who waited in the storms</p><p>Hermes — messenger of the gods</p><p>Ares — the God of War before him</p><p>Zeus — King of Olympus</p><p>Kratos and Deimos — sons of the Heir of Thunder</p>
         <h3>THE WORLD</h3><p>Its land, ruins, sounds and music<br>are generated by code when you press play.</p>
         <h3>STONE AND EARTH</h3><p>Photo-scanned textures from Poly Haven (CC0)</p>
         <h3>HOLLOW HOPLITES</h3><p>"Rigged for UE4 – Spartan" by Andy Woodhead (CC BY 4.0)</p>
@@ -2849,49 +3324,9 @@ const SCRIPTS = {
         <h3>TO BE CONTINUED</h3><p>Eleven sparks remain.<br>Athena waits in the Library of Ash.</p>
         <p style="margin-top:80px;font-style:italic">Thank you for playing.</p>`, 30);
     },
-    /**
-     * Ares gives up the mantle of war, and Ariel takes it: thunder and fire come down on him together.
-     * Then the Fates' tapestry (painted slides: what is still to come), and Olympus with its light coming back
-     */
+    /** after the kill: the Fates' tapestry (painted slides: what is still to come), and Olympus with its light coming back */
     async ascend(c) {
-      Garments.preload(); Models.ensure('deimos'); Models.ensure('heracles');
-      const R = World.arena, P = G.player, B = G.boss, bp = B.pos.clone();
-      const toP = P.pos.clone().sub(bp).setY(0).normalize();
-      B.rig.play('kneelLookUp', { fade: 0.8 });
-      P.rig.play('look', { fade: 0.5 });
-      c.shot(bp.clone().addScaledVector(toP, 4.4).add(V(-1.5, 1.45, 0)), bp.clone().add(V(0, 2.3, 0)).addScaledVector(toP, 0.8), 36);
-      await c.say('Ares', 'Hear me, brother. The mantle of war was never mine to keep. I wore it like a butcher wears his apron.');
-      await c.say('Ares', 'Take it. Be the god of war that I never was.');
-      c.shot(P.pos.clone().add(V(-1.0, 1.55, -1.9)), P.pos.clone().add(V(0, 1.7, 0)), 34);
-      await c.say('Ariel', '…Then I will make it mean something.');
-      // the mantle: fire from the earth, thunder from the sky, and he raises Keraunos into both
-      P.rig.play('raise', { fade: 0.35 });
-      const pf = V(Math.sin(P.heading), 0, Math.cos(P.heading)), pr = V(pf.z, 0, -pf.x);
-      c.shot(P.pos.clone().addScaledVector(pf, 3.4).addScaledVector(pr, 2.2).add(V(0, 0.45, 0)), P.pos.clone().add(V(0, 2.0, 0)), 44);
-      c.move(P.pos.clone().addScaledVector(pf, 4.2).addScaledVector(pr, 1.0).add(V(0, 0.35, 0)), P.pos.clone().add(V(0, 2.3, 0)), 6.5, { ease: (t) => t });
-      FX.ring(P.pos, 7, { color: [2.4, 0.7, 0.18], life: 1.4, opacity: 0.8 });
-      FX.fireBurst(P.pos, 2.2, 60);
-      Sound.fire(true, 1); Sound.roar(0.5, 0.7);
-      const t0 = G.time;
-      let nextBolt = 0;
-      await c.wait(4.2, () => {
-        const k = G.time - t0;
-        const tip = P.swordTip ? P.swordTip() : P.pos.clone().add(V(0, 2.6, 0));
-        if (k > nextBolt) {
-          nextBolt = k + rand(0.35, 0.6);
-          FX.bolt(tip.clone().add(V(rand(-6, 6), 40, rand(-6, 6))), tip, { radius: 0.09, life: 0.3, branches: 4 });
-          FX.flashLight(tip, 0xb8d4ff, 110, 0.3, 14);
-          Sound.zap();
-        }
-        for (let i = 0; i < 3; i++) { const a = rand(0, TAU), r = rand(0.4, 1.4); FX.glow.spawn({ x: P.pos.x + Math.cos(a) * r, y: P.pos.y + rand(0, 0.4), z: P.pos.z + Math.sin(a) * r, vx: 0, vy: rand(1.5, 3.5), vz: 0, life: rand(0.8, 1.4), s: rand(0.08, 0.16), s2: 0.01, c: [2.6, 0.8, 0.2, 1], c2: [1.2, 0.2, 0.05, 0] }); }
-        return false;
-      });
-      FX.lightningStrike(P.pos.clone(), { radius: 2.6, scale: 0.8, shake: 0.9, flash: 0.1, light: 700, puff: false });
-      UI.chapter('ARIEL', 'God of War');
-      await c.wait(3.4);
-      UI.chapter(null);
       await UI.fade(1, 1.4);
-      // the Fates' tapestry
       Music.play('victory');
       await SCRIPTS.bossDefeat.tapestry(c, ASCENSION_SLIDES, 'THE FATES’ TAPESTRY');
       await SCRIPTS.bossDefeat.olympus(c);
@@ -2989,7 +3424,7 @@ const SCRIPTS = {
       this.mythTick = false;
       const M = this.myth;
       if (!M) return;
-      for (const a of [M.kratos, M.deimos, M.heracles, M.titan, M.ares, ...(M.hoplites || [])]) if (a) { a.root.visible = false; if (a.cape) a.cape.mesh.visible = false; }
+      for (const a of [M.kratos, M.deimos, M.heracles, M.titan, M.father, ...(M.hoplites || [])]) if (a) { a.root.visible = false; if (a.cape) a.cape.mesh.visible = false; }
       if (M.chains) M.chains.group.visible = false;
       this.mythHallBack();
       if (this.mythFires) { World.fires = this.mythFires; this.mythFires = null; }
@@ -3012,6 +3447,8 @@ const SCRIPTS = {
       PR.rot = 1; PR.rotOn = false;
       PR.kronosHall.root.visible = false; PR.hadesFallen.root.visible = false; PR.hades.root.visible = true;
       for (const g of [PR.zeus, ...PR.gods]) if (g.spark) { g.sparkGone = true; g.spark.visible = false; g.sparkFly = null; g.sparkHeld = false; }
+      // (Ares is dead: his place in the hall stands empty, and his spark burns in Ariel now)
+      PR.ares.root.visible = false;
       const top = PR.zeus.root.position.y;
       const A = this.arielHall || (this.arielHall = PR.actor(S, 'arielGod', { stance: 'sword', size: 1.18, x: -2.7, y: 0, z: -10.6, face: 0.2 }));
       A.root.visible = true;
@@ -3021,7 +3458,7 @@ const SCRIPTS = {
       await UI.fade(0, 1.6);
       // the sparks come home, one god at a time
       const act = Cutscene.active;
-      [PR.poseidon, PR.athena, PR.hades, PR.ares, PR.zeus].forEach((g, i) => setTimeout(() => {
+      [PR.poseidon, PR.athena, PR.hades, PR.zeus].forEach((g, i) => setTimeout(() => {
         if (!g.spark || Cutscene.active !== act || !this.hallState) return;
         g.sparkGone = false; g.spark.visible = true;
         const p = g.spark.position;
@@ -3220,6 +3657,9 @@ const SCRIPTS = {
       { let capU = null, top = null;
         a.root.traverse((o) => { if (!o.isMesh || !o.material) return; if (o.material._cap) capU = o.material._cap; if (/^sleeve/.test(o.name) && o.material.color) top = o.material.color; });
         if (capU && top) { (this.capWas || (this.capWas = [])).push([capU, capU.value.clone()]); capU.value.copy(top); } }
+      // under the goddess gown's drape her shoulders are bare: the cloth painted over them (to carry her top on under
+      // its sleeves) ended in a ragged line across her chest, above the drape
+      if (style === 'heavenly-extras') a.root.traverse((o) => { const m = o.material; if (m && m._capOn && m._capOn.value) { (this.capOnWas || (this.capOnWas = [])).push([m._capOn, m._capOn.value]); m._capOn.value = 0; } });
       // what they wear on top of it
       const head = a.rig.j.head;
       if (style === 'bride' || style === 'bride-extras' || style === 'heavenly' || style === 'heavenly-extras') {
@@ -3228,33 +3668,108 @@ const SCRIPTS = {
         head.add(circ); extras.push(circ);
       }
       if (style === 'bride' || style === 'bride-extras') {
-        // the veil: from the crown, falling behind her shoulders
-        const veil = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.36, 0.95, 32, 6, true, Math.PI / 2, Math.PI),
-          new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false }));
-        veil.position.set(0, 0.1 - 0.475, -0.07);
+        // the veil: gathered at the back of the crown, round the back of the head, then out over the shoulders and
+        // down her back in soft folds. (A flat half-cone read as a pane of glass: from the side its straight edge
+        // ran head to knee.) Its sides and hem fade out, as tulle does where it is single and thin
+        const veil = new THREE.Mesh(this.veilGeometry(), new THREE.MeshStandardMaterial({ color: 0xfbf8f2, roughness: 0.92, transparent: true, opacity: 0.42,
+          alphaMap: this.veilAlpha(), side: THREE.DoubleSide, depthWrite: false }));
+        veil.renderOrder = 3;
         head.add(veil); extras.push(veil);
-        // the bouquet, where the phone would be, between her hands
+        // the bouquet, where the phone would be, between her hands: hand-tied, its stems bound in ivory ribbon
         if (a.phone) {
           a.phone.children.forEach((o) => { o.visible = false; });
           const b = new THREE.Group();
-          const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.012, 0.2, 10).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3d5a2c, roughness: 0.7 }));
-          stem.position.z = -0.1; b.add(stem);
-          const petals = [0xf6efe6, 0xf2d6d0, 0xfaf6ef, 0xe9c2c4];
-          for (let i = 0; i < 13; i++) {
-            const t = i / 13, ang = i * 2.4, r = 0.055 * Math.sqrt(t);
-            const f = new THREE.Mesh(new THREE.SphereGeometry(0.03 + 0.008 * Math.random(), 12, 10), new THREE.MeshStandardMaterial({ color: petals[i % 4], roughness: 0.6 }));
-            f.position.set(Math.cos(ang) * r, Math.sin(ang) * r, 0.03 - t * 0.03);
-            b.add(f);
+          const satin = new THREE.MeshStandardMaterial({ color: 0xf1e9dc, roughness: 0.38 });
+          const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.016, 0.065, 14).rotateX(Math.PI / 2), satin);
+          stem.position.z = -0.035; b.add(stem);
+          for (const sx of [-1, 1]) {   // the bow's two tails
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.0025, 0.09), satin);
+            tail.position.set(sx * 0.012, -0.02, -0.055); tail.rotation.set(0.35, sx * 0.25, sx * 0.3); b.add(tail);
+          }
+          // (a collar of leaves tucked under the dome, laid back toward the stems: only their tips show past the roses)
+          const leaf = new THREE.MeshStandardMaterial({ color: 0x627a4c, roughness: 0.7 });
+          for (let i = 0; i < 8; i++) {
+            const a2 = (i / 8) * TAU + 0.3, l = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 6), leaf);
+            l.scale.set(0.5, 0.85, 0.1); l.position.set(Math.cos(a2) * 0.058, Math.sin(a2) * 0.058, -0.018);
+            l.rotation.set(-0.6, 0, a2 - Math.PI / 2, 'ZXY'); b.add(l);   // (pointed out, then tipped back about its own width)
+          }
+          // roses, a dome of them, each a bud wrapped in a few cupped petals
+          const petals = [0xf7f1e8, 0xf3ddd6, 0xfbf7f0, 0xeccfcc];
+          for (let i = 0; i < 19; i++) {
+            const t = (i + 0.5) / 19, ang = i * 2.4, r = 0.062 * Math.sqrt(t), m = new THREE.MeshStandardMaterial({ color: petals[i % 4], roughness: 0.55 });
+            const rose = new THREE.Group(), s = 0.85 + 0.25 * Math.random();
+            const bud = new THREE.Mesh(new THREE.SphereGeometry(0.011, 10, 8), m); bud.position.z = 0.006; rose.add(bud);
+            for (let k = 0; k < 5; k++) {
+              // (each petal a size up from the last, so no two lie in one surface)
+              const p = new THREE.Mesh(new THREE.SphereGeometry(0.0135 + k * 0.0018, 10, 6, 0, Math.PI * 0.9, 0, Math.PI * (0.42 + k * 0.03)), m);
+              p.rotation.set(Math.PI / 2, (k / 5) * TAU * 1.6 + i, 0); p.position.z = -k * 0.0012; rose.add(p);
+            }
+            rose.scale.setScalar(s);
+            rose.position.set(Math.cos(ang) * r, Math.sin(ang) * r, 0.032 - t * t * 0.03);
+            rose.lookAt(new THREE.Vector3(rose.position.x * 1.6, rose.position.y * 1.6, rose.position.z + 1));
+            b.add(rose);
           }
           a.phone.add(b); extras.push(b);
         }
       }
+    },
+    /**
+     * The bride's veil in the frame of her head joint (+y up, +z her face): rings from the comb at the back of the
+     * crown down to below her waist, round her back and a little forward at the sides, gathered close over the
+     * head, out over the shoulders, then hanging in loose vertical folds
+     */
+    veilGeometry() {
+      if (this._veilGeo) return this._veilGeo;
+      const NU = 48, NV = 28, L = 1.0, span = Math.PI * 1.02, pos = [], uv = [], idx = [];
+      const sm = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+      for (let j = 0; j <= NV; j++) {
+        const v = j / NV, y = 0.115 - v * L;
+        // round the head, out over the shoulders (head-local: they are about 0.22 down and 0.2 out), then flaring a little
+        const rx = 0.078 + 0.035 * sm(0, 0.1, v) + 0.13 * sm(0.12, 0.32, v) + 0.04 * sm(0.32, 1, v);
+        const rz = 0.075 + 0.04 * sm(0, 0.1, v) + 0.06 * sm(0.12, 0.32, v) + 0.08 * sm(0.32, 1, v);
+        const fold = 0.075 * sm(0.18, 0.65, v);
+        for (let i = 0; i <= NU; i++) {
+          const u = i / NU, th = Math.PI + (u - 0.5) * span;   // th = PI: straight behind her
+          const k = 1 + fold * Math.sin(th * 9 + 0.7) + fold * 0.4 * Math.sin(th * 23 + 2.1);
+          // (the sides fall a little behind the shoulder line, not forward over her arms)
+          const side = Math.abs(u - 0.5) * 2, back = -0.035 - 0.05 * sm(0.75, 1, side) * sm(0.15, 0.4, v);
+          pos.push(Math.sin(th) * rx * k, y, Math.cos(th) * rz * k + back - 0.02);
+          uv.push(u, 1 - v);
+        }
+      }
+      for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) {
+        const a = j * (NU + 1) + i, b = a + NU + 1;
+        idx.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      return (this._veilGeo = g);
+    },
+    /** how thick the tulle looks: doubled at the comb, single and thinning to nothing at the sides and the hem */
+    veilAlpha() {
+      if (this._veilTex) return this._veilTex;
+      const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+      const x = cv.getContext('2d'), im = x.createImageData(128, 128);
+      for (let j = 0; j < 128; j++) for (let i = 0; i < 128; i++) {
+        const u = i / 127, v = 1 - j / 127, e = Math.min(u, 1 - u);
+        const a = clamp(e / 0.16, 0, 1) * clamp((v - 0.02) / 0.16, 0, 1) * (0.75 + 0.25 * clamp((v - 0.85) / 0.15, 0, 1));
+        const o = (j * 128 + i) * 4, g = Math.round(255 * a * a * (3 - 2 * a));
+        im.data[o] = im.data[o + 1] = im.data[o + 2] = g; im.data[o + 3] = 255;
+      }
+      x.putImageData(im, 0, 0);
+      const t = new THREE.CanvasTexture(cv);
+      return (this._veilTex = t);
     },
     giveBack() {
       for (const d of this.dressed || []) d.o.material = d.m;
       this.dressed = [];
       for (const [u, c] of this.capWas || []) u.value.copy(c);
       this.capWas = [];
+      for (const [u, v] of this.capOnWas || []) u.value = v;
+      this.capOnWas = [];
       for (const e of this.extras || []) if (e.parent) e.parent.remove(e);
       this.extras = [];
       for (const k of this.borrowed || []) {
@@ -3315,7 +3830,7 @@ const SCRIPTS = {
       }, false);
       for (let i = 0; i < 4; i++) { A.rig.poseFrom({ armL: [2, 0, 10], elbowL: [-6, 0, 0], armR: [2, 0, -10], elbowR: [-6, 0, 0], neck: [4, 0, 0] }); if (A.model) A.model.update(); }
       // (the gown's bodice is cut slimmer than she is: wider than it is tall, so it closes round her)
-      const u1 = await Garments.wear(J, 'dress', { s: 0.343, wide: 1.4, deep: 1.55, hide: /denim|shoe|heel/, z: 0 });
+      const u1 = await Garments.wear(J, 'dress', { s: 0.343, wide: 1.4, deep: 1.55, hide: /denim|shoe|heel|body_3/, z: 0 });   // (her legs: under a floor-length gown)
       const u2 = await Garments.wear(A, 'tailcoat', { shoulder: 1.8, foot: 0, wide: 1.12, deep: 1.1, hide: /outfit_top|outfit_bottom|outfit_shoes/, z: -0.015 });
       [u1, u2].forEach((u) => u && this.undress.push(u));
       Music.play('victory');
@@ -3390,6 +3905,8 @@ const SCRIPTS = {
       this.dress(J, 'heavenly-extras'); this.dress(M, 'heavenly');
       this.babyHome = Me.baby.parent;
       PR.olympus.add(Me.baby);
+      // (a newborn against a grown woman: at the memory's own size the bundle filled her arms like a pillow)
+      Me.baby.scale.setScalar(0.8);
       J.root.position.set(0.15, 0, -6.4); J.root.rotation.y = 0.12;
       J.hold = { fore: 0.03, palm: 0.016, at: 0.77 };
       J.texting(false);
@@ -3434,7 +3951,7 @@ const SCRIPTS = {
       const Me = Memory, J = Campus.jesse;
       this.tickOn = false;
       if (Me.carrier) { Me.cupHands(Me.carrier, false); Me.carrier = null; }
-      Me.baby.visible = false;
+      Me.baby.visible = false; Me.baby.scale.setScalar(1);
       if (this.babyHome) { this.babyHome.add(Me.baby); this.babyHome = null; }
       if (this.arielHall) this.arielHall.root.visible = false;
       (this.undress || []).forEach((u) => u());
@@ -3453,6 +3970,14 @@ const SCRIPTS = {
       Sound.setRain(0);
       if (G.activeScene !== G.scene) Game.useScene(G.scene);
       UI.hide('credits'); UI.chapter(null);
+      // (the Berserker and Ares' stone death, undone whether the scene ran or was skipped)
+      SCRIPTS.bossDefeat.berserkOff();
+      ARES_STONE.stone.value = 0; ARES_STONE.r.value = 0; ARES_STONE.crumble.value = 0;
+      B.root.scale.setScalar(B.def.size);
+      if (SCRIPTS.bossDefeat.aresSize) B.rig.size = SCRIPTS.bossDefeat.aresSize;
+      G.slowMo = 1; G.post.possess = 0;
+      P.cineGlow = 0; P.blink = 0; P.root.visible = true;
+      Music.intensity = 0;
       B.root.visible = false;
       if (B.cape) B.cape.mesh.visible = false;
       G.flags.bossDefeated = true;
@@ -3612,7 +4137,8 @@ const SCRIPTS = {
         c.shot(at(3.6, 2.8, 0.55), upAt(A), 50);
         c.move(at(3.0, 2.3, 0.6), upAt(A), 6, { ease: (t) => t });
         await c.wait(1.2);
-        if (G.flags.bossDefeated) await c.say('Ares', 'And the war answers with it, brother. Let them see what the two of us made.');
+        // (after the arena he is dead, and this is only the war Ariel tore out of him, wearing his face)
+        if (G.flags.bossDefeated) await c.say('Ares', 'You killed me, brother, and still you call on me. Very well. Take the war.');
         else await c.say('Ares', 'You want my war, little thief? Then take it. Every drop. And see if you can hold it.');
       } else {
         // the short version: both of them at once, behind him, and one of them speaks
